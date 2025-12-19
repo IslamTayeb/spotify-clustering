@@ -3,7 +3,8 @@
     "allow": [
       "WebFetch(domain:developer.spotify.com)",
       "Bash(pip install:*)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(ls:*)"
     ]
   }
 }
