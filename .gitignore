@@ -208,8 +208,7 @@ __marimo__/
 
 # Project data - keep user's listening data private
 data/
-songs/
-lyrics/
 
 # Spotify OAuth cache
 .cache
+*claude*
