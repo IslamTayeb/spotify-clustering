@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:developer.spotify.com)"
+      "WebFetch(domain:developer.spotify.com)",
+      "Bash(pip install:*)",
+      "WebFetch(domain:pypi.org)"
     ]
   }
 }

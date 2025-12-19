@@ -21,12 +21,20 @@ This is a Python-based Spotify clustering project that analyzes audio features a
   - All scripts use aggressive filename normalization to match tracks across systems
   - Downloads saved to `songs/` directory
 
+- `fetch_lyrics.py` - Lyrics fetching using Genius API
+  - Fetches lyrics for all tracks in `api/saved_tracks.json`
+  - Uses lyricsgenius library with OAuth token from .env
+  - Implements smart caching to avoid re-fetching
+  - Saves results to `lyrics/` directory in multiple formats
+  - Includes progress tracking and resume capability
+
 ### Data Flow
 
-1. Fetch track metadata from Spotify API → `api/data/saved_tracks.json`
+1. Fetch track metadata from Spotify API → `api/saved_tracks.json`
 2. Check which tracks are already downloaded → `check_matches.py`
 3. Download missing tracks → `download_missing.py` (spotdl) or `download_ytdlp.py` (yt-dlp)
 4. MP3 files stored in `songs/` directory
+5. (Optional) Fetch lyrics from Genius API → `lyrics/` directory
 
 ### Filename Normalization Strategy
 
@@ -67,6 +75,11 @@ pip install spotdl  # For download_missing.py
 pip install yt-dlp  # For download_ytdlp.py
 ```
 
+For lyrics fetching (optional):
+```bash
+pip install -r requirements-lyrics.txt
+```
+
 ### Spotify API Setup
 
 1. Create a Spotify app at [Spotify Dashboard](https://developer.spotify.com/dashboard)
@@ -83,6 +96,18 @@ pip install yt-dlp  # For download_ytdlp.py
    ```
    SPOTIFY_CLIENT_ID=your_client_id
    SPOTIFY_CLIENT_SECRET=your_client_secret
+   ```
+
+### Genius API Setup (Optional - for lyrics fetching)
+
+1. Create a Genius API client at [Genius API Clients](https://genius.com/api-clients)
+   - Click "New API Client"
+   - Fill in app details (name, website URL, redirect URI can all be `http://localhost`)
+   - Generate a "Client Access Token"
+
+2. Add token to `.env`:
+   ```
+   GENIUS_ACCESS_TOKEN=your_genius_access_token
    ```
 
 ## Common Commands
@@ -109,10 +134,21 @@ python download/download_ytdlp.py
 ```
 
 Both scripts:
-- Compare `api/data/saved_tracks.json` with `songs/*.mp3`
+- Compare `api/saved_tracks.json` with `songs/*.mp3`
 - Show statistics before downloading
 - Require confirmation before starting
 - Save failed downloads to `failed_*.txt` files
+
+### Fetch Lyrics from Genius
+```bash
+python fetch_lyrics.py
+```
+
+Fetches lyrics for all tracks in `api/saved_tracks.json`:
+- Uses smart caching (safe to stop/resume)
+- Shows live progress and statistics
+- Saves to `lyrics/` directory in multiple formats
+- See `LYRICS_README.md` for detailed documentation
 
 ## Spotify API Endpoints Used
 
@@ -120,9 +156,14 @@ Both scripts:
 
 ## Data Management
 
-- Track metadata: `api/data/saved_tracks.json`
+- Track metadata: `api/saved_tracks.json`
 - Downloaded MP3s: `songs/` directory
-- Both `data/` and `songs/` folders are gitignored to keep listening data private
+- Fetched lyrics: `lyrics/` directory
+  - `tracks_with_lyrics.json` - Complete data with lyrics
+  - `lyrics_only.json` - Simplified lyrics-only format
+  - `individual/` - One text file per song
+  - `lyrics_cache.json` - Cache to avoid re-fetching
+- Both `songs/` and `lyrics/` folders are gitignored to keep listening data private
 - OAuth tokens cached in `.cache` file (also gitignored)
 
 ## Testing
