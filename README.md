@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 Download the required TensorFlow models (~22MB total):
 ```bash
-python download_models.py
+python analysis/models/download_models.py
 ```
 
 This downloads models to `~/.essentia/models/` (one-time setup).
@@ -89,20 +89,30 @@ Logs are saved to `logging/analysis_YYYYMMDD_HHMMSS.log` for debugging and monit
 ```
 spotify-clustering/
 ├── analysis/
-│   ├── audio_analysis.py       # Essentia-based audio feature extraction
-│   ├── lyric_analysis.py       # Sentence-transformer lyric embeddings
-│   ├── clustering.py           # UMAP + HDBSCAN clustering
-│   └── visualization.py        # Plotly visualizations and reports
+│   ├── pipeline/
+│   │   ├── audio_analysis.py       # Essentia-based audio feature extraction
+│   │   ├── lyric_analysis.py       # Sentence-transformer lyric embeddings
+│   │   ├── clustering.py           # UMAP + HDBSCAN clustering
+│   │   └── visualization.py        # Plotly visualizations and reports
+│   ├── models/
+│   │   ├── download_models.py      # Download Essentia TensorFlow models
+│   │   └── list_models.py          # List available models
+│   ├── scripts/                    # Utility analysis scripts
+│   ├── outputs/                    # Analysis results
+│   └── interactive_tuner.py        # Streamlit app for tuning clustering
 ├── spotify/
-│   ├── fetch_audio_data.py     # Fetch tracks from Spotify API
-│   └── master_index.json       # Unified track mapping
-├── songs/data/                 # MP3 files
-├── lyrics/data/                # Lyric text files
-├── cache/                      # Feature cache (speeds up re-runs)
-├── outputs/                    # Analysis results
-├── logging/                    # Log files with timestamps
-├── download_models.py          # Download Essentia TensorFlow models
-├── run_analysis.py             # Main pipeline script
+│   ├── fetch_audio_data.py         # Fetch tracks from Spotify API
+│   └── master_index.json           # Unified track mapping
+├── tools/
+│   ├── build_master_index.py       # Build unified track index
+│   ├── clean_lyrics.py             # Clean lyric data
+│   ├── deduplicate_songs.py        # Remove duplicate MP3s
+│   └── verify_cache.py             # Verify cached features
+├── songs/data/                     # MP3 files
+├── lyrics/data/                    # Lyric text files
+├── cache/                          # Feature cache (speeds up re-runs)
+├── logging/                        # Log files with timestamps
+├── run_analysis.py                 # Main pipeline script
 └── requirements.txt
 ```
 

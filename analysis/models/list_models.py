@@ -70,7 +70,7 @@ def main():
 
     if not models_dir.exists():
         print(f"❌ Essentia models directory not found: {models_dir}")
-        print("\n💡 Try running: python download_models.py")
+        print("\n💡 Try running: python analysis/models/download_models.py")
         print("   Or check if models are in a different location")
         return
 

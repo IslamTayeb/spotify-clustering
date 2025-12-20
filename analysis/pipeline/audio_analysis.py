@@ -44,6 +44,7 @@ class AudioFeatureExtractor:
     def __init__(self):
         logger.info("Initializing Essentia models...")
         from essentia.standard import MonoLoader, TensorflowPredictEffnetDiscogs, TensorflowPredict2D
+        from essentia.standard import TensorflowPredictMusiCNN
         from essentia.standard import RhythmExtractor2013, KeyExtractor
 
         models_dir = Path.home() / '.essentia' / 'models'
@@ -125,11 +126,22 @@ class AudioFeatureExtractor:
             input="model/Placeholder", output="model/Sigmoid"
         )
 
-        # NEW: Valence/Arousal model (MusiCNN architecture, different from EffNet)
+        # NEW: MusiCNN embedding extractor (needed for MusiCNN-based models)
+        try:
+            self.musicnn_embedding_model = TensorflowPredictMusiCNN(
+                graphFilename=str(models_dir / 'msd-musicnn-1.pb'),
+                output="model/dense/BiasAdd"
+            )
+        except Exception as e:
+            logger.warning(f"Could not load MusiCNN embedding model: {e}")
+            self.musicnn_embedding_model = None
+
+        # NEW: Valence/Arousal model (uses MusiCNN embeddings)
         try:
             self.valence_arousal_model = TensorflowPredict2D(
                 graphFilename=str(models_dir / 'deam-msd-musicnn-2.pb'),
-                input="model/Placeholder", output="model/Identity"
+                input="model/Placeholder",
+                output="model/Identity"
             )
         except Exception as e:
             logger.warning(f"Could not load valence/arousal model: {e}")
@@ -175,11 +187,12 @@ class AudioFeatureExtractor:
             logger.warning(f"Could not load instrument model: {e}")
             self.mtg_jamendo_instrument = None
 
-        # NEW (2024): Alternative Arousal/Valence (emoMusic dataset)
+        # NEW (2024): Alternative Arousal/Valence (emoMusic dataset, uses MusiCNN embeddings)
         try:
             self.emomusic_model = TensorflowPredict2D(
                 graphFilename=str(models_dir / 'emomusic-msd-musicnn-2.pb'),
-                input="model/Placeholder", output="model/Identity"
+                input="model/Placeholder",
+                output="model/Identity"
             )
         except Exception as e:
             logger.warning(f"Could not load emoMusic model: {e}")
@@ -195,11 +208,12 @@ class AudioFeatureExtractor:
             logger.warning(f"Could not load MTG-Jamendo genre model: {e}")
             self.mtg_jamendo_genre = None
 
-        # NEW (2024): MIREX Moods (5 mood clusters)
+        # NEW (2024): MIREX Moods (5 mood clusters, uses MusiCNN embeddings)
         try:
             self.moods_mirex_model = TensorflowPredict2D(
                 graphFilename=str(models_dir / 'moods_mirex-msd-musicnn-1.pb'),
-                input="model/Placeholder", output="model/Softmax"
+                input="serving_default_model_Placeholder",
+                output="PartitionedCall"
             )
         except Exception as e:
             logger.warning(f"Could not load MIREX moods model: {e}")
@@ -222,8 +236,8 @@ class AudioFeatureExtractor:
             embeddings = self.embedding_model(audio)
             genre_probs = self.genre_model(embeddings).mean(axis=0)
 
-            moods = {name: model(embeddings).mean() for name, model in self.mood_models.items()}
-            danceability = self.danceability_model(embeddings).mean()
+            moods = {name: model(embeddings).mean(axis=0)[1] for name, model in self.mood_models.items()}
+            danceability = self.danceability_model(embeddings).mean(axis=0)[1]
 
             voice_probs = self.voice_model(embeddings).mean(axis=0)
             instrumentalness = voice_probs[0]
@@ -241,59 +255,68 @@ class AudioFeatureExtractor:
             # NEW: MTG-Jamendo multi-label extraction (56 classes)
             mtg_jamendo_probs = self.mtg_jamendo(embeddings).mean(axis=0)
 
-            # NEW: Valence/Arousal extraction
-            valence, arousal = 0.5, 0.5
-            if self.valence_arousal_model:
-                # This model expects raw audio, NOT embeddings
-                va_preds = self.valence_arousal_model(audio)
-                # Output is (N, 2) where col 0 is valence, col 1 is arousal
-                mean_preds = va_preds.mean(axis=0)
-                valence = float(mean_preds[0])
-                arousal = float(mean_preds[1])
+            # NEW: MusiCNN embeddings extraction (for MusiCNN-based models)
+            musicnn_embeddings = None
+            if self.musicnn_embedding_model:
+                musicnn_embeddings = self.musicnn_embedding_model(audio)
+
+            # NEW: Valence/Arousal extraction (uses MusiCNN embeddings)
+            if not self.valence_arousal_model:
+                raise RuntimeError("Valence/arousal model not loaded - cannot extract features")
+            if musicnn_embeddings is None:
+                raise RuntimeError("MusiCNN embeddings not available - cannot extract valence/arousal")
+            va_preds = self.valence_arousal_model(musicnn_embeddings)
+            mean_preds = va_preds.mean(axis=0)
+            valence = float(mean_preds[0])
+            arousal = float(mean_preds[1])
 
             # NEW (2024): Voice Gender extraction
-            voice_gender_female, voice_gender_male = 0.5, 0.5
-            if self.voice_gender_model:
-                gender_probs = self.voice_gender_model(embeddings).mean(axis=0)
-                voice_gender_female = float(gender_probs[0])
-                voice_gender_male = float(gender_probs[1])
+            if not self.voice_gender_model:
+                raise RuntimeError("Voice gender model not loaded - cannot extract features")
+            gender_probs = self.voice_gender_model(embeddings).mean(axis=0)
+            voice_gender_female = float(gender_probs[0])
+            voice_gender_male = float(gender_probs[1])
 
             # NEW (2024): Timbre extraction (bright vs dark)
-            timbre_bright, timbre_dark = 0.5, 0.5
-            if self.timbre_model:
-                timbre_probs = self.timbre_model(embeddings).mean(axis=0)
-                timbre_bright = float(timbre_probs[0])
-                timbre_dark = float(timbre_probs[1])
+            if not self.timbre_model:
+                raise RuntimeError("Timbre model not loaded - cannot extract features")
+            timbre_probs = self.timbre_model(embeddings).mean(axis=0)
+            timbre_bright = float(timbre_probs[0])
+            timbre_dark = float(timbre_probs[1])
 
             # NEW (2024): Acoustic vs Electronic
-            mood_acoustic, mood_electronic = 0.5, 0.5
-            if self.mood_acoustic_model:
-                acoustic_probs = self.mood_acoustic_model(embeddings).mean(axis=0)
-                mood_acoustic = float(acoustic_probs[0])
-                mood_electronic = float(acoustic_probs[1])
+            if not self.mood_acoustic_model:
+                raise RuntimeError("Acoustic/electronic model not loaded - cannot extract features")
+            acoustic_probs = self.mood_acoustic_model(embeddings).mean(axis=0)
+            mood_acoustic = float(acoustic_probs[0])
+            mood_electronic = float(acoustic_probs[1])
 
             # NEW (2024): MTG-Jamendo Instruments (40 classes)
-            mtg_jamendo_instrument_probs = None
-            if self.mtg_jamendo_instrument:
-                mtg_jamendo_instrument_probs = self.mtg_jamendo_instrument(embeddings).mean(axis=0).tolist()
+            if not self.mtg_jamendo_instrument:
+                raise RuntimeError("MTG-Jamendo instrument model not loaded - cannot extract features")
+            mtg_jamendo_instrument_probs = self.mtg_jamendo_instrument(embeddings).mean(axis=0).tolist()
 
-            # NEW (2024): Alternative Arousal/Valence (emoMusic)
-            arousal_emomusic, valence_emomusic = 0.5, 0.5
-            if self.emomusic_model:
-                emo_preds = self.emomusic_model(audio)
-                mean_emo = emo_preds.mean(axis=0)
-                arousal_emomusic = float(mean_emo[0])
-                valence_emomusic = float(mean_emo[1])
+            # NEW (2024): Alternative Arousal/Valence (emoMusic, uses MusiCNN embeddings)
+            if not self.emomusic_model:
+                raise RuntimeError("EmoMusic model not loaded - cannot extract features")
+            if musicnn_embeddings is None:
+                raise RuntimeError("MusiCNN embeddings not available - cannot extract emoMusic features")
+            emo_preds = self.emomusic_model(musicnn_embeddings)
+            mean_emo = emo_preds.mean(axis=0)
+            arousal_emomusic = float(mean_emo[0])
+            valence_emomusic = float(mean_emo[1])
 
             # NEW (2024): MTG-Jamendo Genre (87 classes)
-            mtg_jamendo_genre_probs = None
-            if self.mtg_jamendo_genre:
-                mtg_jamendo_genre_probs = self.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
+            if not self.mtg_jamendo_genre:
+                raise RuntimeError("MTG-Jamendo genre model not loaded - cannot extract features")
+            mtg_jamendo_genre_probs = self.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
 
-            # NEW (2024): MIREX Moods (5 clusters)
-            moods_mirex_probs = None
-            if self.moods_mirex_model:
-                moods_mirex_probs = self.moods_mirex_model(embeddings).mean(axis=0).tolist()
+            # NEW (2024): MIREX Moods (5 clusters, uses MusiCNN embeddings)
+            if not self.moods_mirex_model:
+                raise RuntimeError("MIREX moods model not loaded - cannot extract features")
+            if musicnn_embeddings is None:
+                raise RuntimeError("MusiCNN embeddings not available - cannot extract MIREX moods")
+            moods_mirex_probs = self.moods_mirex_model(musicnn_embeddings).mean(axis=0).tolist()
 
             bpm, _, _, _, _ = self.rhythm_extractor(audio)
             key, scale, _ = self.key_extractor(audio)
@@ -350,17 +373,17 @@ class AudioFeatureExtractor:
                 'mood_electronic': mood_electronic,
 
                 # NEW (2024): MTG-Jamendo Instruments
-                'mtg_jamendo_instrument_probs': mtg_jamendo_instrument_probs or [],
+                'mtg_jamendo_instrument_probs': mtg_jamendo_instrument_probs,
 
                 # NEW (2024): Alternative Arousal/Valence
                 'arousal_emomusic': arousal_emomusic,
                 'valence_emomusic': valence_emomusic,
 
                 # NEW (2024): MTG-Jamendo Genre
-                'mtg_jamendo_genre_probs': mtg_jamendo_genre_probs or [],
+                'mtg_jamendo_genre_probs': mtg_jamendo_genre_probs,
 
                 # NEW (2024): MIREX Moods
-                'moods_mirex_probs': moods_mirex_probs or [],
+                'moods_mirex_probs': moods_mirex_probs,
             }
 
         except Exception as e:
@@ -446,9 +469,16 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
             # Load audio
             loader = es.MonoLoader(filename=filepath, sampleRate=16000)
             audio = loader()
-            
+
             # Recalculate embeddings since we need them for the new classifiers
             embeddings = extractor.embedding_model(audio)
+
+            # Extract MusiCNN embeddings if needed for MusiCNN-based models
+            musicnn_embeddings = None
+            if extractor.musicnn_embedding_model and (
+                'valence' not in feature or 'arousal_emomusic' not in feature or 'moods_mirex_probs' not in feature
+            ):
+                musicnn_embeddings = extractor.musicnn_embedding_model(audio)
 
             # 0. Basic rhythm/key features (should always be present, but check anyway)
             if 'bpm' not in feature or 'key' not in feature:
@@ -473,27 +503,27 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
 
             # 3. Danceability
             if 'danceability' not in feature:
-                feature['danceability'] = float(extractor.danceability_model(embeddings).mean())
+                feature['danceability'] = float(extractor.danceability_model(embeddings).mean(axis=0)[1])
 
             # 4. Mood features
             if 'mood_happy' not in feature:
-                mood_results = {name: model(embeddings).mean() for name, model in extractor.mood_models.items()}
+                mood_results = {name: model(embeddings).mean(axis=0)[1] for name, model in extractor.mood_models.items()}
                 feature['mood_happy'] = float(mood_results['mood_happy'])
                 feature['mood_sad'] = float(mood_results['mood_sad'])
                 feature['mood_aggressive'] = float(mood_results['mood_aggressive'])
                 feature['mood_relaxed'] = float(mood_results['mood_relaxed'])
                 feature['mood_party'] = float(mood_results['mood_party'])
 
-            # 5. Valence/Arousal (Requires raw audio)
+            # 5. Valence/Arousal (Requires MusiCNN embeddings)
             if 'valence' not in feature or 'arousal' not in feature:
-                if extractor.valence_arousal_model:
-                    va_preds = extractor.valence_arousal_model(audio)
-                    mean_preds = va_preds.mean(axis=0)
-                    feature['valence'] = float(mean_preds[0])
-                    feature['arousal'] = float(mean_preds[1])
-                else:
-                    feature['valence'] = 0.5
-                    feature['arousal'] = 0.5
+                if not extractor.valence_arousal_model:
+                    raise RuntimeError("Valence/arousal model not loaded - cannot extract features")
+                if musicnn_embeddings is None:
+                    raise RuntimeError("MusiCNN embeddings not available - cannot extract valence/arousal")
+                va_preds = extractor.valence_arousal_model(musicnn_embeddings)
+                mean_preds = va_preds.mean(axis=0)
+                feature['valence'] = float(mean_preds[0])
+                feature['arousal'] = float(mean_preds[1])
 
             # 6. Approachability
             if 'approachability_score' not in feature:
@@ -515,65 +545,58 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
 
             # 9. NEW (2024): Voice Gender
             if 'voice_gender_female' not in feature or 'voice_gender_male' not in feature:
-                if extractor.voice_gender_model:
-                    gender_probs = extractor.voice_gender_model(embeddings).mean(axis=0)
-                    feature['voice_gender_female'] = float(gender_probs[0])
-                    feature['voice_gender_male'] = float(gender_probs[1])
-                else:
-                    feature['voice_gender_female'] = 0.5
-                    feature['voice_gender_male'] = 0.5
+                if not extractor.voice_gender_model:
+                    raise RuntimeError("Voice gender model not loaded - cannot extract features")
+                gender_probs = extractor.voice_gender_model(embeddings).mean(axis=0)
+                feature['voice_gender_female'] = float(gender_probs[0])
+                feature['voice_gender_male'] = float(gender_probs[1])
 
             # 10. NEW (2024): Timbre
             if 'timbre_bright' not in feature or 'timbre_dark' not in feature:
-                if extractor.timbre_model:
-                    timbre_probs = extractor.timbre_model(embeddings).mean(axis=0)
-                    feature['timbre_bright'] = float(timbre_probs[0])
-                    feature['timbre_dark'] = float(timbre_probs[1])
-                else:
-                    feature['timbre_bright'] = 0.5
-                    feature['timbre_dark'] = 0.5
+                if not extractor.timbre_model:
+                    raise RuntimeError("Timbre model not loaded - cannot extract features")
+                timbre_probs = extractor.timbre_model(embeddings).mean(axis=0)
+                feature['timbre_bright'] = float(timbre_probs[0])
+                feature['timbre_dark'] = float(timbre_probs[1])
 
             # 11. NEW (2024): Acoustic vs Electronic
             if 'mood_acoustic' not in feature or 'mood_electronic' not in feature:
-                if extractor.mood_acoustic_model:
-                    acoustic_probs = extractor.mood_acoustic_model(embeddings).mean(axis=0)
-                    feature['mood_acoustic'] = float(acoustic_probs[0])
-                    feature['mood_electronic'] = float(acoustic_probs[1])
-                else:
-                    feature['mood_acoustic'] = 0.5
-                    feature['mood_electronic'] = 0.5
+                if not extractor.mood_acoustic_model:
+                    raise RuntimeError("Acoustic/electronic model not loaded - cannot extract features")
+                acoustic_probs = extractor.mood_acoustic_model(embeddings).mean(axis=0)
+                feature['mood_acoustic'] = float(acoustic_probs[0])
+                feature['mood_electronic'] = float(acoustic_probs[1])
 
             # 12. NEW (2024): MTG-Jamendo Instruments
             if 'mtg_jamendo_instrument_probs' not in feature:
-                if extractor.mtg_jamendo_instrument:
-                    feature['mtg_jamendo_instrument_probs'] = extractor.mtg_jamendo_instrument(embeddings).mean(axis=0).tolist()
-                else:
-                    feature['mtg_jamendo_instrument_probs'] = []
+                if not extractor.mtg_jamendo_instrument:
+                    raise RuntimeError("MTG-Jamendo instrument model not loaded - cannot extract features")
+                feature['mtg_jamendo_instrument_probs'] = extractor.mtg_jamendo_instrument(embeddings).mean(axis=0).tolist()
 
-            # 13. NEW (2024): Alternative Arousal/Valence (emoMusic)
+            # 13. NEW (2024): Alternative Arousal/Valence (emoMusic, requires MusiCNN embeddings)
             if 'arousal_emomusic' not in feature or 'valence_emomusic' not in feature:
-                if extractor.emomusic_model:
-                    emo_preds = extractor.emomusic_model(audio)
-                    mean_emo = emo_preds.mean(axis=0)
-                    feature['arousal_emomusic'] = float(mean_emo[0])
-                    feature['valence_emomusic'] = float(mean_emo[1])
-                else:
-                    feature['arousal_emomusic'] = 0.5
-                    feature['valence_emomusic'] = 0.5
+                if not extractor.emomusic_model:
+                    raise RuntimeError("EmoMusic model not loaded - cannot extract features")
+                if musicnn_embeddings is None:
+                    raise RuntimeError("MusiCNN embeddings not available - cannot extract emoMusic features")
+                emo_preds = extractor.emomusic_model(musicnn_embeddings)
+                mean_emo = emo_preds.mean(axis=0)
+                feature['arousal_emomusic'] = float(mean_emo[0])
+                feature['valence_emomusic'] = float(mean_emo[1])
 
             # 14. NEW (2024): MTG-Jamendo Genre
             if 'mtg_jamendo_genre_probs' not in feature:
-                if extractor.mtg_jamendo_genre:
-                    feature['mtg_jamendo_genre_probs'] = extractor.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
-                else:
-                    feature['mtg_jamendo_genre_probs'] = []
+                if not extractor.mtg_jamendo_genre:
+                    raise RuntimeError("MTG-Jamendo genre model not loaded - cannot extract features")
+                feature['mtg_jamendo_genre_probs'] = extractor.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
 
-            # 15. NEW (2024): MIREX Moods
+            # 15. NEW (2024): MIREX Moods (requires MusiCNN embeddings)
             if 'moods_mirex_probs' not in feature:
-                if extractor.moods_mirex_model:
-                    feature['moods_mirex_probs'] = extractor.moods_mirex_model(embeddings).mean(axis=0).tolist()
-                else:
-                    feature['moods_mirex_probs'] = []
+                if not extractor.moods_mirex_model:
+                    raise RuntimeError("MIREX moods model not loaded - cannot extract features")
+                if musicnn_embeddings is None:
+                    raise RuntimeError("MusiCNN embeddings not available - cannot extract MIREX moods")
+                feature['moods_mirex_probs'] = extractor.moods_mirex_model(musicnn_embeddings).mean(axis=0).tolist()
 
             updated_features.append(feature)
             

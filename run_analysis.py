@@ -51,6 +51,9 @@ def main():
         "--re-classify-audio", action="store_true", help="Run missing audio classifiers (valence, arousal, etc) on cached files"
     )
     parser.add_argument(
+        "--audio-only", action="store_true", help="Only extract/update audio features, then exit (skip lyrics, clustering, visualization)"
+    )
+    parser.add_argument(
         "--mode",
         choices=["audio", "lyrics", "combined"],
         default="combined",
@@ -92,6 +95,19 @@ def main():
 
     print(f"  ✓ Processed {len(audio_features)} songs")
     logger.info(f"Audio features extracted: {len(audio_features)} songs")
+
+    # Early exit if only audio processing was requested
+    if args.audio_only:
+        print("\n" + "=" * 60)
+        print("AUDIO EXTRACTION COMPLETE!")
+        print("=" * 60)
+        print(f"\nProcessed {len(audio_features)} songs")
+        print("Cache updated: cache/audio_features.pkl")
+        print("\nRun 'python tools/verify_cache.py' to verify the features.")
+        elapsed_time = datetime.now() - start_time
+        print(f"\nTotal time: {elapsed_time}")
+        logger.info(f"Audio-only mode complete. Total time: {elapsed_time}")
+        return
 
     print("\n[2/5] Extracting lyric features...")
     logger.info("Step 2/5: Lyric feature extraction")
