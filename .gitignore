@@ -213,3 +213,9 @@ data/
 .cache
 *claude*
 temp/
+
+# Analysis outputs and logs
+outputs/
+cache/
+logging/
+errors.log

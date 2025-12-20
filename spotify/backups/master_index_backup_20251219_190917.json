@@ -1,10 +1,16 @@
 {
   "statistics": {
-    "total_tracks": 1452,
-    "has_mp3": 1445,
-    "has_lyrics": 1153,
-    "has_both": 1151,
-    "has_neither": 5
+    "total_tracks": 1488,
+    "has_mp3": 1481,
+    "has_lyrics": 1180,
+    "has_both": 1178,
+    "has_neither": 5,
+    "total_mp3_files": 1450,
+    "matched_mp3_files": 1446,
+    "mp3_match_percentage": 99.72,
+    "total_lyrics_files": 1147,
+    "matched_lyrics_files": 1147,
+    "lyrics_match_percentage": 100.0
   },
   "tracks": [
     {
@@ -360,6 +366,14 @@
       "lyrics_file": null
     },
     {
+      "track_id": "42I3Ab0hKH995NIqRhR5SQ",
+      "track_name": "All and All (Uk Remix)",
+      "artist": "Joyce Sims",
+      "spotify_metadata": "spotify/saved_tracks.json#42I3Ab0hKH995NIqRhR5SQ",
+      "mp3_file": "songs/data/Joyce Sims - All and All (Uk Remix).mp3",
+      "lyrics_file": null
+    },
+    {
       "track_id": "5d7k3UJrfQx6OI5cWpXZ2a",
       "track_name": "All and All",
       "artist": "Joyce Sims",
@@ -550,6 +564,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#5CXVrYZ2aaMn0MJLAGTM4Z",
       "mp3_file": "songs/data/Ab-Soul, Fre$H - Don Julio 70.mp3",
       "lyrics_file": "lyrics/data/Ab-Soul - Don Julio 70.txt"
+    },
+    {
+      "track_id": "7FzGnxnDHNlT3LjYj69MP9",
+      "track_name": "HYPER4ID (#TPZREMAKE)",
+      "artist": "t+pazolite",
+      "spotify_metadata": "spotify/saved_tracks.json#7FzGnxnDHNlT3LjYj69MP9",
+      "mp3_file": "songs/data/t+pazolite - HYPER4ID (#TPZREMAKE).mp3",
+      "lyrics_file": null
     },
     {
       "track_id": "17NEG5coHWTbt1smBgGUrR",
@@ -942,6 +964,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#5xMjhZKSo8yh5r9b5vrYRr",
       "mp3_file": "songs/data/A$AP Rocky - Tailor Swif.mp3",
       "lyrics_file": "lyrics/data/A$AP Rocky - Tailor Swif.txt"
+    },
+    {
+      "track_id": "4CvWCw186MTiSFbpEiZODS",
+      "track_name": "Fantastic Planet",
+      "artist": "SOIL & “PIMP” SESSIONS",
+      "spotify_metadata": "spotify/saved_tracks.json#4CvWCw186MTiSFbpEiZODS",
+      "mp3_file": "songs/data/SOIL & “PIMP” SESSIONS - Fantastic Planet.mp3",
+      "lyrics_file": null
     },
     {
       "track_id": "2TL2nJWr5uqfAu0YiuG1jU",
@@ -2872,6 +2902,14 @@
       "lyrics_file": "lyrics/data/攬佬SKAI ISYOURGOD - 八方來財(Stacks from All Sides).txt"
     },
     {
+      "track_id": "2PcZiMr9bRNtRikrN7s6bL",
+      "track_name": "Bodies (with JID)",
+      "artist": "Offset, JID",
+      "spotify_metadata": "spotify/saved_tracks.json#2PcZiMr9bRNtRikrN7s6bL",
+      "mp3_file": "songs/data/Offset, JID - Bodies (with JID).mp3",
+      "lyrics_file": null
+    },
+    {
       "track_id": "0hEWvzkgbI301JZj947gFz",
       "track_name": "大展鴻圖(Blueprint Supreme)",
       "artist": "攬佬SKAI ISYOURGOD, AR刘夫阳",
@@ -3608,6 +3646,14 @@
       "lyrics_file": "lyrics/data/Eddie Johns - More Spell On You.txt"
     },
     {
+      "track_id": "2Z94scAOu1QPc9JBy4x44S",
+      "track_name": "Vacay",
+      "artist": "Aminé",
+      "spotify_metadata": "spotify/saved_tracks.json#2Z94scAOu1QPc9JBy4x44S",
+      "mp3_file": "songs/data/Aminé - Vacay.mp3",
+      "lyrics_file": "lyrics/data/Aminé - Vacay.txt"
+    },
+    {
       "track_id": "1GeNui6m825V8jP4uKiIaH",
       "track_name": "Bad Bad Bad (feat. Lil Baby)",
       "artist": "Young Thug, Lil Baby",
@@ -3662,6 +3708,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#3cJh89D0za2SW705fNBo3b",
       "mp3_file": "songs/data/Basement Jaxx - Where's Your Head At.mp3",
       "lyrics_file": "lyrics/data/Basement Jaxx - Where's Your Head At.txt"
+    },
+    {
+      "track_id": "1XMQl1X1rpfqdSAg0UJqTS",
+      "track_name": "WW3",
+      "artist": "Ye",
+      "spotify_metadata": "spotify/saved_tracks.json#1XMQl1X1rpfqdSAg0UJqTS",
+      "mp3_file": "songs/data/Ye - WW3.mp3",
+      "lyrics_file": null
     },
     {
       "track_id": "3ZnyjmRl3n5OVKfPtxF4Zu",
@@ -4296,6 +4350,14 @@
       "lyrics_file": "lyrics/data/JPEGMAFIA - ALLAH.txt"
     },
     {
+      "track_id": "7L7yPKVZpBEuu5wJhaun7i",
+      "track_name": "ALLAH",
+      "artist": "JPEGMAFIA",
+      "spotify_metadata": "spotify/saved_tracks.json#7L7yPKVZpBEuu5wJhaun7i",
+      "mp3_file": "songs/data/JPEGMAFIA - ALLAH.mp3",
+      "lyrics_file": "lyrics/data/JPEGMAFIA - ALLAH.txt"
+    },
+    {
       "track_id": "3sK8wGT43QFpWrvNQsrQya",
       "track_name": "DtMF",
       "artist": "Bad Bunny",
@@ -4469,6 +4531,14 @@
       "artist": "joyful",
       "spotify_metadata": "spotify/saved_tracks.json#1neintdjlABjVTPGUIN6Gl",
       "mp3_file": "songs/data/joyful - chess (slowed).mp3",
+      "lyrics_file": null
+    },
+    {
+      "track_id": "3GPCXHGwf7UoTcMyVY0KoA",
+      "track_name": "chess",
+      "artist": "joyful",
+      "spotify_metadata": "spotify/saved_tracks.json#3GPCXHGwf7UoTcMyVY0KoA",
+      "mp3_file": "songs/data/joyful - chess.mp3",
       "lyrics_file": null
     },
     {
@@ -4862,6 +4932,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#2rSTewKrvP4zifuTE3ooEz",
       "mp3_file": "songs/data/Fimiguerrero - Mandy.mp3",
       "lyrics_file": "lyrics/data/Fimiguerrero - Mandy.txt"
+    },
+    {
+      "track_id": "0hFOvvRqlEX99Q2EnZuHGL",
+      "track_name": "Vogue",
+      "artist": "Fimiguerrero",
+      "spotify_metadata": "spotify/saved_tracks.json#0hFOvvRqlEX99Q2EnZuHGL",
+      "mp3_file": "songs/data/Fimiguerrero - Vogue.mp3",
+      "lyrics_file": "lyrics/data/Fimiguerrero - Vogue.txt"
     },
     {
       "track_id": "7koqYCHESDGTORau9emDO1",
@@ -5688,6 +5766,14 @@
       "lyrics_file": "lyrics/data/JPEGMAFIA - I Cannot Fucking Wait Til Morrissey Dies.txt"
     },
     {
+      "track_id": "7HZQQIK510dt00sZiTHl7z",
+      "track_name": "listeria",
+      "artist": "ptasinski, RJ Pasin",
+      "spotify_metadata": "spotify/saved_tracks.json#7HZQQIK510dt00sZiTHl7z",
+      "mp3_file": "songs/data/ptasinski, RJ Pasin - listeria.mp3",
+      "lyrics_file": null
+    },
+    {
       "track_id": "0jNhSK5gotdRB1G4nMqEau",
       "track_name": "trauma",
       "artist": "2hollis",
@@ -5736,6 +5822,14 @@
       "lyrics_file": "lyrics/data/Charli xcx - 365.txt"
     },
     {
+      "track_id": "4dZklCq6Jpc7zhUHzls9xv",
+      "track_name": "MY SOUL",
+      "artist": "¥$, Kanye West, Ty Dolla $ign",
+      "spotify_metadata": "spotify/saved_tracks.json#4dZklCq6Jpc7zhUHzls9xv",
+      "mp3_file": "songs/data/¥$, Kanye West, Ty Dolla $ign - MY SOUL.mp3",
+      "lyrics_file": "lyrics/data/¥$ - MY SOUL.txt"
+    },
+    {
       "track_id": "5v1yAVGillOAN3yqJ6pmPL",
       "track_name": "PROMOTION",
       "artist": "¥$, Kanye West, Ty Dolla $ign",
@@ -5766,6 +5860,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#76lNySMRTjhiJ0KtMkuHdX",
       "mp3_file": "songs/data/JPEGMAFIA - i scream this in the mirror before i interact with anyone.mp3",
       "lyrics_file": "lyrics/data/JPEGMAFIA - i scream this in the mirror before i interact with anyone.txt"
+    },
+    {
+      "track_id": "7Lfwb4IjZiNYGuqtP65kIc",
+      "track_name": "FRIED",
+      "artist": "¥$, Kanye West, Ty Dolla $ign",
+      "spotify_metadata": "spotify/saved_tracks.json#7Lfwb4IjZiNYGuqtP65kIc",
+      "mp3_file": "songs/data/¥$, Kanye West, Ty Dolla $ign - FRIED.mp3",
+      "lyrics_file": "lyrics/data/¥$ - FRIED.txt"
     },
     {
       "track_id": "106vWgOc5xlj05wewZ2V4u",
@@ -6344,6 +6446,14 @@
       "lyrics_file": "lyrics/data/Mared - 3la Wara2a.txt"
     },
     {
+      "track_id": "2RZBNHSfrxyIs8u9ciLKLf",
+      "track_name": "don't rely on other men",
+      "artist": "JPEGMAFIA",
+      "spotify_metadata": "spotify/saved_tracks.json#2RZBNHSfrxyIs8u9ciLKLf",
+      "mp3_file": "songs/data/JPEGMAFIA - don't rely on other men.mp3",
+      "lyrics_file": "lyrics/data/JPEGMAFIA - don't rely on other men.txt"
+    },
+    {
       "track_id": "4INDiWSKvqSKDEu7mh8HFz",
       "track_name": "Mo Money Mo Problems (feat. Puff Daddy & Mase) - 2014 Remaster",
       "artist": "The Notorious B.I.G., Mase, Diddy",
@@ -6768,6 +6878,14 @@
       "lyrics_file": "lyrics/data/Souad Massi - Samira Meskina.txt"
     },
     {
+      "track_id": "2vcdlFDuB7tjdYTCf0u6AL",
+      "track_name": "Dark Hearted",
+      "artist": "Freddie Gibbs",
+      "spotify_metadata": "spotify/saved_tracks.json#2vcdlFDuB7tjdYTCf0u6AL",
+      "mp3_file": "songs/data/Freddie Gibbs - Dark Hearted.mp3",
+      "lyrics_file": "lyrics/data/Freddie Gibbs - Dark Hearted.txt"
+    },
+    {
       "track_id": "3iGOhMMCQ2nOMkra3Bpo0f",
       "track_name": "Reminisce",
       "artist": "Nas",
@@ -6928,6 +7046,14 @@
       "lyrics_file": null
     },
     {
+      "track_id": "0Qj7PB41b6XgkApKPwDy1r",
+      "track_name": "Ego Death (feat. Steve Vai)",
+      "artist": "Polyphia, Steve Vai",
+      "spotify_metadata": "spotify/saved_tracks.json#0Qj7PB41b6XgkApKPwDy1r",
+      "mp3_file": "songs/data/Polyphia, Steve Vai - Ego Death (feat. Steve Vai).mp3",
+      "lyrics_file": null
+    },
+    {
       "track_id": "6xGruZOHLs39ZbVccQTuPZ",
       "track_name": "Glimpse of Us",
       "artist": "Joji",
@@ -6958,6 +7084,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#1vU4X8ffq8oNcvvqkgTEXm",
       "mp3_file": "songs/data/GHOST DATA, Jovani Occomy - Celestial Bodies.mp3",
       "lyrics_file": "lyrics/data/GHOST DATA - Celestial Bodies.txt"
+    },
+    {
+      "track_id": "5Gt9bxniM1SxN61yRzRhXL",
+      "track_name": "United In Grief",
+      "artist": "Kendrick Lamar",
+      "spotify_metadata": "spotify/saved_tracks.json#5Gt9bxniM1SxN61yRzRhXL",
+      "mp3_file": "songs/data/Kendrick Lamar - United In Grief.mp3",
+      "lyrics_file": "lyrics/data/Kendrick Lamar - United In Grief.txt"
     },
     {
       "track_id": "1gT5TGwbkkkUliNzHRIGi1",
@@ -7368,6 +7502,14 @@
       "lyrics_file": "lyrics/data/Big Sean - Precision.txt"
     },
     {
+      "track_id": "3WXE54Hl81DpFWNKMLQYGY",
+      "track_name": "Euro$tep",
+      "artist": "West",
+      "spotify_metadata": "spotify/saved_tracks.json#3WXE54Hl81DpFWNKMLQYGY",
+      "mp3_file": "songs/data/West - Euro$tep.mp3",
+      "lyrics_file": "lyrics/data/West - Euro$tep.txt"
+    },
+    {
       "track_id": "5Ex5aIXLQimPjhiRUZjtre",
       "track_name": "Mazel Tron",
       "artist": "BLP KOSHER, BabyTron",
@@ -7590,6 +7732,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#55jQMevNp7aWtiW5LPlPoa",
       "mp3_file": "songs/data/BROCKHAMPTON - 1997 DIANA.mp3",
       "lyrics_file": "lyrics/data/BROCKHAMPTON - 1997 DIANA.txt"
+    },
+    {
+      "track_id": "7sPoDigIbCWDS6AZmOhSRR",
+      "track_name": "Rapapapa (feat. RZA)",
+      "artist": "Rich Brian, RZA",
+      "spotify_metadata": "spotify/saved_tracks.json#7sPoDigIbCWDS6AZmOhSRR",
+      "mp3_file": "songs/data/Rich Brian, RZA - Rapapapa (feat. RZA).mp3",
+      "lyrics_file": "lyrics/data/Rich Brian - Rapapapa (feat. RZA).txt"
     },
     {
       "track_id": "2b1MCbfwRZ1teOX1vSm4Xt",
@@ -8016,6 +8166,14 @@
       "lyrics_file": "lyrics/data/Deante' Hitchcock - I Got Money Now (feat. JID).txt"
     },
     {
+      "track_id": "5itTZ7kNRBl65Nn1QO9Ax9",
+      "track_name": "Dead or Alive",
+      "artist": "Lil Tecca",
+      "spotify_metadata": "spotify/saved_tracks.json#5itTZ7kNRBl65Nn1QO9Ax9",
+      "mp3_file": "songs/data/Lil Tecca - Dead or Alive.mp3",
+      "lyrics_file": "lyrics/data/Lil Tecca - Dead or Alive.txt"
+    },
+    {
       "track_id": "7rkJh3dzU6zMugz863ScA9",
       "track_name": "Thowy's Revenge",
       "artist": "Benny The Butcher",
@@ -8224,6 +8382,22 @@
       "lyrics_file": "lyrics/data/JID - Dance Now (feat. Kenny Mason).txt"
     },
     {
+      "track_id": "65dO13qYabE4LDdQmjU4p6",
+      "track_name": "Crack Sandwich",
+      "artist": "JID",
+      "spotify_metadata": "spotify/saved_tracks.json#65dO13qYabE4LDdQmjU4p6",
+      "mp3_file": "songs/data/JID - Crack Sandwich.mp3",
+      "lyrics_file": "lyrics/data/JID - Crack Sandwich.txt"
+    },
+    {
+      "track_id": "2H2l7zo9EqtqxFr8R8N8Zg",
+      "track_name": "Can’t Punk Me (feat. EARTHGANG)",
+      "artist": "JID, EARTHGANG",
+      "spotify_metadata": "spotify/saved_tracks.json#2H2l7zo9EqtqxFr8R8N8Zg",
+      "mp3_file": "songs/data/JID, EARTHGANG - Can’t Punk Me (feat. EARTHGANG).mp3",
+      "lyrics_file": "lyrics/data/JID - Can’t Punk Me (feat. EARTHGANG).txt"
+    },
+    {
       "track_id": "7fsMkFC6OwhFqqYYPipgrO",
       "track_name": "Just In Time (feat. Lil Wayne & Kenny Mason)",
       "artist": "JID, Kenny Mason, Lil Wayne",
@@ -8312,6 +8486,14 @@
       "lyrics_file": "lyrics/data/Denzel Curry - Pyro (leak 2019).txt"
     },
     {
+      "track_id": "206UWNKXURTnN4zf9vmXUV",
+      "track_name": "God-ish",
+      "artist": "PinocchioP",
+      "spotify_metadata": "spotify/saved_tracks.json#206UWNKXURTnN4zf9vmXUV",
+      "mp3_file": "songs/data/PinocchioP - God-ish.mp3",
+      "lyrics_file": "lyrics/data/PinocchioP - God-ish.txt"
+    },
+    {
       "track_id": "2NVriBgm51GGRhcrkCuDnp",
       "track_name": "FIAT",
       "artist": "JAHMED",
@@ -8352,6 +8534,14 @@
       "lyrics_file": "lyrics/data/1nonly - Step Back!.txt"
     },
     {
+      "track_id": "6EqF11d0EPJwVynLXu3gvY",
+      "track_name": "Dance Now (with Kenny Mason)",
+      "artist": "JID, Kenny Mason",
+      "spotify_metadata": "spotify/saved_tracks.json#6EqF11d0EPJwVynLXu3gvY",
+      "mp3_file": "songs/data/JID, Kenny Mason - Dance Now (with Kenny Mason).mp3",
+      "lyrics_file": "lyrics/data/JID - Dance Now (feat. Kenny Mason).txt"
+    },
+    {
       "track_id": "6CQUWOqXOo4S8Jghab18Ga",
       "track_name": "Walkin - Cold Blooded Soul Version",
       "artist": "Denzel Curry",
@@ -8380,6 +8570,14 @@
       "track_name": "POPSTAR (feat. Drake)",
       "artist": "DJ Khaled, Drake",
       "spotify_metadata": "spotify/saved_tracks.json#1sbEeUY8KsdvgiQi26JBFz",
+      "mp3_file": "songs/data/DJ Khaled, Drake - POPSTAR (feat. Drake).mp3",
+      "lyrics_file": "lyrics/data/DJ Khaled - POPSTAR (feat. Drake).txt"
+    },
+    {
+      "track_id": "6EDO9iiTtwNv6waLwa1UUq",
+      "track_name": "POPSTAR (feat. Drake)",
+      "artist": "DJ Khaled, Drake",
+      "spotify_metadata": "spotify/saved_tracks.json#6EDO9iiTtwNv6waLwa1UUq",
       "mp3_file": "songs/data/DJ Khaled, Drake - POPSTAR (feat. Drake).mp3",
       "lyrics_file": "lyrics/data/DJ Khaled - POPSTAR (feat. Drake).txt"
     },
@@ -9000,6 +9198,14 @@
       "lyrics_file": "lyrics/data/Joey Bada$$ - Paper Trail$.txt"
     },
     {
+      "track_id": "5zO3iS6KgrXA20ZXc9zMdI",
+      "track_name": "Keep My Spirit Alive",
+      "artist": "Kanye West",
+      "spotify_metadata": "spotify/saved_tracks.json#5zO3iS6KgrXA20ZXc9zMdI",
+      "mp3_file": "songs/data/Kanye West - Keep My Spirit Alive.mp3",
+      "lyrics_file": "lyrics/data/Kanye West - Keep My Spirit Alive.txt"
+    },
+    {
       "track_id": "7cCBsINflnE3PKyvcN3bzX",
       "track_name": "عرفة",
       "artist": "Lege-Cy",
@@ -9326,6 +9532,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#086myS9r57YsLbJpU0TgK9",
       "mp3_file": "songs/data/Arctic Monkeys - Why'd You Only Call Me When You're High.mp3",
       "lyrics_file": "lyrics/data/Arctic Monkeys - Why'd You Only Call Me When You're High-.txt"
+    },
+    {
+      "track_id": "5qbhVL3vB7HwWvb0042B7y",
+      "track_name": "The Heart Part 5",
+      "artist": "Kendrick Lamar",
+      "spotify_metadata": "spotify/saved_tracks.json#5qbhVL3vB7HwWvb0042B7y",
+      "mp3_file": "songs/data/Kendrick Lamar - The Heart Part 5.mp3",
+      "lyrics_file": "lyrics/data/Kendrick Lamar - The Heart Part 5.txt"
     },
     {
       "track_id": "58k32my5lKofeZRtIvBDg9",
@@ -9712,6 +9926,14 @@
       "lyrics_file": "lyrics/data/Ameer Vann - Keep Your Distance.txt"
     },
     {
+      "track_id": "3khEEPRyBeOUabbmOPJzAG",
+      "track_name": "KICK BACK",
+      "artist": "Kenshi Yonezu",
+      "spotify_metadata": "spotify/saved_tracks.json#3khEEPRyBeOUabbmOPJzAG",
+      "mp3_file": "songs/data/Kenshi Yonezu - KICK BACK.mp3",
+      "lyrics_file": "lyrics/data/Kenshi Yonezu - KICK BACK.txt"
+    },
+    {
       "track_id": "5L7VBYoosmkmiiDlzumdCe",
       "track_name": "21st Century Schizoid Man - Including \"Mirrors\"",
       "artist": "King Crimson",
@@ -9822,6 +10044,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#33omqR79fIXhaqdO4kQFAz",
       "mp3_file": "songs/data/JPEGMAFIA, Kenny Beats - Puff Daddy.mp3",
       "lyrics_file": "lyrics/data/JPEGMAFIA - Puff Daddy.txt"
+    },
+    {
+      "track_id": "4B462KwzHiJLHJeXYL5Y4V",
+      "track_name": "BALD!",
+      "artist": "JPEGMAFIA",
+      "spotify_metadata": "spotify/saved_tracks.json#4B462KwzHiJLHJeXYL5Y4V",
+      "mp3_file": "songs/data/JPEGMAFIA - BALD!.mp3",
+      "lyrics_file": "lyrics/data/JPEGMAFIA - BALD!.txt"
     },
     {
       "track_id": "5yNcl0KUSPv78Erf26ul5A",
@@ -10216,6 +10446,14 @@
       "lyrics_file": "lyrics/data/Ski Mask The Slump God - Faucet Failure.txt"
     },
     {
+      "track_id": "3vCVpJcZQ7zssjPbzMXaVs",
+      "track_name": "So.Incredible.pkg [Robert Glasper Version Feat. Smino]",
+      "artist": "Denzel Curry, Kenny Beats, Smino, Robert Glasper",
+      "spotify_metadata": "spotify/saved_tracks.json#3vCVpJcZQ7zssjPbzMXaVs",
+      "mp3_file": "songs/data/Denzel Curry, Kenny Beats, Smino, Robert Glasper - So.Incredible.pkg [Robert Glasper Version Feat. Smino].mp3",
+      "lyrics_file": "lyrics/data/Denzel Curry - So.Incredible.pkg [Robert Glasper Version Feat. Smino].txt"
+    },
+    {
       "track_id": "1fDsrQ23eTAVFElUMaf38X",
       "track_name": "American Pie",
       "artist": "Don McLean",
@@ -10344,6 +10582,14 @@
       "lyrics_file": "lyrics/data/Duckwrth - I'M DEAD (feat. Sabrina Claudio).txt"
     },
     {
+      "track_id": "4IadxL6BUymXlh8RCJJu7T",
+      "track_name": "Too Sweet",
+      "artist": "Hozier",
+      "spotify_metadata": "spotify/saved_tracks.json#4IadxL6BUymXlh8RCJJu7T",
+      "mp3_file": "songs/data/Hozier - Too Sweet.mp3",
+      "lyrics_file": "lyrics/data/Hozier - Too Sweet.txt"
+    },
+    {
       "track_id": "1xsYj84j7hUDDnTTerGWlH",
       "track_name": "Dream On",
       "artist": "Aerosmith",
@@ -10366,6 +10612,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#6tTy7jzu0pDDn6bE5NaaEJ",
       "mp3_file": "songs/data/Vince Staples - Hell Bound - Ad 01.mp3",
       "lyrics_file": "lyrics/data/Vince Staples - Hell Bound - Ad 01.txt"
+    },
+    {
+      "track_id": "5STe0hPlbFwIk0OkjNRJLa",
+      "track_name": "FEEL SOMETHING DIFFERENT",
+      "artist": "Bea Miller, Aminé",
+      "spotify_metadata": "spotify/saved_tracks.json#5STe0hPlbFwIk0OkjNRJLa",
+      "mp3_file": "songs/data/Bea Miller, Aminé - FEEL SOMETHING DIFFERENT.mp3",
+      "lyrics_file": "lyrics/data/Bea Miller - FEEL SOMETHING DIFFERENT.txt"
     },
     {
       "track_id": "2OZfJcpzSFApBxUA0gXuJz",
@@ -10880,6 +11134,22 @@
       "lyrics_file": "lyrics/data/Of Monsters and Men - Little Talks.txt"
     },
     {
+      "track_id": "1lgy5Mb6QKx47vJXmmwIri",
+      "track_name": "Galaxy",
+      "artist": "JID",
+      "spotify_metadata": "spotify/saved_tracks.json#1lgy5Mb6QKx47vJXmmwIri",
+      "mp3_file": "songs/data/JID - Galaxy.mp3",
+      "lyrics_file": "lyrics/data/JID - Galaxy.txt"
+    },
+    {
+      "track_id": "3n31mf1JGlRxAGwHwx3pDd",
+      "track_name": "Bruddanem (feat. Lil Durk)",
+      "artist": "JID, Lil Durk",
+      "spotify_metadata": "spotify/saved_tracks.json#3n31mf1JGlRxAGwHwx3pDd",
+      "mp3_file": "songs/data/JID, Lil Durk - Bruddanem (feat. Lil Durk).mp3",
+      "lyrics_file": "lyrics/data/JID - Bruddanem (feat. Lil Durk).txt"
+    },
+    {
       "track_id": "5RMTsrJkrtumtiIZjy7dL6",
       "track_name": "H.Y.B. (feat. Bas & Central Cee)",
       "artist": "J. Cole, Bas, Central Cee",
@@ -10901,6 +11171,14 @@
       "artist": "AZKi",
       "spotify_metadata": "spotify/saved_tracks.json#2Ry3Dh3961tMDiEztJF2vg",
       "mp3_file": "songs/data/AZKi - Fake.Fake.Fake.mp3",
+      "lyrics_file": null
+    },
+    {
+      "track_id": "3cv5WbcyiF3ZVy6DwyKA6t",
+      "track_name": "",
+      "artist": "",
+      "spotify_metadata": "spotify/saved_tracks.json#3cv5WbcyiF3ZVy6DwyKA6t",
+      "mp3_file": "songs/data/ - .mp3",
       "lyrics_file": null
     },
     {
@@ -11118,6 +11396,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#0YAQnYt2oB8OdoaeqnHyTI",
       "mp3_file": "songs/data/Bas, J. Cole - Tribe (with J. Cole).mp3",
       "lyrics_file": null
+    },
+    {
+      "track_id": "7L9g4cPfohScjJ8mGwLQWr",
+      "track_name": "TEMPTATION",
+      "artist": "Joey Bada$$",
+      "spotify_metadata": "spotify/saved_tracks.json#7L9g4cPfohScjJ8mGwLQWr",
+      "mp3_file": "songs/data/Joey Bada$$ - TEMPTATION.mp3",
+      "lyrics_file": "lyrics/data/Joey Bada$$ - TEMPTATION.txt"
     },
     {
       "track_id": "5o0PTlSUeYaIIPzwi18qfi",
@@ -11414,6 +11700,14 @@
       "spotify_metadata": "spotify/saved_tracks.json#0FakQLpj9YPv1hE5lXmBsc",
       "mp3_file": "songs/data/Soushi Sakiyama - いかれた夜を.mp3",
       "lyrics_file": null
+    },
+    {
+      "track_id": "7iq0IYOnYZUHrz7F4rIIq4",
+      "track_name": "Ethereal",
+      "artist": "Txmy",
+      "spotify_metadata": "spotify/saved_tracks.json#7iq0IYOnYZUHrz7F4rIIq4",
+      "mp3_file": "songs/data/Txmy - Ethereal.mp3",
+      "lyrics_file": "lyrics/data/Txmy - Ethereal.txt"
     },
     {
       "track_id": "1rSirOSgJ7I6OyoOIpQ5N4",
