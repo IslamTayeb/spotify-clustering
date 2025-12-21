@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import json
 import logging
 import pickle
 from pathlib import Path
@@ -26,18 +27,35 @@ ESSENTIA_MODELS = {
     'voice_instrumental': 'voice_instrumental-discogs-effnet-1',
 }
 
-GENRE_LABELS = None
+GENRE_LABELS = {}
 
+def _load_labels_from_json(filepath: Path) -> List[str]:
+    """Helper to load labels from a JSON file."""
+    with open(filepath, 'r') as f:
+        return json.load(f)
 
-def load_genre_labels():
+def load_genre_labels(model_name: str = 'discogs400') -> List[str]:
+    """Load genre labels for a specific model, with caching."""
     global GENRE_LABELS
-    if GENRE_LABELS is None:
-        try:
-            metadata = es.TensorflowPredictEffnetDiscogs.getMetadata()
-            GENRE_LABELS = metadata['classes']
-        except:
-            GENRE_LABELS = [f"genre_{i}" for i in range(400)]
-    return GENRE_LABELS
+    if model_name not in GENRE_LABELS:
+        if model_name == 'discogs400':
+            filepath = Path(__file__).parent.parent / 'data' / 'genre_discogs400_labels.json'
+            if not filepath.exists():
+                logger.error(f"Discogs 400 genre labels file not found: {filepath}. Falling back to generic labels.")
+                GENRE_LABELS[model_name] = [f"genre_{i}" for i in range(400)]
+            else:
+                GENRE_LABELS[model_name] = _load_labels_from_json(filepath)
+        elif model_name == 'mtg_jamendo_genre':
+            filepath = Path(__file__).parent.parent / 'data' / 'mtg_jamendo_genre_labels.json'
+            if not filepath.exists():
+                logger.error(f"MTG-Jamendo genre labels file not found: {filepath}. Falling back to generic labels.")
+                GENRE_LABELS[model_name] = [f"mtg_jamendo_genre_{i}" for i in range(87)]
+            else:
+                GENRE_LABELS[model_name] = _load_labels_from_json(filepath)
+        else:
+            logger.warning(f"Unknown genre model: {model_name}. Returning empty list.")
+            GENRE_LABELS[model_name] = []
+    return GENRE_LABELS[model_name]
 
 
 class AudioFeatureExtractor:
@@ -321,9 +339,14 @@ class AudioFeatureExtractor:
             bpm, _, _, _, _ = self.rhythm_extractor(audio)
             key, scale, _ = self.key_extractor(audio)
 
-            genre_labels = load_genre_labels()
+            genre_labels = load_genre_labels('discogs400')
             top_3_indices = np.argsort(genre_probs)[-3:][::-1]
             top_3_genres = [(genre_labels[i], float(genre_probs[i])) for i in top_3_indices]
+
+            # Process MTG-Jamendo Genre probabilities
+            mtg_jamendo_genre_labels = load_genre_labels('mtg_jamendo_genre')
+            top_mtg_jamendo_genre_indices = np.argsort(mtg_jamendo_genre_probs)[-3:][::-1]
+            top_mtg_jamendo_genres = [(mtg_jamendo_genre_labels[i], float(mtg_jamendo_genre_probs[i])) for i in top_mtg_jamendo_genre_indices]
 
             return {
                 'filename': Path(filepath).name,
@@ -381,6 +404,7 @@ class AudioFeatureExtractor:
 
                 # NEW (2024): MTG-Jamendo Genre
                 'mtg_jamendo_genre_probs': mtg_jamendo_genre_probs,
+                'top_mtg_jamendo_genres': top_mtg_jamendo_genres,
 
                 # NEW (2024): MIREX Moods
                 'moods_mirex_probs': moods_mirex_probs,

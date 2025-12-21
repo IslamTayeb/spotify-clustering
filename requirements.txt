@@ -7,8 +7,12 @@ plotly==6.5.0
 python-dotenv==1.2.1
 rapidfuzz==3.14.3
 scikit_learn==1.8.0
+scipy>=1.11.0
 sentence_transformers==5.2.0
 spotipy==2.25.2
 streamlit==1.52.2
+textstat>=0.7.3
 tqdm==4.67.1
 umap_learn==0.5.9.post2
+vaderSentiment>=3.3.2
+wordcloud>=1.9.0
