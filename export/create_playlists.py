@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """
 Export clustering results to Spotify playlists.
-Creates 5 playlists for audio clusters and 5 for lyric clusters.
+Creates playlists for audio clusters, lyric clusters, or combined clusters.
+
+Clustering Modes:
+  - audio: ~1.5K songs clustered by audio features only
+  - lyrics: ~1.1K songs clustered by lyric features only
+  - combined: ~1.2K songs (with both audio+lyrics) clustered by both features together
 
 Usage:
     python export/create_playlists.py [--private] [--prefix "My Music"]
     python export/create_playlists.py --dry-run  # Preview without creating
+    python export/create_playlists.py --combined  # Create combined mode playlists
+    python export/create_playlists.py --audio-only  # Only audio clusters
+    python export/create_playlists.py --lyrics-only  # Only lyric clusters
 """
 
 import argparse
@@ -74,7 +82,7 @@ def get_cluster_description(cluster_stats, cluster_id, mode="audio"):
 
     stats = cluster_stats[cluster_id]
 
-    if mode == "audio":
+    if mode == "audio" or mode == "combined":
         # Extract top genre from top_3_genres list
         top_3_genres = stats.get("top_3_genres", [])
         if top_3_genres:
@@ -244,6 +252,11 @@ def main():
         action="store_true",
         help="Only create lyric cluster playlists",
     )
+    parser.add_argument(
+        "--combined",
+        action="store_true",
+        help="Only create combined cluster playlists (songs with both audio and lyric features)",
+    )
 
     args = parser.parse_args()
 
@@ -262,48 +275,67 @@ def main():
 
     # DRY RUN MODE - Preview only
     if args.dry_run:
-        # Preview audio clusters
-        if not args.lyrics_only:
-            audio_data = data["audio"]
-            audio_clusters = group_tracks_by_cluster(
-                audio_data["dataframe"], audio_data["cluster_labels"]
+        # Preview combined clusters
+        if args.combined:
+            combined_data = data["combined"]
+            combined_clusters = group_tracks_by_cluster(
+                combined_data["dataframe"], combined_data["cluster_labels"]
             )
-            audio_playlists = preview_cluster_playlists(
-                audio_clusters, audio_data["cluster_stats"], mode="audio", prefix=prefix
+            combined_playlists = preview_cluster_playlists(
+                combined_clusters, combined_data["cluster_stats"], mode="combined", prefix=prefix
             )
-            all_playlists.extend(audio_playlists)
+            all_playlists.extend(combined_playlists)
+        else:
+            # Preview audio clusters
+            if not args.lyrics_only:
+                audio_data = data["audio"]
+                audio_clusters = group_tracks_by_cluster(
+                    audio_data["dataframe"], audio_data["cluster_labels"]
+                )
+                audio_playlists = preview_cluster_playlists(
+                    audio_clusters, audio_data["cluster_stats"], mode="audio", prefix=prefix
+                )
+                all_playlists.extend(audio_playlists)
 
-        # Preview lyric clusters
-        if not args.audio_only:
-            lyrics_data = data["lyrics"]
-            lyric_clusters = group_tracks_by_cluster(
-                lyrics_data["dataframe"], lyrics_data["cluster_labels"]
-            )
-            lyric_playlists = preview_cluster_playlists(
-                lyric_clusters, lyrics_data["cluster_stats"], mode="lyrics", prefix=prefix
-            )
-            all_playlists.extend(lyric_playlists)
+            # Preview lyric clusters
+            if not args.audio_only:
+                lyrics_data = data["lyrics"]
+                lyric_clusters = group_tracks_by_cluster(
+                    lyrics_data["dataframe"], lyrics_data["cluster_labels"]
+                )
+                lyric_playlists = preview_cluster_playlists(
+                    lyric_clusters, lyrics_data["cluster_stats"], mode="lyrics", prefix=prefix
+                )
+                all_playlists.extend(lyric_playlists)
 
         # Summary
         total_audio = sum(pl["track_count"] for pl in all_playlists if "Audio" in pl["name"])
         total_lyrics = sum(pl["track_count"] for pl in all_playlists if "Lyrics" in pl["name"])
+        total_combined = sum(pl["track_count"] for pl in all_playlists if "Combined" in pl["name"])
 
         print(f"{'=' * 70}")
         print("SUMMARY".center(70))
         print(f"{'=' * 70}\n")
 
-        if not args.lyrics_only:
-            audio_count = sum(1 for pl in all_playlists if "Audio" in pl["name"])
-            print(f"  Audio clusters:  {audio_count} playlists, {total_audio} total tracks")
-        if not args.audio_only:
-            lyrics_count = sum(1 for pl in all_playlists if "Lyrics" in pl["name"])
-            print(f"  Lyric clusters:  {lyrics_count} playlists, {total_lyrics} total tracks")
+        if args.combined:
+            combined_count = sum(1 for pl in all_playlists if "Combined" in pl["name"])
+            print(f"  Combined clusters: {combined_count} playlists, {total_combined} total tracks")
+        else:
+            if not args.lyrics_only:
+                audio_count = sum(1 for pl in all_playlists if "Audio" in pl["name"])
+                print(f"  Audio clusters:  {audio_count} playlists, {total_audio} total tracks")
+            if not args.audio_only:
+                lyrics_count = sum(1 for pl in all_playlists if "Lyrics" in pl["name"])
+                print(f"  Lyric clusters:  {lyrics_count} playlists, {total_lyrics} total tracks")
 
         print(f"  Total playlists: {len(all_playlists)}")
         print(f"\n  To create these playlists in Spotify, run:")
-        print(f"    python export/create_playlists.py")
+        cmd = "    python export/create_playlists.py"
+        if args.combined:
+            cmd += " --combined"
         if args.prefix:
-            print(f"    (with --prefix \"{args.prefix}\")")
+            cmd += f" --prefix \"{args.prefix}\""
+        print(cmd)
         print()
         return
 
@@ -314,37 +346,53 @@ def main():
 
     public = not args.private
 
-    # Export audio clusters
-    if not args.lyrics_only:
-        audio_data = data["audio"]
-        audio_clusters = group_tracks_by_cluster(
-            audio_data["dataframe"], audio_data["cluster_labels"]
+    # Export combined clusters
+    if args.combined:
+        combined_data = data["combined"]
+        combined_clusters = group_tracks_by_cluster(
+            combined_data["dataframe"], combined_data["cluster_labels"]
         )
-        audio_playlists = export_clusters_to_playlists(
+        combined_playlists = export_clusters_to_playlists(
             sp,
-            audio_clusters,
-            audio_data["cluster_stats"],
-            mode="audio",
+            combined_clusters,
+            combined_data["cluster_stats"],
+            mode="combined",
             prefix=prefix,
             public=public,
         )
-        all_playlists.extend(audio_playlists)
+        all_playlists.extend(combined_playlists)
+    else:
+        # Export audio clusters
+        if not args.lyrics_only:
+            audio_data = data["audio"]
+            audio_clusters = group_tracks_by_cluster(
+                audio_data["dataframe"], audio_data["cluster_labels"]
+            )
+            audio_playlists = export_clusters_to_playlists(
+                sp,
+                audio_clusters,
+                audio_data["cluster_stats"],
+                mode="audio",
+                prefix=prefix,
+                public=public,
+            )
+            all_playlists.extend(audio_playlists)
 
-    # Export lyric clusters
-    if not args.audio_only:
-        lyrics_data = data["lyrics"]
-        lyric_clusters = group_tracks_by_cluster(
-            lyrics_data["dataframe"], lyrics_data["cluster_labels"]
-        )
-        lyric_playlists = export_clusters_to_playlists(
-            sp,
-            lyric_clusters,
-            lyrics_data["cluster_stats"],
-            mode="lyrics",
-            prefix=prefix,
-            public=public,
-        )
-        all_playlists.extend(lyric_playlists)
+        # Export lyric clusters
+        if not args.audio_only:
+            lyrics_data = data["lyrics"]
+            lyric_clusters = group_tracks_by_cluster(
+                lyrics_data["dataframe"], lyrics_data["cluster_labels"]
+            )
+            lyric_playlists = export_clusters_to_playlists(
+                sp,
+                lyric_clusters,
+                lyrics_data["cluster_stats"],
+                mode="lyrics",
+                prefix=prefix,
+                public=public,
+            )
+            all_playlists.extend(lyric_playlists)
 
     # Summary
     print(f"\n{'=' * 60}")

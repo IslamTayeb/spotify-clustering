@@ -266,7 +266,21 @@ Top 10 genres across entire library:
 
 **Languages**: {lang_dist_str}
 
-**Representative Songs**:
+"""
+
+        # Add lyric themes if available
+        if stats.get('lyric_themes') and stats['lyric_themes']:
+            themes = stats['lyric_themes']
+            keywords = ', '.join([kw[0] for kw in themes['top_keywords'].get('unigrams', [])[:5]])
+
+            report += f"""**Lyric Themes** ({themes['n_lyrics']} songs with lyrics):
+- Top Keywords: {keywords}
+- Sentiment: {themes['sentiment_label']} ({themes['avg_sentiment']:.2f})
+- Vocabulary Richness: {themes['avg_complexity']:.2f}
+
+"""
+
+        report += f"""**Representative Songs**:
 {rep_songs_str}
 
 ---

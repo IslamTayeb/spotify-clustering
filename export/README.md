@@ -30,10 +30,10 @@ The script will automatically request the necessary permissions (`playlist-modif
 
 ### 2. Install Dependencies
 
-If you haven't already, install the required packages:
+The export tool uses `spotipy` and `python-dotenv`, which are already included in the main requirements.txt:
 
 ```bash
-pip install spotipy python-dotenv
+pip install -r requirements.txt
 ```
 
 ## Usage

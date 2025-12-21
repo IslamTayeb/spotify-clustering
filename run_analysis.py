@@ -69,6 +69,26 @@ def main():
         default="combined",
         help="Clustering mode (default: combined)",
     )
+    parser.add_argument(
+        "--audio-embedding-backend",
+        choices=["essentia", "mert"],
+        default="essentia",
+        help="Audio embedding backend for clustering (default: essentia). "
+             "Essentia always runs for interpretation fields (genre/mood/BPM). "
+             "MERT creates separate cache for clustering-optimized embeddings.",
+    )
+    parser.add_argument(
+        "--lyrics-embedding-backend",
+        choices=["bge-m3", "e5"],
+        default="bge-m3",
+        help="Lyrics embedding backend (default: bge-m3 for backward compatibility). "
+             "E5 provides higher quality embeddings with separate cache.",
+    )
+    parser.add_argument(
+        "--mert-cache-path",
+        default="cache/mert_embeddings_24khz_30s_cls.pkl",
+        help="Path to MERT embeddings cache (default: cache/mert_embeddings_24khz_30s_cls.pkl)",
+    )
     args = parser.parse_args()
 
     logger = setup_logging()
@@ -105,8 +125,32 @@ def main():
         logger.info("Extracting audio features from MP3 files")
         audio_features = extract_audio_features()
 
-    print(f"  ✓ Processed {len(audio_features)} songs")
+    print(f"  ✓ Processed {len(audio_features)} songs (Essentia)")
     logger.info(f"Audio features extracted: {len(audio_features)} songs")
+
+    # Step 1.5: Extract MERT embeddings if selected (separate cache for clustering)
+    audio_embeddings_for_clustering = None
+    if args.audio_embedding_backend == "mert":
+        print("\n[1.5/5] Extracting MERT audio embeddings for clustering...")
+        logger.info("Step 1.5/5: MERT audio embedding extraction")
+
+        from analysis.pipeline.mert_embedding import extract_mert_embeddings
+
+        if args.use_cache and Path(args.mert_cache_path).exists():
+            print(f"  Loading MERT embeddings from cache...")
+            with open(args.mert_cache_path, "rb") as f:
+                audio_embeddings_for_clustering = pickle.load(f)
+        else:
+            print(f"  Extracting MERT embeddings...")
+            audio_embeddings_for_clustering = extract_mert_embeddings(
+                cache_path=args.mert_cache_path,
+                use_cache=args.use_cache
+            )
+
+        print(f"  ✓ Processed {len(audio_embeddings_for_clustering)} songs (MERT)")
+        logger.info(f"MERT embeddings extracted: {len(audio_embeddings_for_clustering)} songs")
+    else:
+        logger.info("Using Essentia embeddings for clustering (default)")
 
     # Early exit if only audio processing was requested
     if args.audio_only:
@@ -123,20 +167,33 @@ def main():
 
     print("\n[2/5] Extracting lyric features...")
     logger.info("Step 2/5: Lyric feature extraction")
+
+    # Determine lyric cache path based on backend
+    lyric_backend = args.lyrics_embedding_backend
+    if lyric_backend == "bge-m3":
+        lyric_cache = "cache/lyric_features.pkl"  # Preserve existing name for default
+    elif lyric_backend == "e5":
+        lyric_cache = "cache/lyric_features_e5.pkl"
+    else:
+        lyric_cache = f"cache/lyric_features_{lyric_backend}.pkl"
+
     if (
         args.use_cache
         and not args.re_embed_lyrics
-        and Path("cache/lyric_features.pkl").exists()
+        and Path(lyric_cache).exists()
     ):
-        print("  Loading from cache...")
-        logger.info("Loading lyric features from cache")
-        with open("cache/lyric_features.pkl", "rb") as f:
+        print(f"  Loading from cache ({lyric_backend})...")
+        logger.info(f"Loading lyric features from cache ({lyric_backend})")
+        with open(lyric_cache, "rb") as f:
             lyric_features = pickle.load(f)
     else:
-        logger.info("Extracting lyric features from text files")
-        lyric_features = extract_lyric_features()
+        logger.info(f"Extracting lyric features using {lyric_backend}")
+        lyric_features = extract_lyric_features(
+            backend=lyric_backend,
+            cache_path=lyric_cache
+        )
 
-    print(f"  ✓ Processed {len(lyric_features)} songs")
+    print(f"  ✓ Processed {len(lyric_features)} songs ({lyric_backend})")
     logger.info(f"Lyric features extracted: {len(lyric_features)} songs")
 
     print("\n[3/5] Running clustering pipeline...")
@@ -159,10 +216,17 @@ def main():
         }
         n_pca = pca_components_map[mode]
 
+        # Pass embedding overrides if MERT/E5 selected
+        lyric_embeddings_for_clustering = None
+        if lyric_backend == "e5":
+            lyric_embeddings_for_clustering = lyric_features
+
         mode_results = run_clustering_pipeline(
-            audio_features,
+            audio_features,  # Always Essentia (for interpretation)
             lyric_features,
             mode=mode,
+            audio_embeddings_override=audio_embeddings_for_clustering,  # MERT if selected
+            lyric_embeddings_override=lyric_embeddings_for_clustering,  # E5 if selected
             n_pca_components=n_pca,
             clustering_algorithm="hac",
             n_clusters_hac=5,
@@ -189,23 +253,29 @@ def main():
     print("\n[4/5] Generating interactive visualizations...")
     logger.info("Step 4/5: Generating visualizations")
 
+    # Determine output file suffix based on backends
+    backend_suffix = ""
+    if args.audio_embedding_backend == "mert" or args.lyrics_embedding_backend == "e5":
+        audio_suffix = "_mert" if args.audio_embedding_backend == "mert" else ""
+        lyrics_suffix = "_e5" if args.lyrics_embedding_backend == "e5" else ""
+        backend_suffix = f"{audio_suffix}{lyrics_suffix}"
+
     # Create combined visualization with all 3 modes
     if len(all_results) == 3:
         print("  Creating combined visualization with all 3 modes...")
         combined_fig = create_combined_map(all_results)
+        combined_output = f"analysis/outputs/music_taste_map_combined_comparison{backend_suffix}.html"
         combined_fig.write_html(
-            "analysis/outputs/music_taste_map_combined_comparison.html",
+            combined_output,
             config={"displayModeBar": True, "displaylogo": False},
             include_plotlyjs="cdn",
         )
-        print(
-            "  ✓ Saved combined comparison to analysis/outputs/music_taste_map_combined_comparison.html"
-        )
+        print(f"  ✓ Saved combined comparison to {combined_output}")
         logger.info("Combined visualization saved")
 
     # Also create individual HTMLs for detailed exploration
     for mode, mode_results in all_results.items():
-        output_file = f"analysis/outputs/music_taste_map_{mode}.html"
+        output_file = f"analysis/outputs/music_taste_map_{mode}{backend_suffix}.html"
         fig = create_interactive_map(mode_results["dataframe"], mode_results)
         fig.write_html(
             output_file,

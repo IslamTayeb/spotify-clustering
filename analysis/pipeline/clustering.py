@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
+"""
+Clustering Pipeline
+
+Supports multiple embedding backends via override parameters:
+- Audio: Essentia (default, for interpretation) or MERT (via override, for clustering)
+- Lyrics: BGE-M3 (default) or E5 (via override)
+
+Design: Essentia always runs for interpretation (genre/mood/BPM). MERT/E5 are optional
+overrides passed in-memory, with separate caches (no schema changes to existing caches).
+"""
+
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -41,14 +52,36 @@ def load_temporal_metadata(saved_tracks_path: str = 'spotify/saved_tracks.json')
     return temporal_data
 
 
-def prepare_features(audio_features: List[Dict], lyric_features: List[Dict],
-                     mode: str = 'combined', n_pca_components: int = 50) -> Tuple[np.ndarray, List[int]]:
+def prepare_features(
+    audio_features: List[Dict],
+    lyric_features: List[Dict],
+    mode: str = 'combined',
+    n_pca_components: int = 50,
+    # NEW: Embedding overrides for MERT/E5 support
+    audio_embeddings_override: List[Dict] = None,
+    lyric_embeddings_override: List[Dict] = None
+) -> Tuple[np.ndarray, List[int]]:
     """
     Prepare features for clustering by standardizing and applying PCA.
     This output is used for CLUSTERING (not visualization).
+
+    Args:
+        audio_features: Audio features (Essentia, used for interpretation)
+        lyric_features: Lyric features (BGE-M3 default)
+        mode: 'audio', 'lyrics', or 'combined'
+        n_pca_components: Number of PCA components
+        audio_embeddings_override: Optional MERT embeddings for clustering
+        lyric_embeddings_override: Optional E5 embeddings for clustering
+
+    Returns:
+        Tuple of (pca_features, valid_indices)
     """
-    audio_emb = np.vstack([f['embedding'] for f in audio_features])
-    lyric_emb = np.vstack([f['embedding'] for f in lyric_features])
+    # Use override embeddings if provided, else use default
+    audio_source = audio_embeddings_override if audio_embeddings_override else audio_features
+    lyric_source = lyric_embeddings_override if lyric_embeddings_override else lyric_features
+
+    audio_emb = np.vstack([f['embedding'] for f in audio_source])
+    lyric_emb = np.vstack([f['embedding'] for f in lyric_source])
 
     logger.info(f"Raw Audio embedding shape: {audio_emb.shape}")
     logger.info(f"Raw Lyric embedding shape: {lyric_emb.shape}")
@@ -107,7 +140,26 @@ def prepare_features(audio_features: List[Dict], lyric_features: List[Dict],
         return combined, list(range(len(audio_features)))
 
 
-def analyze_cluster(cluster_id: int, df: pd.DataFrame) -> Dict:
+def analyze_cluster(
+    cluster_id: int,
+    df: pd.DataFrame,
+    pca_features: np.ndarray = None,
+    valid_indices: List[int] = None,
+    lyrics_dir: str = 'lyrics/data/',
+    include_lyric_themes: bool = True
+) -> Dict:
+    """
+    Analyze cluster statistics and select representative tracks.
+
+    Args:
+        cluster_id: Cluster ID to analyze
+        df: Full DataFrame with all tracks
+        pca_features: PCA-reduced features used for clustering (optional)
+        valid_indices: Indices mapping df rows to pca_features (optional)
+
+    Returns:
+        Dictionary with cluster statistics
+    """
     cluster_df = df[df['cluster'] == cluster_id]
 
     genre_matrix = np.vstack(cluster_df['genre_probs'].values)
@@ -142,15 +194,94 @@ def analyze_cluster(cluster_id: int, df: pd.DataFrame) -> Dict:
         'minor': minor_count / total_key if total_key > 0 else 0
     }
 
-    centroid = cluster_df[['umap_x', 'umap_y']].mean().values
-    distances = np.linalg.norm(
-        cluster_df[['umap_x', 'umap_y']].values - centroid,
-        axis=1
-    )
-    representative_indices = np.argsort(distances)[:5]
-    representative_songs = cluster_df.iloc[representative_indices]['filename'].tolist()
+    # Representative track selection
+    # CRITICAL: Use PCA features (clustering space) NOT UMAP (visualization only)
+    if pca_features is not None and valid_indices is not None:
+        # Get PCA features for this cluster
+        cluster_mask = df['cluster'].values == cluster_id
+        cluster_pca_features = pca_features[cluster_mask]
+
+        # Compute centroid in PCA space (actual clustering space)
+        centroid = cluster_pca_features.mean(axis=0)
+
+        # Find 5 closest points to centroid in PCA space
+        distances = np.linalg.norm(cluster_pca_features - centroid, axis=1)
+        representative_indices = np.argsort(distances)[:5]
+        representative_songs = cluster_df.iloc[representative_indices]['filename'].tolist()
+    else:
+        # Fallback to UMAP if PCA features not provided (backward compatibility)
+        # WARNING: This uses visualization coordinates, not actual clustering features
+        centroid = cluster_df[['umap_x', 'umap_y']].mean().values
+        distances = np.linalg.norm(
+            cluster_df[['umap_x', 'umap_y']].values - centroid,
+            axis=1
+        )
+        representative_indices = np.argsort(distances)[:5]
+        representative_songs = cluster_df.iloc[representative_indices]['filename'].tolist()
 
     language_dist = cluster_df['language'].value_counts().to_dict()
+
+    # Lyric theme analysis (optional)
+    lyric_themes = None
+    if include_lyric_themes and Path(lyrics_dir).exists():
+        try:
+            from analysis.interpretability.lyric_themes import (
+                load_lyrics_for_cluster,
+                extract_tfidf_keywords,
+                analyze_sentiment,
+                compute_lyric_complexity
+            )
+
+            # Load lyrics for this cluster
+            lyric_data = load_lyrics_for_cluster(df, cluster_id, lyrics_dir=lyrics_dir)
+
+            if lyric_data and len(lyric_data) >= 3:  # Need minimum lyrics for TF-IDF
+                cluster_lyrics = [text for _, text in lyric_data]
+
+                # Load all lyrics from dataset for TF-IDF IDF calculation
+                # (This is expensive, but TF-IDF needs global statistics)
+                all_lyrics = []
+                for _, row in df.iterrows():
+                    if row.get('has_lyrics', False):
+                        filename = row.get('filename', '')
+                        if filename:
+                            lyric_filename = filename.replace('.mp3', '.txt')
+                            lyric_file = Path(lyrics_dir) / lyric_filename
+                            if lyric_file.exists():
+                                try:
+                                    with open(lyric_file, 'r', encoding='utf-8') as f:
+                                        all_lyrics.append(f.read())
+                                except Exception:
+                                    pass
+
+                # Extract lyric themes
+                if all_lyrics:
+                    keywords = extract_tfidf_keywords(all_lyrics, cluster_lyrics, top_n=10)
+
+                    # Sentiment analysis
+                    sentiments = [analyze_sentiment(text) for text in cluster_lyrics]
+                    avg_sentiment = np.mean([s['compound_score'] for s in sentiments])
+
+                    if avg_sentiment > 0.05:
+                        sentiment_label = 'positive'
+                    elif avg_sentiment < -0.05:
+                        sentiment_label = 'negative'
+                    else:
+                        sentiment_label = 'neutral'
+
+                    # Complexity analysis
+                    complexities = [compute_lyric_complexity(text) for text in cluster_lyrics]
+                    avg_complexity = np.mean([c['vocabulary_richness'] for c in complexities])
+
+                    lyric_themes = {
+                        'top_keywords': keywords,
+                        'avg_sentiment': float(avg_sentiment),
+                        'sentiment_label': sentiment_label,
+                        'avg_complexity': float(avg_complexity),
+                        'n_lyrics': len(lyric_data)
+                    }
+        except Exception as e:
+            logger.warning(f"Could not extract lyric themes for cluster {cluster_id}: {e}")
 
     return {
         'n_songs': len(cluster_df),
@@ -161,7 +292,8 @@ def analyze_cluster(cluster_id: int, df: pd.DataFrame) -> Dict:
         'language_distribution': language_dist,
         'key_distribution': key_dist,
         'avg_danceability': float(cluster_df['danceability'].mean()),
-        'representative_songs': representative_songs
+        'representative_songs': representative_songs,
+        'lyric_themes': lyric_themes  # NEW
     }
 
 
@@ -169,6 +301,10 @@ def run_clustering_pipeline(
     audio_features: List[Dict],
     lyric_features: List[Dict],
     mode: str = 'combined',
+    # NEW: Embedding override parameters for MERT/E5
+    audio_embeddings_override: List[Dict] = None,
+    lyric_embeddings_override: List[Dict] = None,
+    # Existing parameters
     n_pca_components: int = 50,              # PCA dimensionality for clustering
     clustering_algorithm: str = 'hac',       # 'hac', 'birch', 'spectral'
     # HAC parameters
@@ -192,6 +328,12 @@ def run_clustering_pipeline(
     Clustering pipeline that separates:
     1. PCA-reduced features for CLUSTERING
     2. UMAP for VISUALIZATION only
+
+    Design pattern for MERT/E5 support:
+    - audio_features: ALWAYS Essentia (for interpretation: genre/mood/BPM)
+    - audio_embeddings_override: Optional MERT embeddings (for clustering)
+    - lyric_features: Default BGE-M3
+    - lyric_embeddings_override: Optional E5 embeddings (for clustering)
 
     Supported algorithms:
     - 'hac': Hierarchical Agglomerative Clustering (default, recommended)
@@ -228,8 +370,29 @@ def run_clustering_pipeline(
     aligned_audio = [audio_by_id[tid] for tid in sorted(common_ids)]
     aligned_lyrics = [lyric_by_id[tid] for tid in sorted(common_ids)]
 
+    # Align override embeddings if provided
+    aligned_audio_override = None
+    aligned_lyric_override = None
+
+    if audio_embeddings_override:
+        audio_override_by_id = {f['track_id']: f for f in audio_embeddings_override}
+        aligned_audio_override = [audio_override_by_id[tid] for tid in sorted(common_ids) if tid in audio_override_by_id]
+        logger.info(f"Using MERT embeddings for audio clustering ({len(aligned_audio_override)} tracks)")
+
+    if lyric_embeddings_override:
+        lyric_override_by_id = {f['track_id']: f for f in lyric_embeddings_override}
+        aligned_lyric_override = [lyric_override_by_id[tid] for tid in sorted(common_ids) if tid in lyric_override_by_id]
+        logger.info(f"Using E5 embeddings for lyric clustering ({len(aligned_lyric_override)} tracks)")
+
     # Step 1: Prepare PCA-reduced features for CLUSTERING
-    pca_features, valid_indices = prepare_features(aligned_audio, aligned_lyrics, mode, n_pca_components)
+    pca_features, valid_indices = prepare_features(
+        aligned_audio,
+        aligned_lyrics,
+        mode,
+        n_pca_components,
+        audio_embeddings_override=aligned_audio_override,
+        lyric_embeddings_override=aligned_lyric_override
+    )
     logger.info(f"PCA-reduced features for clustering: {pca_features.shape}")
 
     # Step 2: Run CLUSTERING on PCA features
@@ -375,10 +538,14 @@ def run_clustering_pipeline(
         df['added_month'] = df['added_at'].dt.to_period('M').astype(str)
 
         logger.info("Temporal metadata merged successfully")
+
+    # Analyze each cluster (passing PCA features for representative track selection)
     cluster_stats = {}
     for cluster_id in sorted(df['cluster'].unique()):
         if cluster_id != -1:
-            cluster_stats[cluster_id] = analyze_cluster(cluster_id, df)
+            cluster_stats[cluster_id] = analyze_cluster(
+                cluster_id, df, pca_features, valid_indices
+            )
 
     outlier_songs = df[df['cluster'] == -1]['filename'].tolist()
 
@@ -397,6 +564,8 @@ def run_clustering_pipeline(
         'cluster_labels': cluster_labels,
         'cluster_stats': cluster_stats,
         'outlier_songs': outlier_songs,
+        'pca_features': pca_features,  # NEW: Include for potential future use
+        'valid_indices': valid_indices,  # NEW: Mapping from df to pca_features
         'n_clusters': n_clusters,
         'n_outliers': n_outliers,
         'silhouette_score': float(sil_score),
