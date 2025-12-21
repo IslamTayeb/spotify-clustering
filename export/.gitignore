@@ -1,0 +1,7 @@
+# Ignore any cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore any local test files
+test_*.py
