@@ -218,4 +218,5 @@ temp/
 outputs/
 cache/
 logging/
+backup/
 errors.log

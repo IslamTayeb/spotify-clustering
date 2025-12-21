@@ -3,9 +3,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import umap
-import hdbscan
 import plotly.graph_objects as go
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
@@ -15,9 +14,9 @@ st.set_page_config(layout="wide", page_title="Music Clustering Tuner")
 
 @st.cache_data
 def load_data():
-    with open("cache/audio_features.pkl", "rb") as f:
+    with open("../cache/audio_features.pkl", "rb") as f:
         audio_features = pickle.load(f)
-    with open("cache/lyric_features.pkl", "rb") as f:
+    with open("../cache/lyric_features.pkl", "rb") as f:
         lyric_features = pickle.load(f)
 
     # Align features by track_id
@@ -33,6 +32,20 @@ def load_data():
 
 def prepare_features_for_mode(audio_features, lyric_features, mode, n_pca_components):
     """Prepare PCA-reduced features for clustering"""
+    # For combined mode, filter out vocal songs without lyrics
+    if mode == "combined":
+        # Filter tracks where instrumentalness < 0.5 (vocal) but has_lyrics is False
+        valid_mask = [
+            not (audio.get("instrumentalness", 0.5) < 0.5 and not lyric.get("has_lyrics", False))
+            for audio, lyric in zip(audio_features, lyric_features)
+        ]
+        audio_features = [f for f, valid in zip(audio_features, valid_mask) if valid]
+        lyric_features = [f for f, valid in zip(lyric_features, valid_mask) if valid]
+
+        filtered_count = sum(1 for v in valid_mask if not v)
+        if filtered_count > 0:
+            st.sidebar.info(f"ℹ️ Filtered out {filtered_count} vocal songs without lyrics in combined mode")
+
     audio_emb = np.vstack([f["embedding"] for f in audio_features])
     lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
 
@@ -64,8 +77,12 @@ def prepare_features_for_mode(audio_features, lyric_features, mode, n_pca_compon
         lyric_norm = StandardScaler().fit_transform(lyric_emb)
 
         # PCA Reduction to balance modalities
-        n_components_audio = min(audio_norm.shape[0], audio_norm.shape[1], n_pca_components)
-        n_components_lyric = min(lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components)
+        n_components_audio = min(
+            audio_norm.shape[0], audio_norm.shape[1], n_pca_components
+        )
+        n_components_lyric = min(
+            lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components
+        )
 
         pca_audio = PCA(n_components=n_components_audio, random_state=42)
         audio_reduced = pca_audio.fit_transform(audio_norm)
@@ -90,7 +107,7 @@ def main():
     st.markdown("""
     **Pipeline Architecture:**
     1. **Features → PCA** (dimensionality reduction, tunable below)
-    2. **PCA Features → HDBSCAN/HAC** (clustering, determines colors)
+    2. **PCA Features → HAC/Birch/Spectral** (clustering, determines colors)
     3. **PCA Features → UMAP** (visualization only, determines 3D positions)
     """)
 
@@ -103,14 +120,21 @@ def main():
     # Mode Selection
     mode = st.sidebar.selectbox("Feature Mode", ["combined", "audio", "lyrics"])
 
-    # PCA Parameters
+    # PCA Parameters - use mode-specific defaults for 75% variance
+    pca_defaults = {
+        "audio": 118,
+        "lyrics": 162,
+        "combined": 142
+    }
+    default_pca = pca_defaults.get(mode, 140)
+
     n_pca_components = st.sidebar.slider(
         "PCA Components",
         5,
         200,
-        50,
+        default_pca,
         step=5,
-        help="Number of PCA components for dimensionality reduction before clustering. Higher = more detail but may include noise.",
+        help=f"Number of PCA components for dimensionality reduction before clustering. Default ({default_pca}) achieves ~75% variance for {mode} mode.",
     )
 
     # Prepare features
@@ -129,54 +153,16 @@ def main():
     # Clustering Algorithm Selection
     clustering_algorithm = st.sidebar.selectbox(
         "Algorithm",
-        ["HDBSCAN", "HAC (Hierarchical Agglomerative)"],
+        [
+            "HAC (Hierarchical Agglomerative)",
+            "Birch",
+            "Spectral Clustering",
+        ],
         help="Choose the clustering algorithm to use on PCA-reduced features.",
     )
 
     # Algorithm-specific parameters
-    if clustering_algorithm == "HDBSCAN":
-        st.sidebar.subheader("HDBSCAN Parameters")
-        min_cluster_size = st.sidebar.slider(
-            "min_cluster_size",
-            2,
-            100,
-            10,
-            help="Minimum number of samples in a cluster. Lower = more clusters, potentially smaller ones.",
-        )
-        min_samples = st.sidebar.slider(
-            "min_samples",
-            1,
-            50,
-            3,
-            help="How conservative the clustering is. Higher = more points as noise (unclustered).",
-        )
-        cluster_selection_epsilon = st.sidebar.slider(
-            "epsilon",
-            0.0,
-            1.0,
-            0.1,
-            step=0.01,
-            help="Distance threshold for merging clusters. Smaller = prevents merging, more clusters.",
-        )
-        selection_method = st.sidebar.selectbox(
-            "Selection Method",
-            ["eom", "leaf"],
-            index=0,
-            help="'eom' (Excess of Mass) prefers larger, stable clusters. 'leaf' prefers finer, fragmented clusters.",
-        )
-
-        # Run HDBSCAN
-        with st.spinner("Running HDBSCAN..."):
-            clusterer = hdbscan.HDBSCAN(
-                min_cluster_size=min_cluster_size,
-                min_samples=min_samples,
-                cluster_selection_epsilon=cluster_selection_epsilon,
-                cluster_selection_method=selection_method,
-                metric="euclidean",
-            )
-            labels = clusterer.fit_predict(pca_features)
-
-    else:  # HAC
+    if clustering_algorithm == "HAC (Hierarchical Agglomerative)":
         st.sidebar.subheader("HAC Parameters")
         n_clusters_hac = st.sidebar.slider(
             "Number of Clusters",
@@ -199,23 +185,95 @@ def main():
             )
             labels = clusterer.fit_predict(pca_features)
 
+    elif clustering_algorithm == "Birch":
+        st.sidebar.subheader("Birch Parameters")
+        st.sidebar.info(
+            "⚡ Fast hierarchical clustering, similar to HAC but more efficient"
+        )
+        n_clusters_birch = st.sidebar.slider(
+            "Number of Clusters",
+            2,
+            50,
+            20,
+            help="Final number of clusters to create.",
+        )
+        threshold = st.sidebar.slider(
+            "Threshold",
+            0.1,
+            2.0,
+            0.5,
+            step=0.1,
+            help="Radius of subcluster. Lower = more granular subclusters, might be slower.",
+        )
+        branching_factor = st.sidebar.slider(
+            "Branching Factor",
+            10,
+            100,
+            50,
+            step=10,
+            help="Max subclusters per node. Higher = more memory but better clustering.",
+        )
+
+        # Run Birch
+        with st.spinner("Running Birch Clustering..."):
+            clusterer = Birch(
+                n_clusters=n_clusters_birch,
+                threshold=threshold,
+                branching_factor=branching_factor,
+            )
+            labels = clusterer.fit_predict(pca_features)
+
+    elif clustering_algorithm == "Spectral Clustering":
+        st.sidebar.subheader("Spectral Clustering Parameters")
+        st.sidebar.info("🌐 Graph-based clustering, great for non-convex shapes")
+        n_clusters_spectral = st.sidebar.slider(
+            "Number of Clusters",
+            2,
+            50,
+            20,
+            help="Number of clusters to find.",
+        )
+        affinity = st.sidebar.selectbox(
+            "Affinity",
+            ["nearest_neighbors", "rbf"],
+            index=0,
+            help="'nearest_neighbors' uses k-NN graph. 'rbf' uses RBF kernel (slower).",
+        )
+        n_neighbors = st.sidebar.slider(
+            "N Neighbors",
+            5,
+            50,
+            15,
+            help="Number of neighbors for k-NN graph (only used if affinity=nearest_neighbors).",
+        )
+        assign_labels = st.sidebar.selectbox(
+            "Label Assignment",
+            ["kmeans", "discretize"],
+            index=0,
+            help="'kmeans' is faster and usually better. 'discretize' is an alternative method.",
+        )
+
+        # Run Spectral Clustering
+        with st.spinner("Running Spectral Clustering..."):
+            clusterer = SpectralClustering(
+                n_clusters=n_clusters_spectral,
+                affinity=affinity,
+                n_neighbors=n_neighbors if affinity == "nearest_neighbors" else 10,
+                assign_labels=assign_labels,
+                random_state=42,
+            )
+            labels = clusterer.fit_predict(pca_features)
+
     # Calculate metrics
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     n_outliers = (labels == -1).sum()
     pct_outliers = (n_outliers / len(labels)) * 100
 
     # Silhouette score
-    if clustering_algorithm == "HDBSCAN":
-        non_outlier_mask = labels != -1
-        if non_outlier_mask.sum() > 0 and len(set(labels[non_outlier_mask])) > 1:
-            sil_score = silhouette_score(pca_features[non_outlier_mask], labels[non_outlier_mask])
-        else:
-            sil_score = 0.0
+    if len(set(labels)) > 1:
+        sil_score = silhouette_score(pca_features, labels)
     else:
-        if len(set(labels)) > 1:
-            sil_score = silhouette_score(pca_features, labels)
-        else:
-            sil_score = 0.0
+        sil_score = 0.0
 
     # Metrics Display
     col1, col2, col3, col4 = st.columns(4)
@@ -225,7 +283,9 @@ def main():
     col4.metric("Silhouette Score", f"{sil_score:.3f}")
 
     st.sidebar.header("📊 UMAP Visualization")
-    st.sidebar.markdown("*These parameters only affect the plot layout, NOT clustering!*")
+    st.sidebar.markdown(
+        "*These parameters only affect the plot layout, NOT clustering!*"
+    )
 
     n_neighbors_viz = st.sidebar.slider(
         "n_neighbors (Viz)",
@@ -258,32 +318,32 @@ def main():
     plot_data = []
     for i, idx in enumerate(valid_indices):
         track = audio_features[idx]
-        plot_data.append(
-            {
-                "x": umap_coords[i, 0],
-                "y": umap_coords[i, 1],
-                "z": umap_coords[i, 2],
-                "label": labels[i],
-                "track_name": track["track_name"],
-                "artist": track["artist"],
-                "genre": track["top_3_genres"][0][0]
-                if track["top_3_genres"]
-                else "unknown",
-                "mood_happy": track.get("mood_happy", 0.5),
-                "mood_sad": track.get("mood_sad", 0.5),
-                "mood_aggressive": track.get("mood_aggressive", 0.5),
-                "mood_relaxed": track.get("mood_relaxed", 0.5),
-                "mood_party": track.get("mood_party", 0.5),
-                "valence": track.get("valence", 0.5),
-                "arousal": track.get("arousal", 0.5),
-                "engagement_score": track.get("engagement_score", 0.0),
-                "approachability_score": track.get("approachability_score", 0.0),
-                "danceability": track.get("danceability", 0.5),
-                "instrumentalness": track.get("instrumentalness", 0.5),
-                "bpm": track["bpm"],
-                "key": track["key"],
-            }
-        )
+        row_data = {
+            "x": umap_coords[i, 0],
+            "y": umap_coords[i, 1],
+            "z": umap_coords[i, 2],
+            "label": labels[i],
+            "track_name": track["track_name"],
+            "artist": track["artist"],
+            "genre": track["top_3_genres"][0][0]
+            if track["top_3_genres"]
+            else "unknown",
+            "mood_happy": track.get("mood_happy", 0.5),
+            "mood_sad": track.get("mood_sad", 0.5),
+            "mood_aggressive": track.get("mood_aggressive", 0.5),
+            "mood_relaxed": track.get("mood_relaxed", 0.5),
+            "mood_party": track.get("mood_party", 0.5),
+            "valence": track.get("valence", 0.5),
+            "arousal": track.get("arousal", 0.5),
+            "engagement_score": track.get("engagement_score", 0.0),
+            "approachability_score": track.get("approachability_score", 0.0),
+            "danceability": track.get("danceability", 0.5),
+            "instrumentalness": track.get("instrumentalness", 0.5),
+            "bpm": track["bpm"],
+            "key": track["key"],
+        }
+
+        plot_data.append(row_data)
 
     df = pd.DataFrame(plot_data)
 
@@ -298,15 +358,36 @@ def main():
             continue
 
         if label == -1:
-            name = "Outliers"
+            name = f"Outliers ({len(cluster_points)})"
             color_val = "lightgrey"
             size = 3
             opacity = 0.3
         else:
-            name = f"Cluster {label}"
+            name = f"Cluster {label} ({len(cluster_points)})"
             color_val = label
             size = 4
             opacity = 0.8
+
+        # Build hover text
+        def build_hover_text(r):
+            text = (
+                f"<b>{r['track_name']}</b><br>"
+                f"Artist: {r['artist']}<br>"
+                f"Cluster: {r['label']}<br>"
+                f"Genre: {r['genre']}<br>"
+                f"BPM: {r['bpm']:.0f} | Key: {r['key']}<br>"
+                f"Danceability: {r['danceability']:.2f}<br>"
+                f"Instrumentalness: {r['instrumentalness']:.2f}<br>"
+                f"Valence: {r['valence']:.2f} | Arousal: {r['arousal']:.2f}<br>"
+                f"Engagement: {r['engagement_score']:.2f} | Approachability: {r['approachability_score']:.2f}<br>"
+                f"Moods:<br>"
+                f"- Happy: {r['mood_happy']:.2f}<br>"
+                f"- Sad: {r['mood_sad']:.2f}<br>"
+                f"- Aggressive: {r['mood_aggressive']:.2f}<br>"
+                f"- Relaxed: {r['mood_relaxed']:.2f}<br>"
+                f"- Party: {r['mood_party']:.2f}<br>"
+            )
+            return text
 
         fig.add_trace(
             go.Scatter3d(
@@ -321,26 +402,7 @@ def main():
                     colorscale="Viridis",
                     opacity=opacity,
                 ),
-                text=cluster_points.apply(
-                    lambda r: (
-                        f"<b>{r['track_name']}</b><br>"
-                        f"Artist: {r['artist']}<br>"
-                        f"Cluster: {r['label']}<br>"
-                        f"Genre: {r['genre']}<br>"
-                        f"BPM: {r['bpm']:.0f} | Key: {r['key']}<br>"
-                        f"Danceability: {r['danceability']:.2f}<br>"
-                        f"Instrumentalness: {r['instrumentalness']:.2f}<br>"
-                        f"Valence: {r['valence']:.2f} | Arousal: {r['arousal']:.2f}<br>"
-                        f"Engagement: {r['engagement_score']:.2f} | Approachability: {r['approachability_score']:.2f}<br>"
-                        f"Moods:<br>"
-                        f"- Happy: {r['mood_happy']:.2f}<br>"
-                        f"- Sad: {r['mood_sad']:.2f}<br>"
-                        f"- Aggressive: {r['mood_aggressive']:.2f}<br>"
-                        f"- Relaxed: {r['mood_relaxed']:.2f}<br>"
-                        f"- Party: {r['mood_party']:.2f}<br>"
-                    ),
-                    axis=1,
-                ),
+                text=cluster_points.apply(build_hover_text, axis=1),
                 hovertemplate="%{text}<extra></extra>",
             )
         )

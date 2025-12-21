@@ -10,10 +10,17 @@ import pickle
 from datetime import datetime
 from pathlib import Path
 
-from analysis.pipeline.audio_analysis import extract_audio_features, update_cached_features
+from analysis.pipeline.audio_analysis import (
+    extract_audio_features,
+    update_cached_features,
+)
 from analysis.pipeline.clustering import run_clustering_pipeline
 from analysis.pipeline.lyric_analysis import extract_lyric_features
-from analysis.pipeline.visualization import create_interactive_map, create_combined_map, generate_report
+from analysis.pipeline.visualization import (
+    create_interactive_map,
+    create_combined_map,
+    generate_report,
+)
 
 
 def setup_logging():
@@ -25,11 +32,8 @@ def setup_logging():
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
 
     logger = logging.getLogger(__name__)
@@ -45,13 +49,19 @@ def main():
         "--use-cache", action="store_true", help="Use cached features if available"
     )
     parser.add_argument(
-        "--re-embed-lyrics", action="store_true", help="Re-generate lyric embeddings while reusing cached audio features"
+        "--re-embed-lyrics",
+        action="store_true",
+        help="Re-generate lyric embeddings while reusing cached audio features",
     )
     parser.add_argument(
-        "--re-classify-audio", action="store_true", help="Run missing audio classifiers (valence, arousal, etc) on cached files"
+        "--re-classify-audio",
+        action="store_true",
+        help="Run missing audio classifiers (valence, arousal, etc) on cached files",
     )
     parser.add_argument(
-        "--audio-only", action="store_true", help="Only extract/update audio features, then exit (skip lyrics, clustering, visualization)"
+        "--audio-only",
+        action="store_true",
+        help="Only extract/update audio features, then exit (skip lyrics, clustering, visualization)",
     )
     parser.add_argument(
         "--mode",
@@ -79,12 +89,14 @@ def main():
 
     print("\n[1/5] Extracting audio features...")
     logger.info("Step 1/5: Audio feature extraction")
-    
+
     if args.re_classify_audio and Path("cache/audio_features.pkl").exists():
         print("  Updating cached audio features with new classifiers...")
         logger.info("Updating cached audio features")
         audio_features = update_cached_features()
-    elif (args.use_cache or args.re_embed_lyrics) and Path("cache/audio_features.pkl").exists():
+    elif (args.use_cache or args.re_embed_lyrics) and Path(
+        "cache/audio_features.pkl"
+    ).exists():
         print("  Loading from cache...")
         logger.info("Loading audio features from cache")
         with open("cache/audio_features.pkl", "rb") as f:
@@ -111,7 +123,11 @@ def main():
 
     print("\n[2/5] Extracting lyric features...")
     logger.info("Step 2/5: Lyric feature extraction")
-    if args.use_cache and not args.re_embed_lyrics and Path("cache/lyric_features.pkl").exists():
+    if (
+        args.use_cache
+        and not args.re_embed_lyrics
+        and Path("cache/lyric_features.pkl").exists()
+    ):
         print("  Loading from cache...")
         logger.info("Loading lyric features from cache")
         with open("cache/lyric_features.pkl", "rb") as f:
@@ -127,37 +143,48 @@ def main():
     logger.info("Step 3/5: Clustering")
 
     # Run clustering for all 3 modes to create separate visualizations
-    modes = ['audio', 'lyrics', 'combined'] if args.mode == 'combined' else [args.mode]
+    modes = ["audio", "lyrics", "combined"] if args.mode == "combined" else [args.mode]
     all_results = {}
 
     for mode in modes:
         print(f"\n  Running {mode} mode clustering...")
         logger.info(f"Running clustering in {mode} mode")
 
+        # Use mode-specific PCA components for 75% cumulative variance
+        # Determined via tools/find_optimal_pca.py
+        pca_components_map = {
+            "audio": 118,    # 75.01% variance
+            "lyrics": 162,   # 75.02% variance
+            "combined": 142  # 75.04% variance (audio) + 75.04% variance (lyrics)
+        }
+        n_pca = pca_components_map[mode]
+
         mode_results = run_clustering_pipeline(
             audio_features,
             lyric_features,
             mode=mode,
-            n_pca_components=50,
-            clustering_algorithm='hdbscan',
-            min_cluster_size=10,
-            min_samples=3,
-            cluster_selection_epsilon=0.1,
-            cluster_selection_method='eom',
+            n_pca_components=n_pca,
+            clustering_algorithm="hac",
+            n_clusters_hac=5,
+            linkage_method="ward",
             umap_n_neighbors=20,
             umap_min_dist=0.2,
-            umap_n_components=3
+            umap_n_components=3,
         )
 
         all_results[mode] = mode_results
 
         print(f"    ✓ Found {mode_results['n_clusters']} clusters")
-        print(f"    ✓ Outliers: {mode_results['n_outliers']} songs ({mode_results['n_outliers'] / len(mode_results['dataframe']) * 100:.1f}%)")
+        print(
+            f"    ✓ Outliers: {mode_results['n_outliers']} songs ({mode_results['n_outliers'] / len(mode_results['dataframe']) * 100:.1f}%)"
+        )
         print(f"    ✓ Silhouette score: {mode_results['silhouette_score']:.3f}")
-        logger.info(f"{mode} mode: {mode_results['n_clusters']} clusters, {mode_results['n_outliers']} outliers, silhouette={mode_results['silhouette_score']:.3f}")
+        logger.info(
+            f"{mode} mode: {mode_results['n_clusters']} clusters, {mode_results['n_outliers']} outliers, silhouette={mode_results['silhouette_score']:.3f}"
+        )
 
     # Use combined mode for the main report (or the only mode if not combined)
-    results = all_results.get('combined', all_results[args.mode])
+    results = all_results.get("combined", all_results[args.mode])
 
     print("\n[4/5] Generating interactive visualizations...")
     logger.info("Step 4/5: Generating visualizations")
@@ -171,7 +198,9 @@ def main():
             config={"displayModeBar": True, "displaylogo": False},
             include_plotlyjs="cdn",
         )
-        print("  ✓ Saved combined comparison to analysis/outputs/music_taste_map_combined_comparison.html")
+        print(
+            "  ✓ Saved combined comparison to analysis/outputs/music_taste_map_combined_comparison.html"
+        )
         logger.info("Combined visualization saved")
 
     # Also create individual HTMLs for detailed exploration
@@ -203,7 +232,7 @@ def main():
     print("ANALYSIS COMPLETE!")
     print("=" * 60)
     print("\nOutputs:")
-    if args.mode == 'combined':
+    if args.mode == "combined":
         print("  📊 COMBINED VISUALIZATION (recommended):")
         print("     - analysis/outputs/music_taste_map_combined_comparison.html")
         print("       (side-by-side comparison of all 3 modes)")
@@ -212,14 +241,16 @@ def main():
         print("     - analysis/outputs/music_taste_map_lyrics.html")
         print("     - analysis/outputs/music_taste_map_combined.html")
     else:
-        print(f"  - analysis/outputs/music_taste_map_{args.mode}.html (interactive visualization)")
+        print(
+            f"  - analysis/outputs/music_taste_map_{args.mode}.html (interactive visualization)"
+        )
     print("\n  📝 REPORTS:")
     print("     - analysis/outputs/music_taste_report.md (detailed cluster analysis)")
     print("     - analysis/outputs/outliers.txt (unclustered songs)")
     print("     - analysis/outputs/analysis_data.pkl (serialized results)")
     print(f"\nTotal time: {elapsed_time}")
     print("\nNext steps:")
-    if args.mode == 'combined':
+    if args.mode == "combined":
         print("  1. Open analysis/outputs/music_taste_map_combined_comparison.html")
         print("     to see all 3 modes side-by-side")
         print("  2. Read analysis/outputs/music_taste_report.md for insights")

@@ -6,8 +6,8 @@ Analyzes your Spotify library using deep learning audio features and lyric embed
 
 - **Audio Analysis**: Extracts 1280-dimensional embeddings using Essentia's deep learning models
 - **Lyric Analysis**: Generates multilingual embeddings using sentence-transformers
-- **Clustering**: UMAP dimensionality reduction + HDBSCAN clustering
-- **Visualization**: Interactive Plotly-based HTML visualization
+- **Clustering**: PCA + HAC (Hierarchical Agglomerative Clustering)
+- **Visualization**: Interactive Plotly-based HTML visualization with UMAP
 - **Reporting**: Detailed markdown reports with cluster statistics
 
 ## Quick Start
@@ -92,7 +92,7 @@ spotify-clustering/
 │   ├── pipeline/
 │   │   ├── audio_analysis.py       # Essentia-based audio feature extraction
 │   │   ├── lyric_analysis.py       # Sentence-transformer lyric embeddings
-│   │   ├── clustering.py           # UMAP + HDBSCAN clustering
+│   │   ├── clustering.py           # PCA + HAC/Birch/Spectral clustering
 │   │   └── visualization.py        # Plotly visualizations and reports
 │   ├── models/
 │   │   ├── download_models.py      # Download Essentia TensorFlow models
@@ -129,9 +129,9 @@ spotify-clustering/
    - Language detection
    - Word counts
 
-3. **Dimensionality Reduction**: UMAP reduces high-dimensional features to 2D for visualization
+3. **Dimensionality Reduction**: PCA reduces features for clustering, UMAP for visualization
 
-4. **Clustering**: HDBSCAN identifies natural clusters and outliers
+4. **Clustering**: HAC (Hierarchical Agglomerative Clustering) identifies natural clusters
 
 5. **Visualization & Reporting**: Generates interactive HTML and detailed markdown reports
 
@@ -148,7 +148,7 @@ spotify-clustering/
 
 **"Memory error"**: Reduce batch size in `src/audio_analysis.py` (line ~134) from 100 to 50.
 
-**"Too many outliers"**: Normal if your taste is diverse. Try decreasing `min_cluster_size` in `src/clustering.py`.
+**"Too many outliers"**: HAC doesn't produce outliers. If you see any, check your data quality.
 
 **Missing features**: Make sure you've run the data preparation scripts first:
 ```bash
@@ -192,7 +192,7 @@ This project uses:
 - [Essentia](https://essentia.upf.edu/) (AGPL-3.0)
 - [Sentence-Transformers](https://www.sbert.net/) (Apache-2.0)
 - [UMAP](https://umap-learn.readthedocs.io/) (BSD-3-Clause)
-- [HDBSCAN](https://hdbscan.readthedocs.io/) (BSD-3-Clause)
+- [scikit-learn](https://scikit-learn.org/) (BSD-3-Clause)
 - [Plotly](https://plotly.com/python/) (MIT)
 
 ## Contributing
@@ -203,4 +203,4 @@ This is a personal project for analyzing music taste. Feel free to fork and adap
 
 - Essentia team for audio analysis models
 - Sentence-Transformers team for multilingual embeddings
-- UMAP and HDBSCAN developers for clustering algorithms
+- scikit-learn and UMAP developers for clustering and dimensionality reduction algorithms

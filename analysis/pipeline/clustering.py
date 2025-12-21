@@ -4,10 +4,10 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import hdbscan
 import numpy as np
 import pandas as pd
 import umap
+from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
@@ -170,23 +170,33 @@ def run_clustering_pipeline(
     lyric_features: List[Dict],
     mode: str = 'combined',
     n_pca_components: int = 50,              # PCA dimensionality for clustering
-    clustering_algorithm: str = 'hdbscan',   # 'hdbscan' or 'hac'
-    min_cluster_size: int = 10,              # HDBSCAN parameter
-    min_samples: int = 3,                    # HDBSCAN parameter
-    cluster_selection_epsilon: float = 0.1,  # HDBSCAN parameter
-    cluster_selection_method: str = 'eom',   # HDBSCAN: 'eom' or 'leaf'
-    n_clusters_hac: int = 20,                # HAC: number of clusters
-    linkage_method: str = 'ward',            # HAC: linkage method
-    umap_n_neighbors: int = 20,              # UMAP visualization parameter
-    umap_min_dist: float = 0.2,              # UMAP visualization parameter
-    umap_n_components: int = 3               # UMAP: 2D or 3D visualization
+    clustering_algorithm: str = 'hac',       # 'hac', 'birch', 'spectral'
+    # HAC parameters
+    n_clusters_hac: int = 20,
+    linkage_method: str = 'ward',            # 'ward', 'complete', 'average', 'single'
+    # Birch parameters
+    n_clusters_birch: int = 20,
+    birch_threshold: float = 0.5,
+    birch_branching_factor: int = 50,
+    # Spectral Clustering parameters
+    n_clusters_spectral: int = 20,
+    spectral_affinity: str = 'nearest_neighbors',  # 'nearest_neighbors' or 'rbf'
+    spectral_n_neighbors: int = 15,
+    spectral_assign_labels: str = 'kmeans',  # 'kmeans' or 'discretize'
+    # UMAP visualization parameters
+    umap_n_neighbors: int = 20,
+    umap_min_dist: float = 0.2,
+    umap_n_components: int = 3               # 2D or 3D visualization
 ) -> Dict:
     """
     Clustering pipeline that separates:
     1. PCA-reduced features for CLUSTERING
     2. UMAP for VISUALIZATION only
 
-    Supports HDBSCAN and Hierarchical Agglomerative Clustering (HAC).
+    Supported algorithms:
+    - 'hac': Hierarchical Agglomerative Clustering (default, recommended)
+    - 'birch': Fast hierarchical clustering
+    - 'spectral': Graph-based clustering for non-convex shapes
     """
     logger.info(f"Running clustering in {mode} mode")
     logger.info(f"Clustering algorithm: {clustering_algorithm}")
@@ -200,6 +210,21 @@ def run_clustering_pipeline(
     logger.info(f"Found {len(common_ids)} tracks with both audio and lyric features")
     logger.info(f"Audio features: {len(audio_features)}, Lyric features: {len(lyric_features)}")
 
+    # For combined mode, filter out vocal songs without lyrics
+    if mode == 'combined':
+        filtered_ids = set()
+        for tid in common_ids:
+            audio = audio_by_id[tid]
+            lyric = lyric_by_id[tid]
+            # Exclude if song is vocal (instrumentalness < 0.5) but has no lyrics
+            if audio.get('instrumentalness', 0.5) < 0.5 and not lyric.get('has_lyrics', False):
+                filtered_ids.add(tid)
+
+        if filtered_ids:
+            logger.info(f"Filtering out {len(filtered_ids)} vocal songs without lyrics in combined mode")
+            common_ids = common_ids - filtered_ids
+            logger.info(f"Remaining tracks for combined analysis: {len(common_ids)}")
+
     aligned_audio = [audio_by_id[tid] for tid in sorted(common_ids)]
     aligned_lyrics = [lyric_by_id[tid] for tid in sorted(common_ids)]
 
@@ -208,26 +233,34 @@ def run_clustering_pipeline(
     logger.info(f"PCA-reduced features for clustering: {pca_features.shape}")
 
     # Step 2: Run CLUSTERING on PCA features
-    if clustering_algorithm == 'hdbscan':
-        logger.info(f"Running HDBSCAN clustering (min_cluster_size={min_cluster_size}, "
-                   f"min_samples={min_samples}, epsilon={cluster_selection_epsilon}, "
-                   f"method={cluster_selection_method})...")
-        clusterer = hdbscan.HDBSCAN(
-            min_cluster_size=min_cluster_size,
-            min_samples=min_samples,
-            cluster_selection_epsilon=cluster_selection_epsilon,
-            cluster_selection_method=cluster_selection_method,
-            metric='euclidean'
-        )
-        cluster_labels = clusterer.fit_predict(pca_features)
-
-    elif clustering_algorithm == 'hac':
-        from sklearn.cluster import AgglomerativeClustering
+    if clustering_algorithm == 'hac':
         logger.info(f"Running Hierarchical Agglomerative Clustering (n_clusters={n_clusters_hac}, "
                    f"linkage={linkage_method})...")
         clusterer = AgglomerativeClustering(
             n_clusters=n_clusters_hac,
             linkage=linkage_method
+        )
+        cluster_labels = clusterer.fit_predict(pca_features)
+
+    elif clustering_algorithm == 'birch':
+        logger.info(f"Running Birch clustering (n_clusters={n_clusters_birch}, "
+                   f"threshold={birch_threshold}, branching_factor={birch_branching_factor})...")
+        clusterer = Birch(
+            n_clusters=n_clusters_birch,
+            threshold=birch_threshold,
+            branching_factor=birch_branching_factor
+        )
+        cluster_labels = clusterer.fit_predict(pca_features)
+
+    elif clustering_algorithm == 'spectral':
+        logger.info(f"Running Spectral Clustering (n_clusters={n_clusters_spectral}, "
+                   f"affinity={spectral_affinity}, n_neighbors={spectral_n_neighbors})...")
+        clusterer = SpectralClustering(
+            n_clusters=n_clusters_spectral,
+            affinity=spectral_affinity,
+            n_neighbors=spectral_n_neighbors if spectral_affinity == 'nearest_neighbors' else 10,
+            assign_labels=spectral_assign_labels,
+            random_state=42
         )
         cluster_labels = clusterer.fit_predict(pca_features)
 
@@ -350,22 +383,11 @@ def run_clustering_pipeline(
     outlier_songs = df[df['cluster'] == -1]['filename'].tolist()
 
     # Calculate silhouette score on PCA features (not UMAP visualization)
-    if clustering_algorithm == 'hdbscan':
-        # HDBSCAN can have outliers (-1 labels)
-        non_outlier_mask = cluster_labels != -1
-        non_outlier_labels = cluster_labels[non_outlier_mask]
-        non_outlier_features = pca_features[non_outlier_mask]
-
-        if len(set(non_outlier_labels)) > 1:
-            sil_score = silhouette_score(non_outlier_features, non_outlier_labels)
-        else:
-            sil_score = 0.0
+    # HAC, Birch, and Spectral don't produce outliers
+    if len(set(cluster_labels)) > 1:
+        sil_score = silhouette_score(pca_features, cluster_labels)
     else:
-        # HAC doesn't have outliers
-        if len(set(cluster_labels)) > 1:
-            sil_score = silhouette_score(pca_features, cluster_labels)
-        else:
-            sil_score = 0.0
+        sil_score = 0.0
 
     logger.info(f"Silhouette score (on PCA features): {sil_score:.3f}")
 

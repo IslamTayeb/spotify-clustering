@@ -1,5 +1,4 @@
 essentia_tensorflow==2.1b6.dev1389
-hdbscan==0.8.41
 langdetect==1.0.9
 lyricsgenius==3.7.5
 numpy==2.4.0
