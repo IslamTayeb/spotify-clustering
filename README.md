@@ -35,11 +35,16 @@ A comprehensive end-to-end pipeline that fetches your Spotify library, downloads
 - **Spotify API Integration**: Fetch your entire saved library with metadata
 - **Audio Download**: Automated download of missing tracks using spotdl or yt-dlp
 - **Lyrics Fetching**: Fetch and cache lyrics from Genius API
-- **Audio Analysis**: Extracts 1280-dimensional embeddings using Essentia's deep learning models
-- **Lyric Analysis**: Generates multilingual embeddings using sentence-transformers
+- **Dual Audio Analysis**:
+  - **Essentia Models**: 1280-dim embeddings + genre/mood/BPM interpretation (always runs)
+  - **MERT Embeddings**: Optional 768-dim music-understanding transformer for clustering
+- **Dual Lyric Analysis**:
+  - **BGE-M3**: 1024-dim multilingual embeddings (default, max 8192 tokens)
+  - **E5-Large**: Optional 1024-dim high-quality multilingual embeddings
 - **Clustering**: PCA + HAC (Hierarchical Agglomerative Clustering)
+- **Lyric Themes**: TF-IDF keyword extraction, sentiment analysis, vocabulary richness
 - **Visualization**: Interactive Plotly-based HTML visualization with UMAP
-- **Reporting**: Detailed markdown reports with cluster statistics
+- **Reporting**: Detailed markdown reports with cluster statistics and lyric themes
 - **Playlist Export**: Create Spotify playlists from discovered clusters
 - **Interactive Tuning**: Streamlit app for experimenting with clustering parameters
 
@@ -159,15 +164,36 @@ Downloads to `~/.essentia/models/` (one-time setup).
 
 ### 8. Run Analysis
 
-First run (extracts all features, ~90 minutes for 1,500 songs):
+**Default behavior** (uses Essentia + BGE-M3):
 ```bash
+# First run (extracts all features, ~90 minutes for 1,500 songs)
 python run_analysis.py
-```
 
-Subsequent runs (uses cache, <5 minutes):
-```bash
+# Subsequent runs (uses cache, <5 minutes)
 python run_analysis.py --use-cache
 ```
+
+**Advanced: Using MERT for clustering** (optional, higher quality):
+```bash
+# First run: Extract MERT embeddings (~45 min on GPU for 1,500 songs)
+python run_analysis.py --audio-embedding-backend mert
+
+# Subsequent runs: Use cached MERT embeddings
+python run_analysis.py --use-cache --audio-embedding-backend mert
+```
+
+**Advanced: Using E5 for lyrics** (optional, higher quality):
+```bash
+# Extract E5 embeddings (~20 min on GPU for 1,500 songs)
+python run_analysis.py --use-cache --lyrics-embedding-backend e5
+```
+
+**Full upgrade: MERT + E5** (best quality):
+```bash
+python run_analysis.py --use-cache --audio-embedding-backend mert --lyrics-embedding-backend e5 --mode combined
+```
+
+**Note**: Essentia ALWAYS runs for interpretation (genre/mood/BPM), even when using MERT for clustering. MERT/E5 create separate caches without modifying existing files.
 
 ### 9. Export to Spotify Playlists
 
@@ -227,9 +253,12 @@ spotify-clustering/
 ├── analysis/                       # Music analysis pipeline
 │   ├── pipeline/
 │   │   ├── audio_analysis.py       # Essentia audio feature extraction
-│   │   ├── lyric_analysis.py       # Sentence-transformer embeddings
-│   │   ├── clustering.py           # PCA + HAC/Birch/Spectral
+│   │   ├── mert_embedding.py       # MERT audio embeddings (optional)
+│   │   ├── lyric_analysis.py       # BGE-M3/E5 lyric embeddings
+│   │   ├── clustering.py           # PCA + HAC/Birch/Spectral with embedding overrides
 │   │   └── visualization.py        # Plotly visualizations and reports
+│   ├── interpretability/
+│   │   └── lyric_themes.py         # TF-IDF keywords, sentiment analysis
 │   ├── models/
 │   │   ├── download_models.py      # Download Essentia TensorFlow models
 │   │   └── list_models.py          # List available models
@@ -336,19 +365,54 @@ spotify-clustering/
 
 ## How It Works
 
-### Audio Feature Extraction (Essentia)
-Uses pre-trained deep learning models to extract:
+### Dual-Path Audio Architecture
+
+The pipeline uses a **dual-path architecture** for audio analysis:
+
+**Path 1: Essentia (Interpretation) - ALWAYS RUNS**
+- Extracts human-readable musical attributes
+- Genre probabilities, mood scores, BPM, key, danceability
+- Used for cluster interpretation and reporting
+- Cache: `cache/audio_features.pkl` (never modified by MERT)
+
+**Path 2: MERT (Clustering) - OPTIONAL**
+- Semantic audio embeddings optimized for music understanding
+- Used for clustering when `--audio-embedding-backend mert`
+- Separate cache: `cache/mert_embeddings_*.pkl`
+- Passed as in-memory override without modifying Essentia cache
+
+**Why both?**
+- **Essentia**: Fast, interpretable, provides genre/mood/BPM tags
+- **MERT**: Deep semantic understanding, better clustering quality
+- **Together**: Best of both worlds - accurate clustering + interpretable results
+
+### Audio Feature Extraction
+
+**Essentia (Default for clustering)**
 - **Embeddings**: 1280-dimensional audio representations (discogs-effnet-bs64-1)
 - **Genre**: 400 genre probabilities (genre_discogs400)
 - **Moods**: happy, sad, aggressive, relaxed, party (5 separate models)
-- **Musical Attributes**: BPM, key, danceability, instrumentalness
+- **Musical Attributes**: BPM, key, danceability, instrumentalness, valence, arousal
 
-### Lyric Feature Extraction (Sentence-Transformers)
-Uses multilingual transformer models to create:
-- **Embeddings**: 384-dimensional semantic representations (paraphrase-multilingual-MiniLM-L12-v2)
-- **Language Detection**: Identifies language of lyrics
-- **Word Counts**: Basic text statistics
-- **Supports 50+ languages**
+**MERT (Optional for clustering)**
+- **Embeddings**: 768-dimensional transformer representations
+- **Preprocessing**: 24kHz mono, 30s excerpts, L2-normalized
+- **Optimized for**: Music similarity, semantic understanding
+- **Use case**: Higher quality clustering of similar-sounding tracks
+
+### Lyric Feature Extraction
+
+**BGE-M3 (Default)**
+- **Embeddings**: 1024-dimensional semantic representations
+- **Context**: 8192 tokens (very long lyrics supported)
+- **Languages**: 100+ multilingual support
+- **Language Detection**: Automatic via langdetect
+
+**E5-Large (Optional)**
+- **Embeddings**: 1024-dimensional high-quality representations
+- **Context**: 512 tokens
+- **Instruction**: Uses "passage: " prefix for better encoding
+- **Use case**: Higher quality lyric clustering
 
 ### Dimensionality Reduction
 - **PCA**: Reduces features to optimal dimensions for clustering (preserves variance)
@@ -420,8 +484,11 @@ python run_analysis.py --use-cache              # Skip feature extraction (use c
 python run_analysis.py --mode audio             # Audio features only
 python run_analysis.py --mode lyrics            # Lyric features only
 python run_analysis.py --mode combined          # Both (default)
-python run_analysis.py --songs songs/data/      # Custom songs directory
-python run_analysis.py --lyrics lyrics/data/    # Custom lyrics directory
+
+# Embedding backend selection (NEW):
+python run_analysis.py --audio-embedding-backend mert     # Use MERT for audio clustering
+python run_analysis.py --lyrics-embedding-backend e5      # Use E5 for lyrics clustering
+python run_analysis.py --audio-embedding-backend mert --lyrics-embedding-backend e5  # Best quality
 
 # Advanced options (for experimenting with clustering):
 python run_analysis.py --use-cache --algorithm birch
@@ -430,6 +497,17 @@ python run_analysis.py --use-cache --pca-components 50
 
 # IMPORTANT: Always use --use-cache when experimenting with parameters
 # Feature extraction takes ~90 minutes and should only run once
+
+# Embedding Backends:
+# Audio:
+#   - essentia (default): 1280-dim EffNetDiscogs, used for interpretation (genre/mood/BPM)
+#   - mert: 768-dim MERT-v1-95M, optimized for music understanding and clustering
+# Lyrics:
+#   - bge-m3 (default): 1024-dim, 8192 token context, multilingual
+#   - e5: 1024-dim E5-large, higher quality, 512 token context
+#
+# Note: Essentia ALWAYS runs (even with MERT) for interpretation fields.
+# MERT/E5 create separate caches without modifying existing cache/audio_features.pkl.
 ```
 
 ### Interactive Tuning
@@ -539,8 +617,10 @@ This ensures reliable matching across different systems and download tools.
   - `analysis_data.pkl` - Serialized results
   - `outliers.txt` - Unclustered songs (if any)
 - **Feature cache**: `cache/`
-  - `audio_features.pkl` - Cached audio features (~500MB for 1,500 songs)
-  - `lyric_features.pkl` - Cached lyric features (~50MB for 1,500 songs)
+  - `audio_features.pkl` - Essentia audio features (~500MB for 1,500 songs)
+  - `mert_embeddings_24khz_30s_cls.pkl` - MERT audio embeddings (~9MB for 1,500 songs)
+  - `lyric_features.pkl` - BGE-M3 lyric embeddings (~50MB for 1,500 songs)
+  - `lyric_features_e5.pkl` - E5 lyric embeddings (~50MB for 1,500 songs)
 - **OAuth tokens**: `.cache` - Spotify OAuth token (gitignored)
 - **Logs**: `logging/analysis_YYYYMMDD_HHMMSS.log` - Timestamped execution logs
 
@@ -647,21 +727,56 @@ python run_analysis.py
 
 ## Model Information
 
-### Essentia Models
-- Embeddings: discogs-effnet-bs64-1 (1280-dim)
-- Genre: genre_discogs400 (400 classes)
-- Mood models: happy, sad, aggressive, relaxed, party
-- Musical attributes: danceability, BPM, key detection
+### Audio Analysis Models
 
-### Sentence-Transformers
-- Model: paraphrase-multilingual-MiniLM-L12-v2 (384-dim)
-- Supports 50+ languages
+**Essentia Models (Always runs - for interpretation)**
+- **Embedding**: discogs-effnet-bs64-1 (1280-dim)
+- **Genre**: genre_discogs400 (400 genre probabilities)
+- **Moods**: 5 separate models (happy, sad, aggressive, relaxed, party)
+- **Musical Attributes**: BPM, key, danceability, instrumentalness, valence, arousal
+- **Voice/Production**: Gender, timbre (bright/dark), acoustic/electronic
+- **Download**: Auto-downloads to `~/.essentia/models/` (~22MB)
 
-All models download automatically to:
-- Essentia: `~/.essentia/models/`
-- Sentence-transformers: `~/.cache/torch/`
+**MERT (Optional - for clustering)**
+- **Model**: m-a-p/MERT-v1-95M (Music-understanding Evaluation and Representation Transformer)
+- **Embedding Size**: 768-dim
+- **Purpose**: Semantic audio representations optimized for music understanding
+- **Preprocessing**: 24kHz mono, 30s center excerpts, CLS token pooling, L2-normalized
+- **HuggingFace**: [m-a-p/MERT-v1-95M](https://huggingface.co/m-a-p/MERT-v1-95M)
+- **Download**: Auto-downloads from HuggingFace (~360MB)
+- **Performance**: ~45 min on GPU, ~6 hours on CPU (1,500 songs)
 
-Total download size: ~500MB (one-time)
+### Lyric Analysis Models
+
+**BGE-M3 (Default)**
+- **Model**: BAAI/bge-m3 (multilingual embedding model)
+- **Embedding Size**: 1024-dim
+- **Context Length**: 8192 tokens (very long lyrics supported)
+- **Languages**: 100+ languages
+- **HuggingFace**: [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)
+
+**E5-Large (Optional - higher quality)**
+- **Model**: intfloat/multilingual-e5-large
+- **Embedding Size**: 1024-dim
+- **Context Length**: 512 tokens
+- **Languages**: 100+ languages
+- **Instruction Format**: Uses "passage: " prefix for encoding
+- **HuggingFace**: [intfloat/multilingual-e5-large](https://huggingface.co/intfloat/multilingual-e5-large)
+- **Download**: Auto-downloads from HuggingFace (~2.2GB)
+- **Performance**: ~20 min on GPU, ~2 hours on CPU (1,500 songs)
+
+### Model Storage Locations
+- **Essentia**: `~/.essentia/models/`
+- **MERT/E5**: `~/.cache/huggingface/` (managed by transformers)
+- **Total First-Time Download**: ~2.5GB (if using all models)
+
+### Cache Files
+- `cache/audio_features.pkl` - Essentia features (~500MB for 1,500 songs)
+- `cache/mert_embeddings_24khz_30s_cls.pkl` - MERT embeddings (~9MB for 1,500 songs)
+- `cache/lyric_features.pkl` - BGE-M3 embeddings (~50MB for 1,500 songs)
+- `cache/lyric_features_e5.pkl` - E5 embeddings (~50MB for 1,500 songs)
+
+**Note**: MERT/E5 caches are separate and don't modify existing cache files.
 
 ## Performance
 
@@ -788,16 +903,25 @@ Tested on MacBook Pro (M1, 16GB RAM) with 1,500 songs:
 | API fetch | 2-3 min | 30 sec |
 | Audio download | 30-60 min | N/A |
 | Lyrics fetch | 10-15 min | 1 min |
-| Audio features | 60-90 min | 5 sec |
-| Lyric features | 5-10 min | 2 sec |
+| **Essentia audio features** | **60-90 min** | **5 sec** |
+| MERT audio features (optional) | 45 min (GPU) / 6 hrs (CPU) | 5 sec |
+| **BGE-M3 lyric features** | **5-10 min** | **2 sec** |
+| E5 lyric features (optional) | 20 min (GPU) / 2 hrs (CPU) | 2 sec |
 | Clustering | 2-5 min | 2-5 min |
 | Visualization | 30-60 sec | 30-60 sec |
-| **Total** | **~2-3 hours** | **<5 min** |
+| **Total (default)** | **~2-3 hours** | **<5 min** |
+| **Total (with MERT+E5, GPU)** | **~3-4 hours** | **<5 min** |
+
+**Extraction Time Comparison (1,500 songs):**
+- **Default (Essentia + BGE-M3)**: ~90 min first run
+- **With MERT (GPU)**: +45 min = ~135 min first run
+- **With MERT + E5 (GPU)**: +45 min + 20 min = ~155 min first run
+- **With MERT + E5 (CPU)**: +6 hrs + 2 hrs = ~8 hours first run
 
 Scales approximately linearly with library size:
-- 500 songs: ~45 min (first run)
-- 1,500 songs: ~90 min (first run)
-- 5,000 songs: ~4-5 hours (first run)
+- 500 songs: ~45 min (first run, default)
+- 1,500 songs: ~90 min (first run, default)
+- 5,000 songs: ~4-5 hours (first run, default)
 
 ## Privacy and Data Security
 
@@ -916,6 +1040,34 @@ A: The Streamlit interactive tuner (`analysis/interactive_tuner.py`) provides a 
 
 **Q: How often should I re-run the analysis?**
 A: Re-run when you've added significant new tracks (50+) to your library. Use `--use-cache` to save time.
+
+**Q: Should I use MERT or Essentia for audio clustering?**
+A:
+- **Essentia (default)**: Fast, interpretable, great for most users
+- **MERT**: Higher quality clustering, better semantic understanding
+- **Recommendation**: Start with Essentia. Try MERT if you want better clustering quality
+- **Note**: Essentia always runs for interpretation (genre/mood/BPM), even when using MERT
+
+**Q: Do I need a GPU to use MERT?**
+A: No, but highly recommended:
+- **GPU**: ~45 min for 1,500 songs
+- **CPU**: ~6 hours for 1,500 songs
+- MERT extraction is one-time; subsequent runs use cache
+
+**Q: Will MERT overwrite my existing cache?**
+A: No. MERT creates a separate cache (`cache/mert_embeddings_*.pkl`). Your existing `cache/audio_features.pkl` is never modified.
+
+**Q: What's the difference between BGE-M3 and E5 for lyrics?**
+A:
+- **BGE-M3 (default)**: 8192 token context (very long lyrics), good quality
+- **E5**: Higher quality embeddings, 512 token context (shorter)
+- **Recommendation**: BGE-M3 is sufficient for most users
+
+**Q: Can I mix and match embedding backends?**
+A: Yes! Examples:
+- Essentia audio + E5 lyrics
+- MERT audio + BGE-M3 lyrics
+- MERT audio + E5 lyrics (best quality, slowest extraction)
 
 ---
 
