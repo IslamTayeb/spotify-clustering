@@ -215,7 +215,6 @@ data/
 temp/
 
 # Analysis outputs and logs
-outputs/
 cache/
 logging/
 backup/
