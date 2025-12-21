@@ -16,6 +16,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 import sys
+import json
 from pathlib import Path
 from typing import Dict, List
 import umap
@@ -84,8 +85,55 @@ def load_analysis_data(file_path: str = 'analysis/outputs/analysis_data.pkl'):
 
 @st.cache_data
 def get_dataframe(data: Dict, mode: str = 'combined'):
-    """Extract dataframe for selected mode."""
-    return data[mode]['dataframe']
+    """Extract dataframe for selected mode and map genres if needed."""
+    df = data[mode]['dataframe'].copy()
+
+    # Map genre indices to labels if they are numeric or format "genre_X"
+    if 'top_genre' in df.columns:
+        # Check sample values to determine if mapping is needed
+        sample_vals = df['top_genre'].dropna().astype(str).head(10).tolist()
+        
+        needs_mapping = False
+        if sample_vals:
+            # Check for numeric strings ("123")
+            if all(val.replace('.', '', 1).isdigit() for val in sample_vals):
+                needs_mapping = True
+            # Check for "genre_123" format
+            elif all(val.startswith('genre_') for val in sample_vals):
+                needs_mapping = True
+
+        if needs_mapping:
+            try:
+                # Load genre labels
+                labels_path = Path(__file__).parent / 'data' / 'genre_discogs400_labels.json'
+                if labels_path.exists():
+                    with open(labels_path, 'r') as f:
+                        genre_labels = json.load(f)
+                    
+                    # Map indices to labels
+                    def map_genre(x):
+                        try:
+                            s = str(x)
+                            # Handle "genre_123" format
+                            if s.startswith('genre_'):
+                                idx_str = s.replace('genre_', '')
+                            else:
+                                idx_str = s
+                                
+                            # Convert to integer index
+                            idx = int(float(idx_str))
+                            
+                            if 0 <= idx < len(genre_labels):
+                                return genre_labels[idx]
+                            return str(x)
+                        except:
+                            return str(x)
+                            
+                    df['top_genre'] = df['top_genre'].apply(map_genre)
+            except Exception as e:
+                st.warning(f"Note: Could not load genre labels: {e}")
+
+    return df
 
 
 def main():

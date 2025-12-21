@@ -476,6 +476,7 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
             'arousal_emomusic' not in feature or
             'valence_emomusic' not in feature or
             'mtg_jamendo_genre_probs' not in feature or
+            'top_mtg_jamendo_genres' not in feature or
             'moods_mirex_probs' not in feature
         )
 
@@ -609,10 +610,15 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
                 feature['valence_emomusic'] = float(mean_emo[1])
 
             # 14. NEW (2024): MTG-Jamendo Genre
-            if 'mtg_jamendo_genre_probs' not in feature:
+            if 'mtg_jamendo_genre_probs' not in feature or 'top_mtg_jamendo_genres' not in feature:
                 if not extractor.mtg_jamendo_genre:
                     raise RuntimeError("MTG-Jamendo genre model not loaded - cannot extract features")
-                feature['mtg_jamendo_genre_probs'] = extractor.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
+                mtg_jamendo_genre_probs = extractor.mtg_jamendo_genre(embeddings).mean(axis=0).tolist()
+                feature['mtg_jamendo_genre_probs'] = mtg_jamendo_genre_probs
+
+                mtg_jamendo_genre_labels = load_genre_labels('mtg_jamendo_genre')
+                top_mtg_jamendo_genre_indices = np.argsort(mtg_jamendo_genre_probs)[-3:][::-1]
+                feature['top_mtg_jamendo_genres'] = [(mtg_jamendo_genre_labels[i], float(mtg_jamendo_genre_probs[i])) for i in top_mtg_jamendo_genre_indices]
 
             # 15. NEW (2024): MIREX Moods (requires MusiCNN embeddings)
             if 'moods_mirex_probs' not in feature:
