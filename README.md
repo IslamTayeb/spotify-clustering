@@ -35,9 +35,10 @@ A comprehensive end-to-end pipeline that fetches your Spotify library, downloads
 - **Spotify API Integration**: Fetch your entire saved library with metadata
 - **Audio Download**: Automated download of missing tracks using spotdl or yt-dlp
 - **Lyrics Fetching**: Fetch and cache lyrics from Genius API
-- **Dual Audio Analysis**:
+- **Triple Audio Analysis**:
   - **Essentia Models**: 1280-dim embeddings + genre/mood/BPM interpretation (always runs)
   - **MERT Embeddings**: Optional 768-dim music-understanding transformer for clustering
+  - **Interpretable Features**: 17-dim human-readable vector (voice gender, genre purity, moods)
 - **Dual Lyric Analysis**:
   - **BGE-M3**: 1024-dim multilingual embeddings (default, max 8192 tokens)
   - **E5-Large**: Optional 1024-dim high-quality multilingual embeddings
@@ -256,7 +257,8 @@ spotify-clustering/
 │   │   ├── mert_embedding.py       # MERT audio embeddings (optional)
 │   │   ├── lyric_analysis.py       # BGE-M3/E5 lyric embeddings
 │   │   ├── clustering.py           # PCA + HAC/Birch/Spectral with embedding overrides
-│   │   └── visualization.py        # Plotly visualizations and reports
+│   │   ├── visualization.py        # Plotly visualizations and reports
+│   │   └── genre_ladder.py         # Genre purity/fusion (entropy-based)
 │   ├── interpretability/
 │   │   └── lyric_themes.py         # TF-IDF keywords, sentiment analysis
 │   ├── models/
@@ -280,7 +282,8 @@ spotify-clustering/
 │   ├── build_master_index.py       # Build unified track index
 │   ├── clean_lyrics.py             # Clean lyric data
 │   ├── deduplicate_songs.py        # Remove duplicate MP3s
-│   └── verify_cache.py             # Verify cached features
+│   ├── verify_cache.py             # Verify cached features
+│   └── validate_genre_ladder.py    # Validate genre purity/fusion scores
 ├── songs/data/                     # MP3 files (gitignored)
 ├── cache/                          # Feature cache (speeds up re-runs)
 │   ├── audio_features.pkl          # Cached audio features
@@ -332,6 +335,8 @@ spotify-clustering/
 7. **Extract Audio Features** (`analysis/pipeline/audio_analysis.py`)
    - Processes all MP3 files using Essentia
    - Extracts 1280-dim embeddings, 400 genre probabilities, moods, BPM, key
+   - Extracts voice gender (male/female vocals) and production features
+   - Computes genre ladder (entropy-based purity/fusion score)
    - Caches results to `cache/audio_features.pkl`
 
 8. **Extract Lyric Features** (`analysis/pipeline/lyric_analysis.py`)
@@ -393,12 +398,87 @@ The pipeline uses a **dual-path architecture** for audio analysis:
 - **Genre**: 400 genre probabilities (genre_discogs400)
 - **Moods**: happy, sad, aggressive, relaxed, party (5 separate models)
 - **Musical Attributes**: BPM, key, danceability, instrumentalness, valence, arousal
+- **Voice Gender**: Male/female vocal probability (gender-discogs-effnet)
+- **Production**: Acoustic/electronic, timbre (bright/dark)
 
 **MERT (Optional for clustering)**
 - **Embeddings**: 768-dimensional transformer representations
 - **Preprocessing**: 24kHz mono, 30s excerpts, L2-normalized
 - **Optimized for**: Music similarity, semantic understanding
 - **Use case**: Higher quality clustering of similar-sounding tracks
+
+**Interpretable Feature Vector (17 dimensions)**
+
+When using `--audio-embedding-backend interpretable`, the pipeline constructs a human-readable feature vector instead of raw embeddings:
+
+| Index | Feature | Range | Description |
+|-------|---------|-------|-------------|
+| 0 | BPM (normalized) | 0-1 | Tempo relative to library min/max |
+| 1 | Danceability | 0-1 | How suitable for dancing |
+| 2 | Instrumentalness | 0-1 | Vocals (0) vs instrumental (1) |
+| 3 | Valence | 0-1 | Musical positivity/happiness |
+| 4 | Arousal | 0-1 | Energy/intensity level |
+| 5 | Engagement | 0-1 | How attention-holding |
+| 6 | Approachability | 0-1 | Mainstream accessibility |
+| 7-11 | Moods | 0-1 | Happy, sad, aggressive, relaxed, party |
+| 12 | Voice Gender | 0-1 | Female (0) ↔ Male (1) vocals |
+| 13 | Genre Ladder | 0-1 | Pure genre (0) ↔ Genre fusion (1) |
+| 14-16 | Key Features | 0-1 | Musical key encoding (3D) |
+
+**Why Interpretable?**
+- Each dimension has clear meaning (vs opaque 1280-dim embeddings)
+- Weights can be adjusted via interactive sliders
+- Easier to understand why songs cluster together
+- Combines multiple Essentia models into unified representation
+
+### Genre Ladder (Entropy-based)
+
+The genre ladder measures **how categorizable** a song is - not what genre it is, but how confident the AI is about the classification:
+
+```
+0.0 ─────────────────────────────────────────────────────────────── 1.0
+PURE                            MIXED                          FUSION
+│                                 │                                 │
+│  "This is clearly Trap"         │  "Probably Hip Hop"             │  "Could be anything"
+│  AI confidence: 95%+            │  AI confidence: 50-70%          │  AI confidence: <30%
+```
+
+**How it works:**
+1. Essentia's discogs400 model outputs a 400-dimensional probability vector
+2. We compute **Shannon entropy**: `H(X) = -Σ p(x) × log(p(x))`
+3. Low entropy = one genre dominates = pure
+4. High entropy = probabilities spread across genres = fusion
+5. Normalize to [0, 1] across your library
+
+**Examples from a typical library:**
+| Song | Genre | Entropy | Interpretation |
+|------|-------|---------|----------------|
+| BANG THAT | Cloud Rap | 0.00 | AI is 100% confident |
+| New Tank | Trap | 0.06 | Very pure Hip Hop |
+| Jazz track | Swing | 0.62 | Could be Jazz, Soul, or Funk |
+| Collage | Soundtrack | 1.00 | AI has no idea |
+
+**Why entropy instead of acoustic↔electronic?**
+- Acoustic/electronic is **redundant** with existing features (0.71 correlation with danceability)
+- Entropy is **0.54 unique** - captures something new
+- Measures artistic intent: traditionalist vs genre-bender
+- Won't overlap with future lyrics analysis
+
+### Voice Gender
+
+Captures the **vocal character** of a song using Essentia's gender classifier:
+
+| Value | Meaning |
+|-------|---------|
+| 0.0 | Female vocals |
+| 0.5 | Mixed/unclear |
+| 1.0 | Male vocals |
+
+**Why include this?**
+- **0.67 uniqueness** - highest of any candidate feature
+- Won't be captured by lyrics (text doesn't reveal voice timbre)
+- Helps separate songs by vocal character
+- Already computed by Essentia, zero extra cost
 
 ### Lyric Feature Extraction
 
@@ -485,10 +565,13 @@ python run_analysis.py --mode audio             # Audio features only
 python run_analysis.py --mode lyrics            # Lyric features only
 python run_analysis.py --mode combined          # Both (default)
 
-# Embedding backend selection (NEW):
-python run_analysis.py --audio-embedding-backend mert     # Use MERT for audio clustering
-python run_analysis.py --lyrics-embedding-backend e5      # Use E5 for lyrics clustering
-python run_analysis.py --audio-embedding-backend mert --lyrics-embedding-backend e5  # Best quality
+# Embedding backend selection:
+python run_analysis.py --audio-embedding-backend mert          # MERT: deep semantic understanding
+python run_analysis.py --audio-embedding-backend interpretable # Interpretable: 17-dim human-readable features
+python run_analysis.py --lyrics-embedding-backend e5           # E5: higher quality lyrics clustering
+
+# Recommended for exploration (interpretable features with adjustable weights):
+python run_analysis.py --use-cache --audio-embedding-backend interpretable
 
 # Advanced options (for experimenting with clustering):
 python run_analysis.py --use-cache --algorithm birch
@@ -500,14 +583,17 @@ python run_analysis.py --use-cache --pca-components 50
 
 # Embedding Backends:
 # Audio:
-#   - essentia (default): 1280-dim EffNetDiscogs, used for interpretation (genre/mood/BPM)
-#   - mert: 768-dim MERT-v1-95M, optimized for music understanding and clustering
+#   - essentia (default): 1280-dim EffNetDiscogs embeddings
+#   - mert: 768-dim MERT-v1-95M, optimized for music understanding
+#   - interpretable: 17-dim human-readable features (BPM, mood, voice gender, genre purity)
 # Lyrics:
 #   - bge-m3 (default): 1024-dim, 8192 token context, multilingual
 #   - e5: 1024-dim E5-large, higher quality, 512 token context
 #
-# Note: Essentia ALWAYS runs (even with MERT) for interpretation fields.
-# MERT/E5 create separate caches without modifying existing cache/audio_features.pkl.
+# Note: Essentia ALWAYS runs for feature extraction.
+# The "interpretable" backend uses Essentia features but constructs a 17-dim
+# vector with explicit meaning (see "Interpretable Feature Vector" section).
+# Great for understanding WHY songs cluster together.
 ```
 
 ### Interactive Tuning
@@ -565,6 +651,12 @@ python tools/deduplicate_songs.py
 
 # Verify feature cache integrity
 python tools/verify_cache.py
+
+# Validate genre ladder feature (shows pure vs fusion songs)
+python tools/validate_genre_ladder.py
+# Output example:
+#   BANG THAT       | Hip Hop---Cloud Rap | 0.000 (pure)
+#   Collage         | Soundtrack          | 1.000 (fusion)
 ```
 
 ## Filename Normalization Strategy
@@ -1068,6 +1160,35 @@ A: Yes! Examples:
 - Essentia audio + E5 lyrics
 - MERT audio + BGE-M3 lyrics
 - MERT audio + E5 lyrics (best quality, slowest extraction)
+- Interpretable audio + BGE-M3 lyrics (best for understanding clusters)
+
+**Q: What is the "interpretable" audio backend?**
+A: A 17-dimensional feature vector where each dimension has explicit meaning:
+- BPM, danceability, instrumentalness, valence, arousal
+- Engagement, approachability, 5 mood dimensions
+- Voice gender (female↔male), genre ladder (pure↔fusion)
+- Key features (3D)
+
+Use `--audio-embedding-backend interpretable` for clustering you can understand and tune.
+
+**Q: What is the genre ladder?**
+A: Measures how "categorizable" a song is using Shannon entropy:
+- **0.0 = Pure**: AI is 95%+ confident about the genre (e.g., pure Trap)
+- **1.0 = Fusion**: AI is confused, song crosses many genres (e.g., experimental)
+
+It captures whether an artist works within genre traditions or breaks boundaries.
+
+**Q: Why not use acoustic↔electronic for the genre ladder?**
+A: We analyzed feature correlations and found:
+- Acoustic/electronic is **0.71 correlated** with danceability (already in vector)
+- Genre entropy has **0.54 uniqueness** - adds genuinely new information
+- Essentia already extracts `mood_acoustic` and `mood_electronic` directly
+
+**Q: What does voice gender capture?**
+A: The vocal character of a song (female=0, male=1):
+- **0.67 uniqueness** - highest of any candidate feature
+- Won't be captured by lyrics (text doesn't reveal voice timbre)
+- Already computed by Essentia, no extra processing needed
 
 ---
 

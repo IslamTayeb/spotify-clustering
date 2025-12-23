@@ -1,10 +1,10 @@
 # My Music Taste Analysis Report
 
-**Generated**: 2025-12-23 06:42:24
-**Total Songs**: 1445
+**Generated**: 2025-12-23 20:35:56
+**Total Songs**: 1253
 **Clusters Found**: 5
 **Outliers**: 0 (0.0%)
-**Silhouette Score**: 0.090
+**Silhouette Score**: 0.089
 
 ---
 
@@ -12,42 +12,42 @@
 
 ### Genre Distribution
 Top 10 genres across entire library:
-1. genre_202: 32.2% (appears in 607 songs)
-2. genre_183: 33.7% (appears in 509 songs)
-3. genre_190: 20.0% (appears in 252 songs)
-4. genre_192: 16.5% (appears in 204 songs)
-5. genre_191: 17.1% (appears in 179 songs)
-6. genre_184: 15.9% (appears in 168 songs)
-7. genre_197: 18.3% (appears in 139 songs)
-8. genre_91: 18.0% (appears in 117 songs)
-9. genre_308: 13.3% (appears in 107 songs)
-10. genre_180: 18.1% (appears in 106 songs)
+1. Hip Hop---Trap: 32.2% (appears in 519 songs)
+2. Hip Hop---Cloud Rap: 33.8% (appears in 439 songs)
+3. Hip Hop---Gangsta: 20.1% (appears in 224 songs)
+4. Hip Hop---Hardcore Hip-Hop: 16.7% (appears in 180 songs)
+5. Hip Hop---Grime: 17.6% (appears in 152 songs)
+6. Hip Hop---Conscious: 15.7% (appears in 147 songs)
+7. Hip Hop---Pop Rap: 17.7% (appears in 117 songs)
+8. Rock---Alternative Rock: 13.4% (appears in 99 songs)
+9. Electronic---House: 18.0% (appears in 91 songs)
+10. Hip Hop---Boom Bap: 18.1% (appears in 90 songs)
 
 ### Mood Profile
-- Happy: 56.7%
-- Sad: 24.2%
-- Aggressive: 77.3%
-- Relaxed: 49.1%
-- Party: 61.1%
+- Happy: 56.8%
+- Sad: 24.5%
+- Aggressive: 77.5%
+- Relaxed: 49.7%
+- Party: 60.5%
 
 ### Musical Characteristics
-- **Median BPM**: 105
-- **Key Distribution**: 36.9% major, 63.1% minor
+- **Median BPM**: 106
+- **Key Distribution**: 37.1% major, 62.9% minor
 - **Average Danceability**: 0.18
-- **Vocal vs Instrumental**: 90.2% vocal, 9.8% instrumental
-- **Songs with Lyrics**: 79.7%
+- **Vocal vs Instrumental**: 88.7% vocal, 11.3% instrumental
+- **Songs with Lyrics**: 91.9%
 
 ### Language Distribution
-- en: 902 songs (62.4%)
-- unknown: 294 songs (20.3%)
-- ar: 49 songs (3.4%)
-- es: 46 songs (3.2%)
-- pt: 42 songs (2.9%)
-- ja: 25 songs (1.7%)
-- fr: 22 songs (1.5%)
-- ko: 13 songs (0.9%)
-- ru: 13 songs (0.9%)
-- sw: 11 songs (0.8%)
+- en: 902 songs (72.0%)
+- unknown: 102 songs (8.1%)
+- ar: 49 songs (3.9%)
+- es: 46 songs (3.7%)
+- pt: 42 songs (3.4%)
+- ja: 25 songs (2.0%)
+- fr: 22 songs (1.8%)
+- ko: 13 songs (1.0%)
+- ru: 13 songs (1.0%)
+- sw: 11 songs (0.9%)
 
 ---
 
@@ -55,186 +55,181 @@ Top 10 genres across entire library:
 
 ### Cluster 0
 
-**Size**: 269 songs (18.6% of library)
+**Size**: 65 songs (5.2% of library)
 
 **Top Genres**:
-1. genre_54 (82.0%)
-2. genre_369 (65.4%)
-3. genre_71 (65.1%)
+1. Folk, World, & Country---Raï (79.6%)
+2. Pop---Chanson (40.9%)
+3. Electronic---Happy Hardcore (40.6%)
 
 **Musical Profile**:
-- Median BPM: 108
-- Key: 32.3% major, 67.7% minor
-- Avg Danceability: 0.10
+- Median BPM: 103
+- Key: 26.2% major, 73.8% minor
+- Avg Danceability: 0.16
 
 **Mood**:
-- Happy: 50.6%
-- Sad: 12.1%
-- Aggressive: 57.5%
-- Relaxed: 26.5%
-- Party: 78.5%
+- Happy: 56.9%
+- Sad: 21.7%
+- Aggressive: 77.4%
+- Relaxed: 49.8%
+- Party: 62.9%
 
-**Languages**: en: 141, unknown: 73, ja: 19
+**Languages**: ar: 43, sw: 11, en: 6
 
-**Lyric Themes** (139 songs with lyrics):
-- Top Keywords: yeah, ah, like, don, know
-- Sentiment: neutral (0.02)
-- Vocabulary Richness: 0.38
+**Lyric Themes** (40 songs with lyrics):
+- Top Keywords: في, ni, ما, مش, من
+- Sentiment: negative (-0.11)
+- Vocabulary Richness: 0.50
 
 **Representative Songs**:
-1. Alok, Łaszewo, A$AP Rocky - HIGHJACK (right back).mp3
-2. ROSALÍA - SAOKO.mp3
-3. JPEGMAFIA, Danny Brown - Burfict!.mp3
-4. Tyler, The Creator - Tamale.mp3
-5. Miksu  Macloud, makko - Nachts wach.mp3
+1. Karim Osama, Riff - لوجي - Lojy.mp3
+2. Dafencii, Khayyat - كنق الحلبة.mp3
+3. Mared, Nubi, Big Moe - 3la Wara2a.mp3
+4. El Waili, ZIAD ZAZA - Leh Betaeday2.mp3
+5. Nubi - Sheikh El Arab.mp3
 
 ---
 
 ### Cluster 1
 
-**Size**: 139 songs (9.6% of library)
+**Size**: 239 songs (19.1% of library)
 
 **Top Genres**:
-1. genre_214 (37.2%)
-2. genre_210 (36.9%)
-3. genre_222 (35.1%)
+1. Electronic---Eurobeat (67.3%)
+2. Electronic---Freestyle (65.1%)
+3. Latin---Samba (41.2%)
 
 **Musical Profile**:
-- Median BPM: 112
-- Key: 50.4% major, 49.6% minor
-- Avg Danceability: 0.71
+- Median BPM: 114
+- Key: 48.1% major, 51.9% minor
+- Avg Danceability: 0.32
 
 **Mood**:
-- Happy: 80.1%
-- Sad: 69.7%
-- Aggressive: 96.0%
-- Relaxed: 86.1%
-- Party: 9.6%
+- Happy: 53.5%
+- Sad: 37.6%
+- Aggressive: 84.6%
+- Relaxed: 57.4%
+- Party: 44.6%
 
-**Languages**: en: 62, unknown: 52, ko: 9
+**Languages**: en: 156, pt: 26, ja: 21
 
-**Lyric Themes** (67 songs with lyrics):
-- Top Keywords: 나를, 나의, don, 내가, like
-- Sentiment: positive (0.25)
-- Vocabulary Richness: 0.47
+**Lyric Themes** (178 songs with lyrics):
+- Top Keywords: love, know, don, oh, que
+- Sentiment: positive (0.30)
+- Vocabulary Richness: 0.42
 
 **Representative Songs**:
-1. Pedro Mizutani - Melhor Se Acostumar.mp3
-2. Mashrou' Leila - Raksit Leila.mp3
-3. Mustafa - Name of God.mp3
-4. JANNABI - geum ui hwan hyang.mp3
-5. Rex Orange County - Television  So Far So Good.mp3
+1. JAY-Z - 4-44.mp3
+2. Private Island - Drugs.mp3
+3. Kanye West - Believe What I Say.mp3
+4. Rex Orange County - Television  So Far So Good.mp3
+5. Bastille, The Chamber Orchestra Of London - Million Pieces.mp3
 
 ---
 
 ### Cluster 2
 
-**Size**: 559 songs (38.7% of library)
+**Size**: 317 songs (25.3% of library)
 
 **Top Genres**:
-1. genre_157 (43.4%)
-2. genre_183 (35.7%)
-3. genre_202 (33.8%)
+1. Electronic---Donk (82.0%)
+2. Electronic---Hard House (59.4%)
+3. Jazz---Gypsy Jazz (40.9%)
 
 **Musical Profile**:
-- Median BPM: 103
-- Key: 1.4% major, 98.6% minor
-- Avg Danceability: 0.09
+- Median BPM: 105
+- Key: 34.7% major, 65.3% minor
+- Avg Danceability: 0.14
 
 **Mood**:
-- Happy: 53.6%
-- Sad: 17.9%
-- Aggressive: 78.3%
-- Relaxed: 45.8%
-- Party: 69.3%
+- Happy: 56.3%
+- Sad: 22.2%
+- Aggressive: 75.0%
+- Relaxed: 47.3%
+- Party: 62.5%
 
-**Languages**: en: 394, unknown: 72, ar: 29
+**Languages**: en: 250, es: 32, pt: 11
 
-**Lyric Themes** (295 songs with lyrics):
-- Top Keywords: yeah, like, don, got, bitch
-- Sentiment: negative (-0.12)
-- Vocabulary Richness: 0.39
+**Lyric Themes** (195 songs with lyrics):
+- Top Keywords: like, yeah, don, la, know
+- Sentiment: positive (0.17)
+- Vocabulary Richness: 0.38
 
 **Representative Songs**:
-1. Drake - GIMME A HUG.mp3
-2. DJ Snake, Don Toliver - Something Wrong (with Don Toliver).mp3
-3. JID - Hasta Luego - Bonus.mp3
-4. King Combs, Ye - PEOPLE LIKE ME.mp3
-5. Offset - ON THE RIVER.mp3
+1. Lil Darkie - rap music.mp3
+2. Ab-Soul - HOLLANDAISE.mp3
+3. Tame Impala, Lil Yachty - Breathe Deeper - Lil Yachty Remix.mp3
+4. Akintoye - Overload.mp3
+5. Kanye West - Yikes.mp3
 
 ---
 
 ### Cluster 3
 
-**Size**: 215 songs (14.9% of library)
+**Size**: 102 songs (8.1% of library)
 
 **Top Genres**:
-1. genre_152 (71.8%)
-2. genre_218 (44.3%)
-3. genre_259 (38.0%)
+1. Folk, World, & Country---Indian Classical (71.8%)
+2. Electronic---Psy-Trance (71.6%)
+3. Electronic---Disco Polo (65.1%)
 
 **Musical Profile**:
-- Median BPM: 113
-- Key: 48.8% major, 51.2% minor
-- Avg Danceability: 0.28
+- Median BPM: 107
+- Key: 39.2% major, 60.8% minor
+- Avg Danceability: 0.43
 
 **Mood**:
-- Happy: 56.2%
-- Sad: 37.1%
-- Aggressive: 93.9%
-- Relaxed: 70.1%
-- Party: 37.4%
+- Happy: 76.7%
+- Sad: 44.1%
+- Aggressive: 85.6%
+- Relaxed: 70.6%
+- Party: 38.4%
 
-**Languages**: en: 110, unknown: 59, pt: 18
-
-**Lyric Themes** (103 songs with lyrics):
-- Top Keywords: like, não, ooh, que, yeah
-- Sentiment: positive (0.13)
-- Vocabulary Richness: 0.43
+**Languages**: unknown: 102
 
 **Representative Songs**:
-1. Terrell Hines - Living For Today.mp3
-2. Farazi - Dobro Vecer.mp3
-3. McKinley Dixon, Anjimile - Dedicated to Tar Feather.mp3
-4. JAY-Z - 4-44.mp3
-5. Free Nationals, A$AP Rocky, Anderson .Paak - Gangsta.mp3
+1. Farazi - Ölüler Konuşamaz (Remastered) - Instrumental.mp3
+2. sasakure.UK - Cafe SQ- Romancing SaGa 2 'The Ultimate Confrontation'.mp3
+3. Aloboi - New World - Just Raw.mp3
+4. sasakure.UK - Jack-the-Ripper.mp3
+5. MF DOOM - Eucalyptus.mp3
 
 ---
 
 ### Cluster 4
 
-**Size**: 263 songs (18.2% of library)
+**Size**: 530 songs (42.3% of library)
 
 **Top Genres**:
-1. genre_183 (35.6%)
-2. genre_202 (34.2%)
-3. genre_57 (30.9%)
+1. Electronic---UK Garage (48.0%)
+2. Hip Hop---Cloud Rap (36.9%)
+3. Hip Hop---Trap (35.0%)
 
 **Musical Profile**:
-- Median BPM: 99
-- Key: 100.0% major, 0.0% minor
-- Avg Danceability: 0.07
+- Median BPM: 103
+- Key: 34.5% major, 65.5% minor
+- Avg Danceability: 0.09
 
 **Mood**:
-- Happy: 57.3%
-- Sad: 15.4%
-- Aggressive: 71.8%
-- Relaxed: 42.7%
-- Party: 72.5%
+- Happy: 54.7%
+- Sad: 16.6%
+- Aggressive: 74.2%
+- Relaxed: 43.6%
+- Party: 70.5%
 
-**Languages**: en: 195, unknown: 38, es: 7
+**Languages**: en: 490, ru: 10, es: 6
 
-**Lyric Themes** (132 songs with lyrics):
-- Top Keywords: yeah, like, huh, bitch, shit
-- Sentiment: negative (-0.08)
+**Lyric Themes** (323 songs with lyrics):
+- Top Keywords: yeah, like, bitch, niggas, nigga
+- Sentiment: negative (-0.29)
 - Vocabulary Richness: 0.40
 
 **Representative Songs**:
-1. Childish Gambino - Freaks And Geeks.mp3
-2. Lil Tecca - Boys Don’t Cry.mp3
-3. KIDS SEE GHOSTS, Louis Prima - 4th Dimension.mp3
-4. Baby Keem - trademark usa.mp3
-5. JAY-Z, Kanye West - Nias In Paris.mp3
+1. Migos - Avalanche.mp3
+2. Clipse, Stove God Cooks, Pusha T, Malice - F.I.C.O..mp3
+3. Future, Metro Boomin, Kendrick Lamar - Like That.mp3
+4. Lil Wayne, BigXthaPlug, Jay Jones - Hip-Hop (feat. BigXthaPlug, Jay Jones).mp3
+5. Zack Fox - fafo.mp3
 
 ---
 

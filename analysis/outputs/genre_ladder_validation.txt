@@ -1,0 +1,11 @@
+Genre Ladder Validation Summary
+==================================================
+
+Version: entropy-based
+Total tracks: 1445
+Mean: 0.587
+Std: 0.190
+
+Interpretation:
+  0.0 = Pure genre (clearly one genre)
+  1.0 = Genre fusion (crosses many genres)

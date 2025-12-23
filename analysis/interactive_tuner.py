@@ -14,7 +14,13 @@ import numpy as np
 import pandas as pd
 import umap
 import plotly.graph_objects as go
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch, KMeans, DBSCAN
+from sklearn.cluster import (
+    AgglomerativeClustering,
+    SpectralClustering,
+    Birch,
+    KMeans,
+    DBSCAN,
+)
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
@@ -25,8 +31,9 @@ try:
     from export.create_playlists import (
         create_spotify_client,
         create_playlist,
-        add_tracks_to_playlist
+        add_tracks_to_playlist,
     )
+
     HAS_EXPORT_TOOLS = True
 except ImportError:
     HAS_EXPORT_TOOLS = False
@@ -40,7 +47,7 @@ def load_data():
     # Robust path resolution (handles running from root or analysis/ dir)
     cache_dirs = [Path("cache"), Path("../cache")]
     cache_dir = next((d for d in cache_dirs if d.exists()), None)
-    
+
     if not cache_dir:
         st.error("Cache directory not found! Expected 'cache/' or '../cache/'")
         return [], [], []
@@ -50,7 +57,7 @@ def load_data():
         audio_features = pickle.load(f)
     with open(cache_dir / "lyric_features.pkl", "rb") as f:
         lyric_features = pickle.load(f)
-        
+
     # Load MERT features if available
     mert_features = []
     mert_path = cache_dir / "mert_embeddings_24khz_30s_cls.pkl"
@@ -66,24 +73,29 @@ def load_data():
     # Find common IDs (Essentia + Lyrics)
     # Note: We don't strictly require MERT to exist for all tracks to support backward compatibility
     common_ids = set(audio_by_id.keys()) & set(lyric_by_id.keys())
-    
+
     sorted_ids = sorted(common_ids)
     aligned_audio = [audio_by_id[tid] for tid in sorted_ids]
     aligned_lyrics = [lyric_by_id[tid] for tid in sorted_ids]
-    
+
     # Align MERT (fill with None if missing)
     aligned_mert = [mert_by_id.get(tid) for tid in sorted_ids]
 
     return aligned_audio, aligned_lyrics, aligned_mert
 
 
-def prepare_features_for_mode(audio_features, lyric_features, mode, n_pca_components, skip_pca=False):
+def prepare_features_for_mode(
+    audio_features, lyric_features, mode, n_pca_components, skip_pca=False
+):
     """Prepare PCA-reduced features for clustering"""
     # For combined mode, filter out vocal songs without lyrics
     if mode == "combined":
         # Filter tracks where instrumentalness < 0.5 (vocal) but has_lyrics is False
         valid_mask = [
-            not (audio.get("instrumentalness", 0.5) < 0.5 and not lyric.get("has_lyrics", False))
+            not (
+                audio.get("instrumentalness", 0.5) < 0.5
+                and not lyric.get("has_lyrics", False)
+            )
             for audio, lyric in zip(audio_features, lyric_features)
         ]
         audio_features = [f for f, valid in zip(audio_features, valid_mask) if valid]
@@ -91,7 +103,9 @@ def prepare_features_for_mode(audio_features, lyric_features, mode, n_pca_compon
 
         filtered_count = sum(1 for v in valid_mask if not v)
         if filtered_count > 0:
-            st.sidebar.info(f"ℹ️ Filtered out {filtered_count} vocal songs without lyrics in combined mode")
+            st.sidebar.info(
+                f"ℹ️ Filtered out {filtered_count} vocal songs without lyrics in combined mode"
+            )
 
     audio_emb = np.vstack([f["embedding"] for f in audio_features])
     lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
@@ -105,12 +119,12 @@ def prepare_features_for_mode(audio_features, lyric_features, mode, n_pca_compon
             has_lyrics = np.array([f["has_lyrics"] for f in lyric_features])
             valid_indices = np.where(has_lyrics)[0].tolist()
             features_reduced = StandardScaler().fit_transform(lyric_emb[has_lyrics])
-        else: # combined
+        else:  # combined
             audio_norm = StandardScaler().fit_transform(audio_emb)
             lyric_norm = StandardScaler().fit_transform(lyric_emb)
             features_reduced = np.hstack([audio_norm, lyric_norm])
             valid_indices = list(range(len(audio_features)))
-            
+
         return features_reduced, valid_indices, 1.0  # 100% variance explained
 
     if mode == "audio":
@@ -180,7 +194,7 @@ def main():
         audio_features, lyric_features, mert_features = load_data()
 
     st.sidebar.header("⚙️ Feature Preparation")
-    
+
     # Backend Selection
     has_mert = any(x is not None for x in mert_features)
     backend_options = ["Essentia (Default)"]
@@ -189,18 +203,20 @@ def main():
     backend_options.append("Interpretable Features (Audio)")
 
     backend = st.sidebar.selectbox(
-        "Audio Embedding Backend", 
+        "Audio Embedding Backend",
         backend_options,
         index=1 if has_mert else 0,
-        help="Choose backend. 'Interpretable' uses BPM, Key, Moods, etc. 'MERT' uses transformers."
+        help="Choose backend. 'Interpretable' uses BPM, Key, Moods, etc. 'MERT' uses transformers.",
     )
-    
+
     # Apply backend override
     if "MERT" in backend:
         # Check integrity
         if len(mert_features) != len(audio_features):
-             st.warning(f"MERT features count ({len(mert_features)}) mismatch with Essentia ({len(audio_features)})")
-        
+            st.warning(
+                f"MERT features count ({len(mert_features)}) mismatch with Essentia ({len(audio_features)})"
+            )
+
         # Override embeddings in the audio_features list (in-memory only)
         # We assume mert_features aligns with audio_features from load_data
         valid_mert_count = 0
@@ -208,51 +224,65 @@ def main():
             if mert_item is not None and i < len(audio_features):
                 audio_features[i]["embedding"] = mert_item["embedding"]
                 valid_mert_count += 1
-                
+
         st.sidebar.success(f"Using MERT embeddings for {valid_mert_count} tracks")
-    
+
     elif "Interpretable" in backend:
         st.sidebar.info("✨ Using interpretable features: BPM (Norm), Key, Moods, etc.")
-        
+
         # Calculate dynamic global min/max for normalization
         bpms = [float(t.get("bpm", 0) or 0) for t in audio_features]
         valences = [float(t.get("valence", 0) or 0) for t in audio_features]
         arousals = [float(t.get("arousal", 0) or 0) for t in audio_features]
-        
+
         # Helper for safe min/max
         def get_range(values, default_min, default_max):
             valid = [v for v in values if v > 0]
-            if not valid: return default_min, default_max
+            if not valid:
+                return default_min, default_max
             return min(valid), max(valid)
 
         min_bpm, max_bpm = get_range(bpms, 50, 200)
         min_val, max_val = get_range(valences, 1, 9)
         min_ar, max_ar = get_range(arousals, 1, 9)
-        
+
         count = 0
         for track in audio_features:
             # 1. Scalar Features
             def get_float(k, d=0.0):
                 v = track.get(k)
-                if v is None: return d
-                try: return float(v)
-                except: return d
-            
+                if v is None:
+                    return d
+                try:
+                    return float(v)
+                except:
+                    return d
+
             # Normalize BPM
             raw_bpm = get_float("bpm", 120)
-            norm_bpm = (raw_bpm - min_bpm) / (max_bpm - min_bpm) if (max_bpm > min_bpm) else 0.5
+            norm_bpm = (
+                (raw_bpm - min_bpm) / (max_bpm - min_bpm)
+                if (max_bpm > min_bpm)
+                else 0.5
+            )
             norm_bpm = max(0.0, min(1.0, norm_bpm))
-            
+
             # Normalize Valence
             raw_val = get_float("valence", 4.5)
-            norm_val = (raw_val - min_val) / (max_val - min_val) if (max_val > min_val) else 0.5
+            norm_val = (
+                (raw_val - min_val) / (max_val - min_val)
+                if (max_val > min_val)
+                else 0.5
+            )
             norm_val = max(0.0, min(1.0, norm_val))
 
             # Normalize Arousal
             raw_ar = get_float("arousal", 4.5)
-            norm_ar = (raw_ar - min_ar) / (max_ar - min_ar) if (max_ar > min_ar) else 0.5
+            norm_ar = (
+                (raw_ar - min_ar) / (max_ar - min_ar) if (max_ar > min_ar) else 0.5
+            )
             norm_ar = max(0.0, min(1.0, norm_ar))
-            
+
             scalars = [
                 norm_bpm,
                 get_float("danceability", 0.5),
@@ -265,59 +295,204 @@ def main():
                 get_float("mood_sad", 0.0),
                 get_float("mood_aggressive", 0.0),
                 get_float("mood_relaxed", 0.0),
-                get_float("mood_party", 0.0)
+                get_float("mood_party", 0.0),
+                get_float("voice_gender_male", 0.5),  # Female(0) ↔ Male(1)
+                get_float("genre_ladder", 0.5),  # Genre-based feature
             ]
-            
+
             # 2. Key Features
             key_vec = [0.0, 0.0, 0.0]
             key_str = track.get("key", "")
             if isinstance(key_str, str) and key_str:
-                 k = key_str.lower().strip()
-                 # Scale: Major=1, Minor=0
-                 scale_val = 1.0 if 'major' in k else 0.0
-                 # Pitch
-                 pitch_map = {
-                    'c': 0, 'c#': 1, 'db': 1, 'd': 2, 'd#': 3, 'eb': 3,
-                    'e': 4, 'f': 5, 'f#': 6, 'gb': 6, 'g': 7, 'g#': 8,
-                    'ab': 8, 'a': 9, 'a#': 10, 'bb': 10, 'b': 11
-                 }
-                 # Find note
-                 parts = k.split()
-                 if parts:
-                     note = parts[0]
-                     if note in pitch_map:
-                         p = pitch_map[note]
-                         # Sin/Cos are naturally -1 to 1. 
-                         # We can leave them as is, or map to 0-1 if we strictly want positive features.
-                         # StandardScalar handles negative values fine, but relative weight matters.
-                         # Range of 2.0 (vs 1.0 for others) means Key is 2x weighted. 
-                         # Let's scale to 0.5 * sin + 0.5 => 0-1 range.
-                         # THEN Apply a weighting factor of 0.5 to reduce total influence of the 3 Key dimensions
-                         KEY_WEIGHT = 0.5
-                         
-                         sin_val = (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
-                         cos_val = (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
-                         scale_val = scale_val * KEY_WEIGHT
-                         
-                         key_vec = [sin_val, cos_val, scale_val]
-            
+                k = key_str.lower().strip()
+                # Scale: Major=1, Minor=0
+                scale_val = 1.0 if "major" in k else 0.0
+                # Pitch
+                pitch_map = {
+                    "c": 0,
+                    "c#": 1,
+                    "db": 1,
+                    "d": 2,
+                    "d#": 3,
+                    "eb": 3,
+                    "e": 4,
+                    "f": 5,
+                    "f#": 6,
+                    "gb": 6,
+                    "g": 7,
+                    "g#": 8,
+                    "ab": 8,
+                    "a": 9,
+                    "a#": 10,
+                    "bb": 10,
+                    "b": 11,
+                }
+                # Find note
+                parts = k.split()
+                if parts:
+                    note = parts[0]
+                    if note in pitch_map:
+                        p = pitch_map[note]
+                        # Sin/Cos are naturally -1 to 1.
+                        # We can leave them as is, or map to 0-1 if we strictly want positive features.
+                        # StandardScalar handles negative values fine, but relative weight matters.
+                        # Range of 2.0 (vs 1.0 for others) means Key is 2x weighted.
+                        # Let's scale to 0.5 * sin + 0.5 => 0-1 range.
+                        # THEN Apply a weighting factor of 0.5 to reduce total influence of the 3 Key dimensions
+                        KEY_WEIGHT = 0.5
+
+                        sin_val = (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
+                        cos_val = (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
+                        scale_val = scale_val * KEY_WEIGHT
+
+                        key_vec = [sin_val, cos_val, scale_val]
+
             track["embedding"] = np.array(scalars + key_vec, dtype=np.float32)
             count += 1
-            
-        st.sidebar.success(f"Constructed normalized interpretable vectors for {count} tracks")
+
+        st.sidebar.success(
+            f"Constructed normalized interpretable vectors for {count} tracks"
+        )
+
+        # Debug: Show sample vector breakdown
+        with st.sidebar.expander("🔍 Debug: Sample Vector", expanded=False):
+            sample_track = audio_features[0]
+            emb = sample_track["embedding"]
+            feature_names = [
+                "0: BPM (norm)",
+                "1: Danceability",
+                "2: Instrumentalness",
+                "3: Valence (norm)",
+                "4: Arousal (norm)",
+                "5: Engagement",
+                "6: Approachability",
+                "7: Mood Happy",
+                "8: Mood Sad",
+                "9: Mood Aggressive",
+                "10: Mood Relaxed",
+                "11: Mood Party",
+                "12: Voice Gender Male",
+                "13: Genre Ladder",
+                "14: Key Sin",
+                "15: Key Cos",
+                "16: Key Scale",
+            ]
+            st.write(f"**{sample_track['track_name']}** by {sample_track['artist']}")
+            st.write(f"Vector length: {len(emb)}")
+            for i, (name, val) in enumerate(zip(feature_names, emb)):
+                if i < len(emb):
+                    st.write(f"`{name}`: {val:.4f}")
+
+            # Show raw values for context
+            st.markdown("---")
+            st.write("**Raw values:**")
+            st.write(f"- BPM: {sample_track.get('bpm', 'N/A')}")
+            st.write(f"- Key: {sample_track.get('key', 'N/A')}")
+            st.write(
+                f"- voice_gender_male: {sample_track.get('voice_gender_male', 'N/A')}"
+            )
+            st.write(
+                f"- voice_gender_female: {sample_track.get('voice_gender_female', 'N/A')}"
+            )
+            st.write(f"- genre_ladder: {sample_track.get('genre_ladder', 'N/A')}")
+
+            # Show statistics across all tracks
+            st.markdown("---")
+            st.write("**Feature Statistics (all tracks):**")
+            all_embs = np.vstack([t["embedding"] for t in audio_features])
+            stats_data = []
+            for i, name in enumerate(feature_names[: len(all_embs[0])]):
+                col_vals = all_embs[:, i]
+                stats_data.append(
+                    {
+                        "Feature": name.split(": ")[1] if ": " in name else name,
+                        "Min": f"{col_vals.min():.3f}",
+                        "Max": f"{col_vals.max():.3f}",
+                        "Mean": f"{col_vals.mean():.3f}",
+                        "Std": f"{col_vals.std():.3f}",
+                    }
+                )
+            st.dataframe(
+                pd.DataFrame(stats_data), hide_index=True, use_container_width=True
+            )
+
+        # Add weight controls for feature groups
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🎛️ Feature Group Weights")
+        st.sidebar.caption(
+            "Adjust relative importance of feature groups. Each feature in a group is multiplied by the group weight."
+        )
+
+        # Feature group definitions (indices in the 16-dim vector)
+        # 0-5: Core features (BPM, danceability, instrumentalness, valence, arousal, engagement, approachability)
+        # 7-11: Mood features (happy, sad, aggressive, relaxed, party) - indices 7-11
+        # 12: Genre ladder - index 12
+        # 13-15: Key features (sin, cos, scale) - indices 13-15
+
+        core_weight = st.sidebar.slider(
+            "Core Features Weight (BPM, Danceability, etc.)",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Weight for core features: BPM, danceability, instrumentalness, valence, arousal, engagement, approachability",
+        )
+        mood_weight = st.sidebar.slider(
+            "Mood Features Weight",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Weight for mood features: happy, sad, aggressive, relaxed, party (5 features)",
+        )
+        genre_weight = st.sidebar.slider(
+            "Genre Ladder Weight",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Weight for genre_ladder feature (0=acoustic, 1=electronic)",
+        )
+        key_weight = st.sidebar.slider(
+            "Key Features Weight",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Weight for key features: sin, cos, scale (3 features)",
+        )
+
+        # Apply weights to embeddings
+        # Each feature group is multiplied by its weight
+        for track in audio_features:
+            emb = track["embedding"].copy()
+
+            # Core features (indices 0-6): 7 features
+            emb[0:7] = emb[0:7] * core_weight
+
+            # Mood features (indices 7-11): 5 features
+            emb[7:12] = emb[7:12] * mood_weight
+
+            # Genre ladder (index 12): single feature
+            emb[12] = emb[12] * genre_weight
+
+            # Key features (indices 13-15): 3 features
+            emb[13:16] = emb[13:16] * key_weight
+
+            track["embedding"] = emb
 
     # Mode Selection
     mode = st.sidebar.selectbox("Feature Mode", ["combined", "audio", "lyrics"])
 
     # PCA Control
-    skip_pca = st.sidebar.checkbox("Skip PCA (Use Raw Features)", value=False, help="Pass high-dimensional embeddings directly to clustering.")
+    skip_pca = st.sidebar.checkbox(
+        "Skip PCA (Use Raw Features)",
+        value=False,
+        help="Pass high-dimensional embeddings directly to clustering.",
+    )
 
     # PCA Parameters - use mode-specific defaults for 75% variance
-    pca_defaults = {
-        "audio": 118,
-        "lyrics": 162,
-        "combined": 142
-    }
+    pca_defaults = {"audio": 118, "lyrics": 162, "combined": 142}
     default_pca = pca_defaults.get(mode, 140)
 
     if not skip_pca:
@@ -330,7 +505,7 @@ def main():
             help=f"Number of PCA components for dimensionality reduction before clustering. Default ({default_pca}) achieves ~75% variance for {mode} mode.",
         )
     else:
-        n_pca_components = default_pca # Placeholder, ignored
+        n_pca_components = default_pca  # Placeholder, ignored
 
     # Prepare features
     with st.spinner("Preparing features..."):
@@ -483,7 +658,7 @@ def main():
                 n_clusters=n_clusters_kmeans,
                 init=init_method,
                 n_init=10,
-                random_state=42
+                random_state=42,
             )
             labels = clusterer.fit_predict(pca_features)
 
@@ -589,6 +764,7 @@ def main():
             "instrumentalness": track.get("instrumentalness", 0.5),
             "bpm": track["bpm"],
             "key": track["key"],
+            "genre_ladder": track.get("genre_ladder", 0.5),
         }
 
         plot_data.append(row_data)
@@ -599,59 +775,78 @@ def main():
     if HAS_EXPORT_TOOLS:
         st.sidebar.markdown("---")
         st.sidebar.header("📤 Export to Spotify")
-        
-        playlist_prefix = st.sidebar.text_input("Playlist Prefix", value="Tuner Export", help="Prefix for created playlists")
+
+        playlist_prefix = st.sidebar.text_input(
+            "Playlist Prefix", value="Tuner Export", help="Prefix for created playlists"
+        )
         is_private = st.sidebar.checkbox("Private Playlists", value=False)
-        
+
         if st.sidebar.button("Create Spotify Playlists"):
             with st.spinner("Connecting to Spotify..."):
                 try:
                     sp = create_spotify_client()
                     user_id = sp.current_user()["id"]
                     st.sidebar.success(f"Connected as {user_id}")
-                    
+
                     # Create playlists for each cluster
                     unique_labels = sorted(df["label"].unique())
                     progress_bar = st.sidebar.progress(0)
                     status_text = st.sidebar.empty()
-                    
+
                     for i, label in enumerate(unique_labels):
-                        if label == -1: # Skip outliers
+                        if label == -1:  # Skip outliers
                             continue
-                            
+
                         # Get tracks for this cluster
                         cluster_tracks = df[df["label"] == label]
-                        track_uris = [f"spotify:track:{tid}" for tid in cluster_tracks["track_id"]]
-                        
+                        track_uris = [
+                            f"spotify:track:{tid}" for tid in cluster_tracks["track_id"]
+                        ]
+
                         # Generate description
                         # 1. Top Genre
                         genre_counts = Counter(cluster_tracks["genre"])
                         top_genre = genre_counts.most_common(1)[0][0]
-                        
+
                         # 2. Dominant Mood (averaging mood scores)
-                        mood_cols = ["mood_happy", "mood_sad", "mood_aggressive", "mood_relaxed", "mood_party"]
+                        mood_cols = [
+                            "mood_happy",
+                            "mood_sad",
+                            "mood_aggressive",
+                            "mood_relaxed",
+                            "mood_party",
+                        ]
                         avg_moods = cluster_tracks[mood_cols].mean()
                         dominant_mood_col = avg_moods.idxmax()
-                        dominant_mood = dominant_mood_col.replace("mood_", "").capitalize()
-                        
-                        playlist_name = f"{playlist_prefix} - Cluster {label} ({top_genre})"
+                        dominant_mood = dominant_mood_col.replace(
+                            "mood_", ""
+                        ).capitalize()
+
+                        playlist_name = (
+                            f"{playlist_prefix} - Cluster {label} ({top_genre})"
+                        )
                         description = f"Auto-generated: {len(cluster_tracks)} tracks. Genre: {top_genre}, Mood: {dominant_mood}. Mode: {mode}"
-                        
+
                         status_text.write(f"Creating: {playlist_name}...")
-                        
+
                         # Create and populate
-                        playlist = create_playlist(sp, user_id, playlist_name, description, public=not is_private)
+                        playlist = create_playlist(
+                            sp,
+                            user_id,
+                            playlist_name,
+                            description,
+                            public=not is_private,
+                        )
                         add_tracks_to_playlist(sp, playlist["id"], track_uris)
-                        
+
                         progress_bar.progress((i + 1) / len(unique_labels))
-                    
+
                     status_text.write("✅ Export Complete!")
                     st.sidebar.balloons()
-                    
+
                 except Exception as e:
                     st.sidebar.error(f"Export failed: {str(e)}")
                     st.error(f"Full error: {str(e)}")
-
 
     # Visualization
     fig = go.Figure()
@@ -692,6 +887,7 @@ def main():
                 f"- Aggressive: {r['mood_aggressive']:.2f}<br>"
                 f"- Relaxed: {r['mood_relaxed']:.2f}<br>"
                 f"- Party: {r['mood_party']:.2f}<br>"
+                f"Genre Ladder: {r['genre_ladder']:.2f} ({'Acoustic' if r['genre_ladder'] < 0.4 else 'Electronic' if r['genre_ladder'] > 0.6 else 'Hybrid'})<br>"
             )
             return text
 
@@ -722,7 +918,7 @@ def main():
         ),
         title=f"{clustering_algorithm} Clustering ({mode} mode) - UMAP Visualization",
     )
-    
+
     st.caption("💡 Click on a point to play the song in Spotify!")
 
     # 1. State Management
@@ -735,25 +931,26 @@ def main():
 
     # 2. Render Chart
     chart_selection = st.plotly_chart(
-        fig, 
-        use_container_width=True, 
+        fig,
+        use_container_width=True,
         on_select="rerun",
         selection_mode="points",
-        key="main_chart"
+        key="main_chart",
     )
 
     # 3. Cluster Inspector (List View)
     st.markdown("---")
     st.subheader("📋 Cluster Inspector")
-    
+
     col_filter, col_spacer = st.columns([1, 2])
     with col_filter:
         unique_labels_list = sorted(df["label"].unique())
         selected_cluster_view = st.selectbox(
-            "Filter List by Cluster", 
-            ["All"] + [f"Cluster {l}" if l != -1 else "Outliers" for l in unique_labels_list]
+            "Filter List by Cluster",
+            ["All"]
+            + [f"Cluster {l}" if l != -1 else "Outliers" for l in unique_labels_list],
         )
-    
+
     if selected_cluster_view != "All":
         if selected_cluster_view == "Outliers":
             view_label = -1
@@ -765,12 +962,20 @@ def main():
 
     # Prepare DataFrame for display
     cols_to_show = [
-        "track_name", "artist", "label", "genre", "bpm", "key", 
-        "mood_happy", "mood_sad", "mood_party", "danceability"
+        "track_name",
+        "artist",
+        "label",
+        "genre",
+        "bpm",
+        "key",
+        "mood_happy",
+        "mood_sad",
+        "mood_party",
+        "danceability",
     ]
     # Ensure columns exist
     display_df = view_df[[c for c in cols_to_show if c in view_df.columns]].copy()
-    
+
     st.caption("👇 Click on a row to play the song!")
     df_selection = st.dataframe(
         display_df,
@@ -785,16 +990,24 @@ def main():
             "artist": "Artist",
             "genre": "Genre",
             "bpm": st.column_config.NumberColumn("BPM", format="%d"),
-            "mood_happy": st.column_config.ProgressColumn("Happy", min_value=0, max_value=1),
-            "mood_sad": st.column_config.ProgressColumn("Sad", min_value=0, max_value=1),
-            "mood_party": st.column_config.ProgressColumn("Party", min_value=0, max_value=1),
-            "danceability": st.column_config.ProgressColumn("Danceability", min_value=0, max_value=1),
-        }
+            "mood_happy": st.column_config.ProgressColumn(
+                "Happy", min_value=0, max_value=1
+            ),
+            "mood_sad": st.column_config.ProgressColumn(
+                "Sad", min_value=0, max_value=1
+            ),
+            "mood_party": st.column_config.ProgressColumn(
+                "Party", min_value=0, max_value=1
+            ),
+            "danceability": st.column_config.ProgressColumn(
+                "Danceability", min_value=0, max_value=1
+            ),
+        },
     )
 
     # 4. Logic to determine playing track
     new_track_found = False
-    
+
     # Check Chart Selection Change
     if chart_selection != st.session_state.last_chart_selection:
         st.session_state.last_chart_selection = chart_selection
@@ -802,7 +1015,7 @@ def main():
             point = chart_selection["selection"]["points"][0]
             curve_idx = point["curve_number"]
             point_idx = point["point_index"]
-            
+
             # Map back to data
             if curve_idx < len(unique_labels):
                 label = unique_labels[curve_idx]
@@ -820,7 +1033,7 @@ def main():
                 # map back to original df via index if possible, but display_df is a copy.
                 # simpler: display_df has the data we need directly, but we need 'track_id'.
                 # We didn't include 'track_id' in cols_to_show.
-                # Let's get it from the index or include it hidden? 
+                # Let's get it from the index or include it hidden?
                 # display_df comes from view_df. iloc on view_df should work if sorted same way.
                 # Yes, we just sliced columns.
                 st.session_state.current_track = view_df.iloc[row_idx]
@@ -834,12 +1047,12 @@ def main():
             st.sidebar.header("🎧 Now Playing")
             st.sidebar.markdown(f"**{track['track_name']}**")
             st.sidebar.caption(f"{track['artist']}")
-            
+
             spotify_embed = f"""
-            <iframe style="border-radius:12px" 
-            src="https://open.spotify.com/embed/track/{track['track_id']}?utm_source=generator" 
-            width="100%" height="152" frameBorder="0" 
-            allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+            <iframe style="border-radius:12px"
+            src="https://open.spotify.com/embed/track/{track["track_id"]}?utm_source=generator"
+            width="100%" height="152" frameBorder="0"
+            allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"></iframe>
             """
             st.sidebar.markdown(spotify_embed, unsafe_allow_html=True)

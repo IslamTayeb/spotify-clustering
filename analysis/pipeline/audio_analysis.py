@@ -428,10 +428,10 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
         features = pickle.load(f)
 
     logger.info(f"Updating {len(features)} cached features with missing classifiers...")
-    
+
     extractor = AudioFeatureExtractor()
     updated_features = []
-    
+
     for feature in tqdm(features, desc="Updating audio features"):
         # Check if we need to update this track - check ALL possible fields
         needs_update = (
@@ -483,7 +483,7 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
         if not needs_update:
             updated_features.append(feature)
             continue
-            
+
         try:
             filepath = feature['filepath']
             if not Path(filepath).exists():
@@ -628,16 +628,23 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
                     raise RuntimeError("MusiCNN embeddings not available - cannot extract MIREX moods")
                 feature['moods_mirex_probs'] = extractor.moods_mirex_model(musicnn_embeddings).mean(axis=0).tolist()
 
+            # 16. Genre Ladder (computed from top_3_genres, added after all features are collected)
+            # Note: This is handled in add_genre_ladder_to_features() call after the loop
+
             updated_features.append(feature)
-            
+
         except Exception as e:
             logger.error(f"Error updating {feature.get('filename')}: {e}")
             updated_features.append(feature)
 
+    # Add genre ladder feature if missing
+    from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
+    updated_features = add_genre_ladder_to_features(updated_features)
+
     # Save back to cache
     with open(cache_path, 'wb') as f:
         pickle.dump(updated_features, f)
-        
+
     logger.info(f"Successfully updated {len(updated_features)} tracks")
     return updated_features
 
@@ -673,6 +680,10 @@ def extract_audio_features(master_index_path: str = 'spotify/master_index.json',
             with open(cache_path, 'wb') as f:
                 pickle.dump(features, f)
             logger.info(f"Cached {len(features)} features")
+
+    # Add genre ladder feature (0=acoustic, 1=electronic)
+    from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
+    features = add_genre_ladder_to_features(features)
 
     with open(cache_path, 'wb') as f:
         pickle.dump(features, f)
