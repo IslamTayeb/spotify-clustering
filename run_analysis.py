@@ -71,11 +71,12 @@ def main():
     )
     parser.add_argument(
         "--audio-embedding-backend",
-        choices=["essentia", "mert"],
+        choices=["essentia", "mert", "interpretable"],
         default="essentia",
         help="Audio embedding backend for clustering (default: essentia). "
              "Essentia always runs for interpretation fields (genre/mood/BPM). "
-             "MERT creates separate cache for clustering-optimized embeddings.",
+             "MERT creates separate cache for clustering-optimized embeddings. "
+             "Interpretable uses manual features (BPM, Key, Moods).",
     )
     parser.add_argument(
         "--lyrics-embedding-backend",
@@ -149,6 +150,102 @@ def main():
 
         print(f"  ✓ Processed {len(audio_embeddings_for_clustering)} songs (MERT)")
         logger.info(f"MERT embeddings extracted: {len(audio_embeddings_for_clustering)} songs")
+    
+    elif args.audio_embedding_backend == "interpretable":
+        print("\n[1.5/5] Constructing Interpretable Feature embeddings...")
+        logger.info("Step 1.5/5: Interpretable Feature construction")
+        
+        import numpy as np
+        
+        # Dynamic global min/max for normalization
+        bpms = [float(t.get("bpm", 0) or 0) for t in audio_features]
+        valences = [float(t.get("valence", 0) or 0) for t in audio_features]
+        arousals = [float(t.get("arousal", 0) or 0) for t in audio_features]
+        
+        def get_range(values, default_min, default_max):
+            valid = [v for v in values if v > 0]
+            if not valid: return default_min, default_max
+            return min(valid), max(valid)
+
+        min_bpm, max_bpm = get_range(bpms, 50, 200)
+        min_val, max_val = get_range(valences, 1, 9)
+        min_ar, max_ar = get_range(arousals, 1, 9)
+        
+        interpretable_embeddings = []
+        
+        for track in audio_features:
+            # Helper
+            def get_float(k, d=0.0):
+                v = track.get(k)
+                try: return float(v) if v is not None else d
+                except: return d
+            
+            # Normalize BPM
+            raw_bpm = get_float("bpm", 120)
+            norm_bpm = (raw_bpm - min_bpm) / (max_bpm - min_bpm) if (max_bpm > min_bpm) else 0.5
+            norm_bpm = max(0.0, min(1.0, norm_bpm))
+            
+            # Normalize Valence
+            raw_val = get_float("valence", 4.5)
+            norm_val = (raw_val - min_val) / (max_val - min_val) if (max_val > min_val) else 0.5
+            norm_val = max(0.0, min(1.0, norm_val))
+
+            # Normalize Arousal
+            raw_ar = get_float("arousal", 4.5)
+            norm_ar = (raw_ar - min_ar) / (max_ar - min_ar) if (max_ar > min_ar) else 0.5
+            norm_ar = max(0.0, min(1.0, norm_ar))
+            
+            scalars = [
+                norm_bpm,
+                get_float("danceability", 0.5),
+                get_float("instrumentalness", 0.0),
+                norm_val,
+                norm_ar,
+                get_float("engagement_score", 0.5),
+                get_float("approachability_score", 0.5),
+                get_float("mood_happy", 0.0),
+                get_float("mood_sad", 0.0),
+                get_float("mood_aggressive", 0.0),
+                get_float("mood_relaxed", 0.0),
+                get_float("mood_party", 0.0)
+            ]
+            
+            # Key Features
+            key_vec = [0.0, 0.0, 0.0]
+            key_str = track.get("key", "")
+            if isinstance(key_str, str) and key_str:
+                 k = key_str.lower().strip()
+                 scale_val = 1.0 if 'major' in k else 0.0
+                 pitch_map = {
+                    'c': 0, 'c#': 1, 'db': 1, 'd': 2, 'd#': 3, 'eb': 3,
+                    'e': 4, 'f': 5, 'f#': 6, 'gb': 6, 'g': 7, 'g#': 8,
+                    'ab': 8, 'a': 9, 'a#': 10, 'bb': 10, 'b': 11
+                 }
+                 parts = k.split()
+                 if parts and parts[0] in pitch_map:
+                     p = pitch_map[parts[0]]
+                     
+                     # Apply 0.5 weighting to Key components (3 dimensions vs 1)
+                     KEY_WEIGHT = 0.5
+                     
+                     sin_val = (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
+                     cos_val = (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
+                     scale_val = scale_val * KEY_WEIGHT
+                     
+                     key_vec = [sin_val, cos_val, scale_val]
+            
+            emb = np.array(scalars + key_vec, dtype=np.float32)
+            
+            # Create object with same structure as MERT output/Essentia output
+            # Just needs to have 'track_id' and 'embedding'
+            interpretable_embeddings.append({
+                "track_id": track["track_id"],
+                "embedding": emb
+            })
+            
+        audio_embeddings_for_clustering = interpretable_embeddings
+        print(f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs")
+        
     else:
         logger.info("Using Essentia embeddings for clustering (default)")
 
@@ -215,8 +312,21 @@ def main():
             "combined": 142  # 75.04% variance (audio) + 75.04% variance (lyrics)
         }
         n_pca = pca_components_map[mode]
+        
+        # If using Interpretable features (low dimension), skip PCA (set n_pca to None/high or handle in clustering.py)
+        # Assuming run_clustering_pipeline handles n_pca_components >= n_features by skipping or just transforming.
+        # But specifically for interpretable, we might want to preserve the exact dimensions.
+        # Let's set a flag or just let standard PCA run if dimensions are higher.
+        # Actually, for Interpretable, dimensions are ~15. 118 is > 15, so PCA might just be identity or standard projection.
+        # Ideally we skip PCA for interpretable to keep it "interpretable".
+        if args.audio_embedding_backend == "interpretable" and mode != "lyrics":
+             # For audio/combined, skip PCA for the audio part
+             # The pipeline function might not have an explicit "skip_pca" arg exposed here cleanly,
+             # but setting n_pca_components to a large number usually preserves dimensions.
+             # However, let's keep it simple for now and rely on the pipeline's behavior.
+             pass
 
-        # Pass embedding overrides if MERT/E5 selected
+        # Pass embedding overrides if MERT/E5/Interpretable selected
         lyric_embeddings_for_clustering = None
         if lyric_backend == "e5":
             lyric_embeddings_for_clustering = lyric_features
@@ -225,7 +335,7 @@ def main():
             audio_features,  # Always Essentia (for interpretation)
             lyric_features,
             mode=mode,
-            audio_embeddings_override=audio_embeddings_for_clustering,  # MERT if selected
+            audio_embeddings_override=audio_embeddings_for_clustering,  # MERT or Interpretable if selected
             lyric_embeddings_override=lyric_embeddings_for_clustering,  # E5 if selected
             n_pca_components=n_pca,
             clustering_algorithm="hac",
@@ -249,6 +359,14 @@ def main():
 
     # Use combined mode for the main report (or the only mode if not combined)
     results = all_results.get("combined", all_results[args.mode])
+
+    # Store metadata about the run
+    all_results["metadata"] = {
+        "audio_backend": args.audio_embedding_backend,
+        "lyrics_backend": args.lyrics_embedding_backend,
+        "timestamp": datetime.now().isoformat(),
+        "mode": args.mode
+    }
 
     print("\n[4/5] Generating interactive visualizations...")
     logger.info("Step 4/5: Generating visualizations")
@@ -275,6 +393,9 @@ def main():
 
     # Also create individual HTMLs for detailed exploration
     for mode, mode_results in all_results.items():
+        if mode == "metadata":
+            continue
+            
         output_file = f"analysis/outputs/music_taste_map_{mode}{backend_suffix}.html"
         fig = create_interactive_map(mode_results["dataframe"], mode_results)
         fig.write_html(

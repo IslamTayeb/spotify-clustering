@@ -1,5 +1,6 @@
 essentia_tensorflow==2.1b6.dev1389
 langdetect==1.0.9
+librosa>=0.10.0
 lyricsgenius==3.7.5
 numpy==2.4.0
 pandas==2.3.3

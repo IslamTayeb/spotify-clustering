@@ -220,7 +220,8 @@ def extract_mert_embeddings(
 
     # Load master index
     with open(master_index_path, 'r') as f:
-        master_index = json.load(f)
+        data = json.load(f)
+        master_index = data.get('tracks', [])
 
     logger.info(f"Loaded master index with {len(master_index)} tracks")
 

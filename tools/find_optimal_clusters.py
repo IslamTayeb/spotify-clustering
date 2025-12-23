@@ -24,10 +24,26 @@ except ImportError:
 def prepare_features(
     audio_features: List,
     lyric_features: List,
+    mert_features: List,
     mode: str = 'combined',
+    use_mert: bool = False,
     n_pca_components: int = 50
 ) -> np.ndarray:
     """Prepare PCA-reduced features for clustering"""
+    
+    # Override audio embeddings with MERT if requested
+    if use_mert:
+        valid_mert_count = 0
+        # Create a deep copy to avoid modifying original list in place if we run multiple tests
+        import copy
+        audio_features = copy.deepcopy(audio_features)
+        
+        for i, mert_item in enumerate(mert_features):
+            if mert_item is not None and i < len(audio_features):
+                audio_features[i]["embedding"] = mert_item["embedding"]
+                valid_mert_count += 1
+        print(f"Using MERT embeddings for {valid_mert_count} tracks")
+
     audio_emb = np.vstack([f['embedding'] for f in audio_features])
     lyric_emb = np.vstack([f['embedding'] for f in lyric_features])
 
@@ -261,33 +277,48 @@ def main():
         audio_features = pickle.load(f)
     with open('cache/lyric_features.pkl', 'rb') as f:
         lyric_features = pickle.load(f)
+    
+    # Load MERT features
+    mert_features = []
+    mert_path = Path('cache/mert_embeddings_24khz_30s_cls.pkl')
+    if mert_path.exists():
+        with open(mert_path, 'rb') as f:
+            mert_features = pickle.load(f)
+        print("MERT features loaded.")
 
     # Align features by track_id
     audio_by_id = {f['track_id']: f for f in audio_features}
     lyric_by_id = {f['track_id']: f for f in lyric_features}
+    mert_by_id = {f['track_id']: f for f in mert_features} if mert_features else {}
 
     common_ids = set(audio_by_id.keys()) & set(lyric_by_id.keys())
     aligned_audio = [audio_by_id[tid] for tid in sorted(common_ids)]
     aligned_lyrics = [lyric_by_id[tid] for tid in sorted(common_ids)]
+    aligned_mert = [mert_by_id.get(tid) for tid in sorted(common_ids)] if mert_features else []
 
     print(f"Found {len(common_ids)} tracks with both audio and lyric features")
 
     # Configuration
     mode = 'combined'  # 'audio', 'lyrics', or 'combined'
+    use_mert = True if aligned_mert else False
+    if use_mert:
+        print(">> Using MERT embeddings for audio analysis")
+    
     n_pca_components = 50
     k_range = range(5, 51, 2)  # Test k from 5 to 50, step 2
     linkage_method = 'ward'  # 'ward', 'complete', 'average', 'single'
 
     # Prepare features
     print(f"\nPreparing {mode} features with {n_pca_components} PCA components...")
-    features = prepare_features(aligned_audio, aligned_lyrics, mode, n_pca_components)
+    features = prepare_features(aligned_audio, aligned_lyrics, aligned_mert, mode, use_mert, n_pca_components)
     print(f"Feature matrix shape: {features.shape}")
 
     # Calculate metrics
     metrics = calculate_metrics(features, k_range, linkage_method)
 
     # Plot results
-    plot_metrics(metrics)
+    output_filename = 'outputs/optimal_clusters_mert.png' if use_mert else 'outputs/optimal_clusters_analysis.png'
+    plot_metrics(metrics, output_filename)
 
     # Print recommendations
     print_recommendations(metrics)
