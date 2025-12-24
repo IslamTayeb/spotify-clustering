@@ -316,11 +316,7 @@ def main():
     # Calculate metrics
     metrics = calculate_metrics(features, k_range, linkage_method)
 
-    # Plot results
-    output_filename = 'outputs/optimal_clusters_mert.png' if use_mert else 'outputs/optimal_clusters_analysis.png'
-    plot_metrics(metrics, output_filename)
-
-    # Print recommendations
+    # Print recommendations (no PNG output - use Streamlit dashboard instead)
     print_recommendations(metrics)
 
 

@@ -57,11 +57,15 @@ analysis/
 │   │   └── cluster_inspector.py  # NEW: Interactive track table
 │   ├── export/                # Export functionality
 │   │   └── spotify_export.py  # Spotify playlist export
-│   └── tabs/                  # Tab components
-│       └── simplified_tabs.py  # Tab delegation to existing code
+│   └── tabs/                  # Tab components (modular)
+│       ├── simplified_tabs.py     # Tab import hub
+│       ├── eda_explorer.py        # EDA Explorer tab
+│       ├── feature_importance.py  # Feature Importance tab
+│       ├── cluster_comparison.py  # Cluster Comparison tab
+│       ├── lyric_themes.py        # Lyric Themes tab
+│       └── overview.py            # Overview tab
 │
-├── interactive_interpretability.py  # Main dashboard (NEW - 320 lines)
-├── interactive_interpretability_BACKUP.py  # Original backup (2,753 lines)
+├── interactive_interpretability.py  # Main dashboard (320 lines)
 └── outputs/                   # Analysis results
 ```
 
@@ -88,7 +92,12 @@ analysis/
 - `spotify_export.py`: Export clustering results to Spotify playlists with OAuth authentication
 
 #### **Tabs Layer** (`components/tabs/`)
-- `simplified_tabs.py`: Delegates to existing tab implementations (EDA Explorer, Feature Importance, Cluster Comparison, Lyric Themes, Overview)
+- `eda_explorer.py`: EDA Explorer tab with comprehensive temporal analysis (10 visualizations)
+- `feature_importance.py`: Feature importance analysis using Cohen's d effect sizes, heatmaps, violin plots
+- `cluster_comparison.py`: Statistical comparison between clusters with t-tests, radar plots, genre analysis
+- `lyric_themes.py`: Lyric keyword extraction (TF-IDF), sentiment analysis, complexity metrics, word clouds
+- `overview.py`: Global overview with cluster similarity matrix, mood profiles, and summary statistics
+- `simplified_tabs.py`: Central import hub for all tab components
 
 ## New Features
 
@@ -158,6 +167,44 @@ def render_cluster_table(df: pd.DataFrame, selected_cluster: Optional[int] = Non
   2. **Dynamic Tuning (Live)**: Live clustering with parameter tuning
 - **3 feature backends**: Essentia (default), MERT (transformer), Interpretable (29-dim)
 - **Feature weight controls**: Adjust audio/lyric feature weights in real-time (Interpretable mode only)
+
+### 5. Comprehensive Temporal Analysis
+- **NEW section in EDA Explorer tab** (`components/tabs/eda_explorer.py`) with 10 interactive visualizations
+- Analyzes library growth patterns, discovery habits, and taste evolution over time
+- Temporal data loaded from `spotify/saved_tracks.json` (added_at, release_date)
+- **Does NOT affect clustering** - temporal columns added as metadata after clustering completes
+- **Architecture**: Temporal analysis is now in proper component module (not BACKUP file)
+
+**Visualizations:**
+1. **Overview Metrics** - Library timespan, median song age at add, most active month
+2. **Library Growth Timeline** - Cumulative songs added over time
+3. **Addition Patterns** - Monthly histogram showing discovery activity
+4. **Song Age Distribution** - How old songs were when added (New/Recent/Classic/Vintage categories)
+5. **Release Year Distribution** - Era preferences with decade breakdown and pie chart
+6. **Cluster Evolution Over Time** - Stacked bar chart showing taste evolution across 4 equal time periods
+7. **Temporal Extremes** - Oldest/newest songs by release date, first/last added, age extremes
+8. **Mood Evolution** - Rolling 30-song window of mood trends (happy, sad, aggressive, relaxed, party)
+9. **Genre Trends** - Top 5 genres by quarter showing genre preference shifts
+10. **Cluster Timeline Heatmap** - 2D heatmap of cluster density across months
+
+**Technical Details:**
+- Temporal columns in dataframe: `added_at`, `release_date`, `age_at_add_years`, `release_year`, `added_year`, `added_month`
+- Pipeline integration: `load_temporal_metadata()` in `clustering.py` (lines 30-52)
+- Graceful degradation: Shows informative warnings when temporal data is missing
+- Error handling: Validates dates, filters invalid values, handles timezone compatibility
+
+```python
+# analysis/pipeline/clustering.py (lines 526-557)
+# Load and merge temporal metadata AFTER clustering
+temporal_metadata = load_temporal_metadata()
+if temporal_metadata:
+    df['added_at'] = df['track_id'].map(lambda tid: temporal_metadata.get(tid, {}).get('added_at'))
+    df['release_date'] = df['track_id'].map(lambda tid: temporal_metadata.get(tid, {}).get('release_date'))
+    # ... other temporal fields ...
+
+    # Calculate age at addition
+    df['age_at_add_years'] = (df['added_at'] - df['release_date']).dt.days / 365.25
+```
 
 ## Breaking Changes
 
@@ -288,13 +335,12 @@ To verify the refactoring is working correctly:
 
 ## File Changes Summary
 
-### Created (24 files)
+### Created (27 files)
 ```
 analysis/pipeline/config.py                      (107 lines)
 analysis/pipeline/interpretable_features.py      (286 lines)
 analysis/pipeline/feature_cache.py               (181 lines)
 analysis/pipeline/orchestrator.py                (263 lines)
-scripts/extract_interpretable_lyrics.py          (217 lines)
 analysis/components/__init__.py                  (42 lines)
 analysis/components/data/__init__.py             (empty)
 analysis/components/data/loaders.py              (114 lines)
@@ -312,8 +358,12 @@ analysis/components/widgets/cluster_inspector.py (120 lines)
 analysis/components/export/__init__.py           (empty)
 analysis/components/export/spotify_export.py     (240 lines)
 analysis/components/tabs/__init__.py             (empty)
-analysis/components/tabs/simplified_tabs.py      (58 lines)
-analysis/interactive_interpretability_BACKUP.py  (2,753 lines - backup)
+analysis/components/tabs/simplified_tabs.py      (68 lines)
+analysis/components/tabs/eda_explorer.py         (864 lines)
+analysis/components/tabs/feature_importance.py   (280 lines)
+analysis/components/tabs/cluster_comparison.py   (360 lines)
+analysis/components/tabs/lyric_themes.py         (425 lines)
+analysis/components/tabs/overview.py             (267 lines)
 ```
 
 ### Modified (2 files)
@@ -323,16 +373,18 @@ analysis/interactive_interpretability.py         (2,753 → 320 lines, 88% reduc
 analysis/pipeline/visualization.py               (removed generate_report(), 180 lines removed)
 ```
 
-### Deleted (1 file)
+### Deleted (2 files)
 ```
 analysis/interactive_tuner.py                    (1,254 lines - obsolete)
+analysis/interactive_interpretability_BACKUP.py  (2,753 lines - all tabs extracted)
 ```
 
 ### Total Impact
-- **Lines removed**: 4,827 (interactive_tuner.py + old main file + generate_report())
-- **Lines added**: 3,368 (24 modular components + new main file)
-- **Net reduction**: 1,459 lines (30% reduction)
-- **Modularity gain**: 2 monolithic files → 24+ focused components
+- **Lines removed**: 7,580 (interactive_tuner.py + BACKUP file + old main file + generate_report())
+- **Lines added**: 6,624 (28 modular components + new main file)
+- **Net reduction**: 956 lines (13% reduction)
+- **Modularity gain**: 2 monolithic files → 28+ focused components
+- **Key Achievement**: All 5 dashboard tabs fully extracted to component modules - no more BACKUP file!
 
 ## Performance Considerations
 
@@ -392,28 +444,33 @@ Potential improvements for future iterations:
 If you encounter issues or have questions about the new architecture:
 
 1. Check this document first
-2. Review component source code (well-commented)
-3. Check backup file: `interactive_interpretability_BACKUP.py` for old implementation
+2. Review component source code (well-commented and modular)
+3. Check individual tab components in `analysis/components/tabs/` for implementations
 4. Verify cache files exist: `cache/audio_features.pkl`, `cache/lyric_features.pkl`
 
 ## Rollback Instructions
 
-If you need to revert to the old implementation:
+If you need to revert to the old implementation (prior to tab extraction):
 
 ```bash
-# Restore backup
-cp analysis/interactive_interpretability_BACKUP.py analysis/interactive_interpretability.py
+# Check git history for BACKUP file (deleted after tab extraction)
+git log --all -- analysis/interactive_interpretability_BACKUP.py
+
+# Restore BACKUP file from git history
+git checkout <commit_hash> -- analysis/interactive_interpretability_BACKUP.py
+
+# Restore main file from git history
+git checkout <commit_hash> -- analysis/interactive_interpretability.py
 
 # Restore deleted interactive_tuner.py (if needed)
-# Check git history: git log --all -- analysis/interactive_tuner.py
 git checkout <commit_hash> -- analysis/interactive_tuner.py
 
-# Re-add generate_report() to visualization.py
+# Re-add generate_report() to visualization.py (if needed)
 git checkout <commit_hash> -- analysis/pipeline/visualization.py
 ```
 
-**Note**: The modular components are additive and don't affect the old code, so partial rollback is also possible.
+**Note**: All tab components have been extracted and BACKUP file deleted. Full rollback requires restoring files from git history.
 
 ---
 
-**Status**: ✅ Refactoring Complete - All 22 tasks finished
+**Status**: ✅ Refactoring Complete - All tabs extracted to modular components, BACKUP file deleted

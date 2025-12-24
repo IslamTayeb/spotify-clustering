@@ -149,6 +149,9 @@ def main():
                 st.error("No cached features found! Run `python run_analysis.py` first.")
                 st.stop()
 
+            # Load popularity data
+            popularity_data = loaders.load_popularity_data()
+
             # Backend Selection
             has_mert = any(x is not None for x in mert_features)
             backend = feature_selectors.render_backend_selector(has_mert=has_mert)
@@ -157,7 +160,7 @@ def main():
             feature_weights = None
             if "Interpretable" in backend:
                 st.sidebar.caption(
-                    "Note: Lyric embeddings are NOT used. Only interpretable lyric features (valence, moods, themes, etc.)"
+                    "Note: Using interpretable features (30 dims) - normalized audio, lyric, and popularity features"
                 )
 
                 # Render weight sliders
@@ -172,6 +175,7 @@ def main():
                 backend,
                 mert_features=mert_features,
                 feature_weights=feature_weights,
+                popularity_data=popularity_data,
             )
 
             # Mode Selection

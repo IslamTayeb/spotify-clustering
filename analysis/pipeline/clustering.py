@@ -503,7 +503,6 @@ def run_clustering_pipeline(
             'instrumentalness': audio_f['instrumentalness'],
             'is_vocal': audio_f['instrumentalness'] < 0.5,
             'language': lyric_f['language'],
-            'word_count': lyric_f['word_count'],
             'has_lyrics': lyric_f['has_lyrics'],
             # Lyric Features (Tier 1: Parallel emotional dimensions)
             'lyric_valence': lyric_f.get('lyric_valence', 0.5),

@@ -177,9 +177,9 @@ def main():
     audio_features = load_data()
     X = extract_interpretable_features(audio_features)
     print(f"Feature matrix shape: {X.shape}")
-    
+
     k_range, results = analyze_clusters(X)
-    plot_results(k_range, results)
+    # Removed plot_results - use Streamlit dashboard instead
     print_top_configs(k_range, results)
 
 if __name__ == "__main__":

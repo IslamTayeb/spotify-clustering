@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 """Interpretable feature construction for music analysis.
 
-This module provides the single source of truth for constructing 29-dimensional
+This module provides the single source of truth for constructing 30-dimensional
 interpretable feature vectors from audio and lyric features. Used by both the
 CLI (run_analysis.py) and Streamlit dashboard (interactive_interpretability.py).
 
-Vector Structure (29 dimensions):
+Vector Structure (30 dimensions):
 - Audio features (14 dims): BPM, danceability, instrumentalness, valence, arousal,
                            engagement, approachability, moods (5), voice gender, genre ladder
 - Key features (3 dims): Circular encoding (sin/cos) of pitch + major/minor scale (weighted 0.33)
 - Lyric features (10 dims): valence, arousal, moods (4), explicit, narrative, vocabulary, repetition
 - Theme (1 dim): Semantic scale from introspective → energetic/positive
 - Language (1 dim): Ordinal encoding
+- Popularity (1 dim): Spotify popularity score normalized to [0, 1]
 
 CRITICAL: All lyric-related features are weighted by (1 - instrumentalness) to ensure
 that instrumental songs are NOT clustered based on non-existent lyric content.
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import numpy as np
 
 from analysis.pipeline.config import THEME_SCALE, LANGUAGE_SCALE
@@ -28,28 +29,31 @@ logger = logging.getLogger(__name__)
 
 def build_interpretable_features(
     audio_features: List[Dict[str, Any]],
-    lyric_features: List[Dict[str, Any]]
+    lyric_features: List[Dict[str, Any]],
+    popularity_data: Optional[Dict[str, float]] = None
 ) -> List[Dict[str, Any]]:
-    """Construct 29-dimensional interpretable feature vectors.
+    """Construct 30-dimensional interpretable feature vectors.
 
     Args:
         audio_features: List of audio feature dicts (must have 'track_id' key)
         lyric_features: List of lyric feature dicts (must have 'track_id' key)
+        popularity_data: Optional dict mapping track_id to popularity (0-100)
 
     Returns:
-        audio_features with new 'embedding' key containing 29-dim np.array
+        audio_features with new 'embedding' key containing 30-dim np.array
 
     Note:
         Modifies audio_features in-place by adding 'embedding' key.
         Lyric features weighted by (1 - instrumentalness) to prevent
         instrumental songs from being clustered by default lyric values.
+        Popularity normalized from Spotify's 0-100 scale to [0,1].
     """
-    logger.info("Building interpretable feature vectors (29 dimensions)")
+    logger.info("Building interpretable feature vectors (30 dimensions)")
 
     # Create lyric lookup by track_id
     lyric_by_id = {f["track_id"]: f for f in lyric_features}
 
-    # Compute global normalization ranges for BPM, valence, arousal
+    # Compute global normalization ranges for BPM, valence, arousal, popularity
     bpms = [float(t.get("bpm", 0) or 0) for t in audio_features]
     valences = [float(t.get("valence", 0) or 0) for t in audio_features]
     arousals = [float(t.get("arousal", 0) or 0) for t in audio_features]
@@ -65,9 +69,19 @@ def build_interpretable_features(
     min_val, max_val = get_range(valences, 1, 9)
     min_ar, max_ar = get_range(arousals, 1, 9)
 
-    logger.info(f"Normalization ranges - BPM: [{min_bpm:.1f}, {max_bpm:.1f}], "
-                f"Valence: [{min_val:.1f}, {max_val:.1f}], "
-                f"Arousal: [{min_ar:.1f}, {max_ar:.1f}]")
+    # Normalize popularity (0-100 from Spotify) to [0, 1]
+    if popularity_data:
+        popularities = [popularity_data.get(t["track_id"], 0) for t in audio_features]
+        min_pop, max_pop = get_range(popularities, 0, 100)
+        logger.info(f"Normalization ranges - BPM: [{min_bpm:.1f}, {max_bpm:.1f}], "
+                    f"Valence: [{min_val:.1f}, {max_val:.1f}], "
+                    f"Arousal: [{min_ar:.1f}, {max_ar:.1f}], "
+                    f"Popularity: [{min_pop:.1f}, {max_pop:.1f}]")
+    else:
+        min_pop, max_pop = 0, 100
+        logger.info(f"Normalization ranges - BPM: [{min_bpm:.1f}, {max_bpm:.1f}], "
+                    f"Valence: [{min_val:.1f}, {max_val:.1f}], "
+                    f"Arousal: [{min_ar:.1f}, {max_ar:.1f}]")
 
     # Process each track
     for track in audio_features:
@@ -212,10 +226,24 @@ def build_interpretable_features(
         lang_val = LANGUAGE_SCALE.get(lang, 0.14) * lyric_weight  # 28: Language
 
         # =====================================================================
-        # COMBINE ALL FEATURES (29 dimensions total)
+        # POPULARITY (1 dimension) - Normalized Spotify popularity score
+        # =====================================================================
+        if popularity_data:
+            raw_pop = popularity_data.get(track["track_id"], 0)
+            norm_pop = (
+                (raw_pop - min_pop) / (max_pop - min_pop)
+                if (max_pop > min_pop)
+                else 0.5
+            )
+            norm_pop = max(0.0, min(1.0, norm_pop))
+        else:
+            norm_pop = 0.5  # Default to neutral if no popularity data
+
+        # =====================================================================
+        # COMBINE ALL FEATURES (30 dimensions total)
         # =====================================================================
         embedding = np.array(
-            audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val],
+            audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val, norm_pop],
             dtype=np.float32,
         )
 
@@ -236,7 +264,7 @@ def apply_feature_weights(
     groups during clustering (e.g., weight moods more heavily than genre).
 
     Args:
-        audio_features: List with 'embedding' key containing 29-dim vectors
+        audio_features: List with 'embedding' key containing 30-dim vectors
         weights: Dict with keys:
             - 'core_audio': Weight for BPM, danceability, etc. (indices 0-6)
             - 'mood': Weight for audio moods (indices 7-11)
@@ -246,6 +274,7 @@ def apply_feature_weights(
             - 'lyric_content': Weight for content features (indices 23-26)
             - 'theme': Weight for theme (index 27)
             - 'language': Weight for language (index 28)
+            - 'popularity': Weight for popularity (index 29)
 
     Returns:
         audio_features with modified 'embedding' (in-place modification)
@@ -265,6 +294,7 @@ def apply_feature_weights(
         'lyric_content': (23, 27), # Explicit, narrative, vocabulary, repetition
         'theme': (27, 28),         # Theme dimension
         'language': (28, 29),      # Language dimension
+        'popularity': (29, 30),    # Popularity dimension
     }
 
     for track in audio_features:

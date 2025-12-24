@@ -129,6 +129,15 @@ def render_lyric_feature_weights() -> Dict[str, float]:
         help="Language of lyrics",
     )
 
+    weights["popularity"] = st.sidebar.slider(
+        "⭐ Popularity",
+        0.0,
+        2.0,
+        1.0,
+        0.1,
+        help="Spotify popularity score (mainstream vs. niche)",
+    )
+
     return weights
 
 
