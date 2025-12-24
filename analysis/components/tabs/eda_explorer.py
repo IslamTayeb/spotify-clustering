@@ -892,7 +892,67 @@ def render_eda_explorer(df: pd.DataFrame):
                 else:
                     st.info("Age data not available")
 
-                # 8. Mood Evolution (Rolling Window)
+                # 8. Cluster Trends Over Time (Rolling Window)
+                st.markdown("---")
+                st.subheader("🎭 Cluster Trends Over Time")
+
+                if len(df_temp) >= 30 and 'cluster' in df_temp.columns:
+                    df_sorted_cluster_trend = df_temp.sort_values('added_at').copy()
+
+                    # Create one-hot encoding for clusters
+                    cluster_dummies = pd.get_dummies(df_sorted_cluster_trend['cluster'], prefix='cluster')
+
+                    # Apply rolling window (same as mood trends)
+                    rolling_clusters = cluster_dummies.rolling(window=30, min_periods=10).mean() * 100
+                    rolling_clusters['added_at'] = df_sorted_cluster_trend['added_at'].values
+
+                    # Melt for plotting
+                    cluster_cols = [col for col in rolling_clusters.columns if col.startswith('cluster_')]
+                    rolling_melted = rolling_clusters.melt(
+                        id_vars=['added_at'],
+                        value_vars=cluster_cols,
+                        var_name='Cluster',
+                        value_name='Percentage'
+                    )
+                    rolling_melted['Cluster'] = rolling_melted['Cluster'].str.replace('cluster_', 'Cluster ')
+
+                    fig = px.line(
+                        rolling_melted,
+                        x='added_at',
+                        y='Percentage',
+                        color='Cluster',
+                        title='Rolling Cluster Distribution (30-song window)',
+                        labels={'Percentage': 'Proportion (%)', 'added_at': 'Date Added'}
+                    )
+
+                    # Add trendlines for each cluster
+                    colors = px.colors.qualitative.Plotly
+                    for i, cluster in enumerate(rolling_melted['Cluster'].unique()):
+                        cluster_data = rolling_melted[rolling_melted['Cluster'] == cluster].dropna()
+                        if len(cluster_data) > 1:
+                            x_numeric = (cluster_data['added_at'] - cluster_data['added_at'].min()).dt.total_seconds()
+                            z = np.polyfit(x_numeric, cluster_data['Percentage'], 1)
+                            p = np.poly1d(z)
+                            fig.add_trace(go.Scatter(
+                                x=cluster_data['added_at'],
+                                y=p(x_numeric),
+                                mode='lines',
+                                line=dict(dash='dash', width=2, color=colors[i % len(colors)]),
+                                name=f'{cluster} trend',
+                                showlegend=False,
+                                opacity=0.7
+                            ))
+
+                    fig.update_layout(height=500)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    st.caption("Shows how the proportion of each cluster changes as you add songs over time (dashed = trendline)")
+                elif len(df_temp) < 30:
+                    st.info("Need at least 30 songs for rolling cluster trends")
+                else:
+                    st.info("Cluster info not available")
+
+                # 9. Mood Evolution (Rolling Window)
                 st.markdown("---")
                 st.subheader("😊 Mood Trends Over Time")
 
@@ -908,45 +968,232 @@ def render_eda_explorer(df: pd.DataFrame):
                     rolling_melted = rolling_moods.melt(id_vars=['added_at'], var_name='Mood', value_name='Score')
 
                     fig = px.line(rolling_melted, x='added_at', y='Score', color='Mood')
+
+                    # Add trendlines for each mood
+                    colors = px.colors.qualitative.Plotly
+                    for i, mood in enumerate(rolling_melted['Mood'].unique()):
+                        mood_data = rolling_melted[rolling_melted['Mood'] == mood].dropna()
+                        if len(mood_data) > 1:
+                            x_numeric = (mood_data['added_at'] - mood_data['added_at'].min()).dt.total_seconds()
+                            z = np.polyfit(x_numeric, mood_data['Score'], 1)
+                            p = np.poly1d(z)
+                            fig.add_trace(go.Scatter(
+                                x=mood_data['added_at'],
+                                y=p(x_numeric),
+                                mode='lines',
+                                line=dict(dash='dash', width=2, color=colors[i % len(colors)]),
+                                name=f'{mood} trend',
+                                showlegend=False,
+                                opacity=0.7
+                            ))
+
                     fig.update_layout(height=500)
                     st.plotly_chart(fig, use_container_width=True)
+                    st.caption("Dashed lines show overall trend direction for each mood")
                 elif len(df_temp) < 30:
                     st.info("Need at least 30 songs")
                 else:
                     st.info("Mood info not available")
 
-                # 9. Genre Evolution
+                # 10. Genre Family Trends (Grouped + Delta Analysis)
                 st.markdown("---")
-                st.subheader("🎸 Genre Trends Over Time")
+                st.subheader("🎸 Genre Family Trends Over Time")
 
                 if 'top_genre' in df_temp.columns and len(df_temp) > 0:
-                    top_5_genres = df_temp['top_genre'].value_counts().head(5).index
+                    # Define genre families - group similar genres together
+                    genre_families = {
+                        'Hip Hop': ['hip hop', 'rap', 'trap', 'drill', 'boom bap', 'conscious hip hop',
+                                   'southern hip hop', 'west coast', 'east coast', 'gangsta', 'mumble',
+                                   'cloud rap', 'phonk', 'memphis', 'crunk', 'grime', 'uk hip hop'],
+                        'Electronic': ['electronic', 'edm', 'house', 'techno', 'trance', 'dubstep',
+                                      'drum and bass', 'dnb', 'ambient', 'downtempo', 'idm', 'electro',
+                                      'synthwave', 'retrowave', 'future bass', 'garage', 'breakbeat'],
+                        'Rock': ['rock', 'alternative', 'indie', 'punk', 'metal', 'grunge', 'hard rock',
+                                'classic rock', 'progressive', 'post-rock', 'shoegaze', 'emo', 'hardcore'],
+                        'R&B/Soul': ['r&b', 'rnb', 'soul', 'neo soul', 'funk', 'motown', 'quiet storm',
+                                    'contemporary r&b', 'new jack swing'],
+                        'Pop': ['pop', 'synth pop', 'dance pop', 'electropop', 'indie pop', 'art pop',
+                               'dream pop', 'k-pop', 'j-pop', 'latin pop'],
+                        'Jazz/Blues': ['jazz', 'blues', 'smooth jazz', 'bebop', 'swing', 'fusion',
+                                      'acid jazz', 'nu jazz', 'contemporary jazz'],
+                        'Latin': ['latin', 'reggaeton', 'salsa', 'bachata', 'cumbia', 'dembow',
+                                 'urbano', 'latin trap', 'spanish', 'brazilian', 'bossa nova'],
+                        'World/Folk': ['world', 'folk', 'acoustic', 'country', 'bluegrass', 'celtic',
+                                      'african', 'middle eastern', 'indian', 'asian'],
+                    }
+
+                    def get_genre_family(genre_str):
+                        """Map a genre to its family."""
+                        if pd.isna(genre_str):
+                            return 'Other'
+                        genre_lower = str(genre_str).lower()
+                        for family, keywords in genre_families.items():
+                            if any(kw in genre_lower for kw in keywords):
+                                return family
+                        return 'Other'
+
+                    df_temp['genre_family'] = df_temp['top_genre'].apply(get_genre_family)
                     df_temp['quarter'] = df_temp['added_at'].dt.to_period('Q')
 
-                    genre_timeline = []
-                    for quarter in sorted(df_temp['quarter'].dropna().unique()):
+                    # Get top genre families by total count
+                    top_families = df_temp['genre_family'].value_counts().head(6).index.tolist()
+                    if 'Other' in top_families and len(top_families) > 5:
+                        top_families.remove('Other')
+
+                    # Build timeline data with cumulative counts and quarterly additions
+                    quarters = sorted(df_temp['quarter'].dropna().unique())
+                    timeline_data = []
+                    cumulative_counts = {family: 0 for family in top_families}
+
+                    for quarter in quarters:
                         quarter_df = df_temp[df_temp['quarter'] == quarter]
-                        for genre in top_5_genres:
-                            count = (quarter_df['top_genre'] == genre).sum()
-                            pct = count / len(quarter_df) * 100 if len(quarter_df) > 0 else 0
-                            genre_timeline.append({
+                        total_in_quarter = len(quarter_df)
+
+                        for family in top_families:
+                            added_this_quarter = (quarter_df['genre_family'] == family).sum()
+                            cumulative_counts[family] += added_this_quarter
+
+                            # Proportion of this family in this quarter's additions
+                            quarter_pct = (added_this_quarter / total_in_quarter * 100) if total_in_quarter > 0 else 0
+
+                            timeline_data.append({
                                 'Quarter': str(quarter),
-                                'Genre': genre,
-                                'Percentage': pct
+                                'Genre Family': family,
+                                'Added': added_this_quarter,
+                                'Cumulative': cumulative_counts[family],
+                                'Quarter %': quarter_pct,
                             })
 
-                    if genre_timeline:
-                        genre_timeline_df = pd.DataFrame(genre_timeline)
+                    if timeline_data:
+                        timeline_df = pd.DataFrame(timeline_data)
 
-                        fig = px.line(genre_timeline_df, x='Quarter', y='Percentage', color='Genre')
+                        # Calculate delta (change from previous quarter)
+                        for family in top_families:
+                            family_mask = timeline_df['Genre Family'] == family
+                            timeline_df.loc[family_mask, 'Delta'] = timeline_df.loc[family_mask, 'Quarter %'].diff().fillna(0)
+
+                        # Tab selection for different views
+                        genre_view = st.radio(
+                            "View",
+                            ["Quarterly Proportion", "Delta (Rate of Change)", "Cumulative Growth"],
+                            horizontal=True,
+                            key="genre_view_selector"
+                        )
+
+                        if genre_view == "Quarterly Proportion":
+                            fig = px.line(
+                                timeline_df,
+                                x='Quarter',
+                                y='Quarter %',
+                                color='Genre Family',
+                                title='Genre Family Share of Quarterly Additions',
+                                labels={'Quarter %': 'Share of Quarter (%)'}
+                            )
+                            # Add trendlines
+                            colors = px.colors.qualitative.Plotly
+                            for i, family in enumerate(top_families):
+                                family_data = timeline_df[timeline_df['Genre Family'] == family]
+                                if len(family_data) > 1:
+                                    x_numeric = np.arange(len(family_data))
+                                    z = np.polyfit(x_numeric, family_data['Quarter %'], 1)
+                                    p = np.poly1d(z)
+                                    fig.add_trace(go.Scatter(
+                                        x=family_data['Quarter'],
+                                        y=p(x_numeric),
+                                        mode='lines',
+                                        line=dict(dash='dash', width=2, color=colors[i % len(colors)]),
+                                        name=f'{family} trend',
+                                        showlegend=False,
+                                        opacity=0.7
+                                    ))
+                            st.caption("What proportion of songs added each quarter belong to each genre family (dashed = trendline)")
+
+                        elif genre_view == "Delta (Rate of Change)":
+                            fig = px.bar(
+                                timeline_df,
+                                x='Quarter',
+                                y='Delta',
+                                color='Genre Family',
+                                barmode='group',
+                                title='Genre Family Delta (Quarter-over-Quarter Change)',
+                                labels={'Delta': 'Change in Share (pp)'}
+                            )
+                            fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+                            # Add trendlines for delta
+                            colors = px.colors.qualitative.Plotly
+                            for i, family in enumerate(top_families):
+                                family_data = timeline_df[timeline_df['Genre Family'] == family]
+                                if len(family_data) > 1:
+                                    x_numeric = np.arange(len(family_data))
+                                    z = np.polyfit(x_numeric, family_data['Delta'], 1)
+                                    p = np.poly1d(z)
+                                    fig.add_trace(go.Scatter(
+                                        x=family_data['Quarter'],
+                                        y=p(x_numeric),
+                                        mode='lines',
+                                        line=dict(dash='dot', width=3, color=colors[i % len(colors)]),
+                                        name=f'{family} trend',
+                                        showlegend=False,
+                                        opacity=0.8
+                                    ))
+                            st.caption("Positive = growing interest, Negative = declining interest (dotted = trendline)")
+
+                        else:  # Cumulative Growth
+                            fig = px.area(
+                                timeline_df,
+                                x='Quarter',
+                                y='Cumulative',
+                                color='Genre Family',
+                                title='Cumulative Genre Family Growth',
+                                labels={'Cumulative': 'Total Songs'}
+                            )
+                            # Add trendlines for cumulative
+                            colors = px.colors.qualitative.Plotly
+                            for i, family in enumerate(top_families):
+                                family_data = timeline_df[timeline_df['Genre Family'] == family]
+                                if len(family_data) > 1:
+                                    x_numeric = np.arange(len(family_data))
+                                    z = np.polyfit(x_numeric, family_data['Cumulative'], 1)
+                                    p = np.poly1d(z)
+                                    fig.add_trace(go.Scatter(
+                                        x=family_data['Quarter'],
+                                        y=p(x_numeric),
+                                        mode='lines',
+                                        line=dict(dash='dash', width=2, color='white'),
+                                        name=f'{family} trend',
+                                        showlegend=False,
+                                        opacity=0.8
+                                    ))
+                            st.caption("How your collection of each genre family has grown over time (dashed = linear growth rate)")
+
                         fig.update_layout(height=500)
                         st.plotly_chart(fig, use_container_width=True)
+
+                        # Summary statistics
+                        st.markdown("**Genre Family Summary:**")
+                        summary_cols = st.columns(min(len(top_families), 4))
+                        total_songs = len(df_temp)
+
+                        for i, family in enumerate(top_families[:4]):
+                            family_total = cumulative_counts[family]
+                            family_pct = family_total / total_songs * 100 if total_songs > 0 else 0
+                            family_deltas = timeline_df[timeline_df['Genre Family'] == family]['Delta']
+                            avg_delta = family_deltas.mean()
+                            trend = "📈" if avg_delta > 0.5 else ("📉" if avg_delta < -0.5 else "➡️")
+
+                            with summary_cols[i]:
+                                st.metric(
+                                    family,
+                                    f"{family_total} songs",
+                                    f"{avg_delta:+.1f}pp avg {trend}"
+                                )
+                                st.caption(f"{family_pct:.1f}% of library")
                     else:
-                        st.info("Not enough data")
+                        st.info("Not enough data for genre trends")
                 else:
                     st.info("Genre info not available")
 
-                # 10. Cluster Timeline Heatmap
+                # 11. Cluster Timeline Heatmap
                 st.markdown("---")
                 st.subheader("🔥 Cluster Distribution Heatmap")
 
@@ -987,6 +1234,9 @@ def render_eda_explorer(df: pd.DataFrame):
             unique_clusters = sorted(df["cluster"].unique())
             colors = px.colors.qualitative.Plotly
 
+            # Get embedding columns for hover display
+            emb_cols = [col for col in df.columns if col.startswith("emb_")]
+
             for i, cluster_id in enumerate(unique_clusters):
                 cluster_df = df[df["cluster"] == cluster_id]
 
@@ -1001,6 +1251,16 @@ def render_eda_explorer(df: pd.DataFrame):
                         text += f"Genre: {row['top_genre']}<br>"
                     if "bpm" in row:
                         text += f"BPM: {row['bpm']:.0f}<br>"
+
+                    # Add full embedding vector
+                    if emb_cols:
+                        text += "<br><b>Embedding Vector:</b><br>"
+                        for emb_col in emb_cols:
+                            if emb_col in row and pd.notna(row[emb_col]):
+                                # Clean up column name for display (remove emb_ prefix)
+                                display_name = emb_col.replace("emb_", "")
+                                text += f"{display_name}: {row[emb_col]:.3f}<br>"
+
                     hover_texts.append(text)
 
                 fig.add_trace(
