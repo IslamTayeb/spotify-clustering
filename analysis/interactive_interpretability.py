@@ -360,6 +360,166 @@ def create_dataframe_from_clustering(
     return pd.DataFrame(data)
 
 
+def export_to_spotify(
+    df: pd.DataFrame,
+    mode: str,
+    cluster_id: int = None,
+    prefix: str = "",
+    private: bool = False,
+):
+    """Export clusters to Spotify playlists."""
+    import os
+
+    try:
+        import spotipy
+        from spotipy.oauth2 import SpotifyOAuth
+        from dotenv import load_dotenv
+    except ImportError:
+        st.error(
+            "❌ Missing dependencies. Install with: `pip install spotipy python-dotenv`"
+        )
+        return
+
+    # Load environment variables
+    load_dotenv()
+
+    # Check for credentials
+    client_id = os.getenv("SPOTIFY_CLIENT_ID")
+    client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        st.error(
+            "❌ Spotify credentials not found!\n\n"
+            "Please set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in your `.env` file."
+        )
+        return
+
+    # OAuth configuration
+    SCOPE = "user-library-read playlist-modify-public playlist-modify-private"
+    REDIRECT_URI = "http://127.0.0.1:3000/callback"
+
+    with st.spinner("🔐 Authenticating with Spotify..."):
+        try:
+            sp = spotipy.Spotify(
+                auth_manager=SpotifyOAuth(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=REDIRECT_URI,
+                    scope=SCOPE,
+                )
+            )
+            user_id = sp.current_user()["id"]
+            st.success(f"✓ Authenticated as: {user_id}")
+        except Exception as e:
+            st.error(f"❌ Authentication failed: {e}")
+            st.info("💡 Try deleting the `.cache` file and re-running.")
+            return
+
+    # Group tracks by cluster
+    clusters_to_export = {}
+    if cluster_id is not None:
+        # Single cluster export
+        cluster_df = df[df["cluster"] == cluster_id]
+        clusters_to_export[cluster_id] = cluster_df
+    else:
+        # All clusters export
+        for cid in sorted(df["cluster"].unique()):
+            clusters_to_export[cid] = df[df["cluster"] == cid]
+
+    # Build prefix string
+    prefix_str = f"{prefix} - " if prefix else ""
+    public = not private
+
+    # Progress bar
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    created_playlists = []
+
+    total_clusters = len(clusters_to_export)
+    for i, (cid, cluster_df) in enumerate(clusters_to_export.items()):
+        progress = (i + 1) / total_clusters
+        progress_bar.progress(progress)
+        status_text.text(
+            f"Creating playlist for Cluster {cid}... ({i + 1}/{total_clusters})"
+        )
+
+        # Generate playlist name
+        # Try to get descriptive info from the cluster
+        top_genre = "Mixed"
+        if "top_genre" in cluster_df.columns:
+            genre_counts = cluster_df["top_genre"].value_counts()
+            if len(genre_counts) > 0:
+                top_genre = genre_counts.index[0]
+
+        dominant_mood = "Mixed"
+        mood_cols = [
+            "mood_happy",
+            "mood_sad",
+            "mood_aggressive",
+            "mood_relaxed",
+            "mood_party",
+        ]
+        available_moods = [col for col in mood_cols if col in cluster_df.columns]
+        if available_moods:
+            mood_means = {
+                col.replace("mood_", "").capitalize(): cluster_df[col].mean()
+                for col in available_moods
+            }
+            dominant_mood = max(mood_means, key=mood_means.get)
+
+        playlist_name = f"{prefix_str}{mode.capitalize()} Cluster {cid}: {top_genre} - {dominant_mood}"
+        playlist_description = (
+            f"Auto-generated from {mode} clustering analysis. "
+            f"Contains {len(cluster_df)} tracks with similar {mode} characteristics."
+        )
+
+        try:
+            # Create playlist
+            playlist = sp.user_playlist_create(
+                user=user_id,
+                name=playlist_name,
+                public=public,
+                description=playlist_description,
+            )
+            playlist_id = playlist["id"]
+            playlist_url = playlist["external_urls"]["spotify"]
+
+            # Add tracks in batches (Spotify limit: 100 per request)
+            track_uris = [f"spotify:track:{tid}" for tid in cluster_df["track_id"]]
+            batch_size = 100
+            for j in range(0, len(track_uris), batch_size):
+                batch = track_uris[j : j + batch_size]
+                sp.playlist_add_items(playlist_id, batch)
+
+            created_playlists.append(
+                {
+                    "name": playlist_name,
+                    "url": playlist_url,
+                    "track_count": len(cluster_df),
+                    "cluster_id": cid,
+                }
+            )
+
+        except Exception as e:
+            st.warning(f"⚠️ Failed to create playlist for Cluster {cid}: {e}")
+
+    progress_bar.progress(1.0)
+    status_text.empty()
+
+    # Show results
+    if created_playlists:
+        st.success(f"🎉 Created {len(created_playlists)} playlist(s)!")
+
+        # Show created playlists
+        for pl in created_playlists:
+            st.markdown(
+                f"**{pl['name']}** ({pl['track_count']} tracks)  \n"
+                f"[Open in Spotify]({pl['url']})"
+            )
+    else:
+        st.error("❌ No playlists were created.")
+
+
 def main():
     # Header
     st.markdown(
@@ -526,32 +686,31 @@ def main():
                 min_val, max_val = get_range(valences, 1, 9)
                 min_ar, max_ar = get_range(arousals, 1, 9)
 
-                # Theme & Language: 1 dimension each (semantic ordering)
-                # "none" is isolated at 0.0 with a gap to distinguish instrumentals/no-lyrics
+                # Theme & Language: 1 dimension each, natural 0-1 scale
                 # Theme ordered by emotional energy/positivity (high=positive/energetic, low=negative/introspective)
                 THEME_SCALE = {
-                    "party": 1.0,  # highest energy
-                    "flex": 0.92,  # confident, boastful
-                    "love": 0.85,  # positive emotion
-                    "social": 0.75,  # community focused
-                    "spirituality": 0.68,  # contemplative but uplifting
-                    "introspection": 0.6,  # neutral, internal
-                    "street": 0.5,  # raw, realistic
-                    "heartbreak": 0.4,  # sad
-                    "struggle": 0.3,  # difficult
-                    "other": 0.2,  # has lyrics, unknown theme
-                    "none": 0.0,  # no lyrics/theme (gap of 0.2)
+                    "party": 1.0,
+                    "flex": 0.9,
+                    "love": 0.8,
+                    "social": 0.7,
+                    "spirituality": 0.6,
+                    "introspection": 0.5,
+                    "street": 0.4,
+                    "heartbreak": 0.3,
+                    "struggle": 0.2,
+                    "other": 0.1,
+                    "none": 0.0,
                 }
-                # Language: ordinal encoding with gap for "none"
+                # Language: ordinal encoding, natural 0-1 scale
                 LANGUAGE_SCALE = {
                     "english": 1.0,
-                    "spanish": 0.85,
-                    "french": 0.7,
-                    "arabic": 0.6,
-                    "korean": 0.5,
-                    "japanese": 0.4,
-                    "unknown": 0.25,  # has lyrics, unknown language
-                    "none": 0.0,  # no lyrics (gap of 0.25)
+                    "spanish": 0.86,
+                    "french": 0.71,
+                    "arabic": 0.57,
+                    "korean": 0.43,
+                    "japanese": 0.29,
+                    "unknown": 0.14,
+                    "none": 0.0,
                 }
 
                 for track in audio_features:
@@ -642,7 +801,7 @@ def main():
                         parts = k.split()
                         if parts and parts[0] in pitch_map:
                             p = pitch_map[parts[0]]
-                            KEY_WEIGHT = 0.5
+                            KEY_WEIGHT = 0.33  # 3 dims × 0.33 ≈ 1 equivalent dimension
                             key_vec = [
                                 (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT,
                                 (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT,
@@ -650,28 +809,40 @@ def main():
                             ]
 
                     # Lyric scalars (10 dims)
+                    # Weight lyric features by (1 - instrumentalness) so that
+                    # highly instrumental songs don't get clustered by lyrics
+                    instrumentalness_val = get_float(track, "instrumentalness", 0.0)
+                    lyric_weight = (
+                        1.0 - instrumentalness_val
+                    )  # 0 if fully instrumental, 1 if fully vocal
+
                     lyric_scalars = [
-                        get_float(lyric, "lyric_valence", 0.5),
-                        get_float(lyric, "lyric_arousal", 0.5),
-                        get_float(lyric, "lyric_mood_happy", 0.0),
-                        get_float(lyric, "lyric_mood_sad", 0.0),
-                        get_float(lyric, "lyric_mood_aggressive", 0.0),
-                        get_float(lyric, "lyric_mood_relaxed", 0.0),
-                        get_float(lyric, "lyric_explicit", 0.0),
-                        get_float(lyric, "lyric_narrative", 0.0),
-                        get_float(lyric, "lyric_vocabulary_richness", 0.0),
-                        get_float(lyric, "lyric_repetition", 0.0),
+                        get_float(lyric, "lyric_valence", 0.5) * lyric_weight,
+                        get_float(lyric, "lyric_arousal", 0.5) * lyric_weight,
+                        get_float(lyric, "lyric_mood_happy", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_mood_sad", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_mood_aggressive", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_mood_relaxed", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_explicit", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_narrative", 0.0) * lyric_weight,
+                        get_float(lyric, "lyric_vocabulary_richness", 0.0)
+                        * lyric_weight,
+                        get_float(lyric, "lyric_repetition", 0.0) * lyric_weight,
                     ]
 
-                    # Theme (1 dim) - semantic scale
+                    # Theme (1 dim) - semantic scale, weighted by lyric_weight
                     theme = lyric.get("lyric_theme", "other")
                     theme = theme.lower().strip() if isinstance(theme, str) else "other"
-                    theme_val = THEME_SCALE.get(theme, 0.2)  # default to "other"
+                    theme_val = (
+                        THEME_SCALE.get(theme, 0.1) * lyric_weight
+                    )  # default to "other"
 
-                    # Language (1 dim) - ordinal scale
+                    # Language (1 dim) - ordinal scale, weighted by lyric_weight
                     lang = lyric.get("lyric_language", "unknown")
                     lang = lang.lower().strip() if isinstance(lang, str) else "unknown"
-                    lang_val = LANGUAGE_SCALE.get(lang, 0.25)  # default to "unknown"
+                    lang_val = (
+                        LANGUAGE_SCALE.get(lang, 0.14) * lyric_weight
+                    )  # default to "unknown"
 
                     track["embedding"] = np.array(
                         audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val],
@@ -683,17 +854,22 @@ def main():
                     sample_track = audio_features[0]
                     sample_lyric = lyric_by_id.get(sample_track["track_id"], {})
                     emb = sample_track["embedding"]
+                    sample_instrumentalness = sample_track.get("instrumentalness", 0.0)
+                    sample_lyric_weight = 1.0 - sample_instrumentalness
                     st.write(
                         f"**{sample_track['track_name']}** by {sample_track['artist']}"
                     )
                     st.write(
                         f"Vector length: {len(emb)} (Audio:14 + Key:3 + Lyric:10 + Theme:1 + Lang:1 = 29)"
                     )
+                    st.write(
+                        f"**Instrumentalness:** {sample_instrumentalness:.2f} → **Lyric Weight:** {sample_lyric_weight:.2f}"
+                    )
                     theme_raw = sample_lyric.get("lyric_theme", "N/A")
                     lang_raw = sample_lyric.get("lyric_language", "N/A")
                     st.write(
-                        f"Theme: {theme_raw} → {THEME_SCALE.get(str(theme_raw).lower().strip(), 0.2):.2f}, "
-                        f"Language: {lang_raw} → {LANGUAGE_SCALE.get(str(lang_raw).lower().strip(), 0.25):.2f}"
+                        f"Theme: {theme_raw} → {THEME_SCALE.get(str(theme_raw).lower().strip(), 0.1):.2f}, "
+                        f"Language: {lang_raw} → {LANGUAGE_SCALE.get(str(lang_raw).lower().strip(), 0.14):.2f}"
                     )
 
                 # Weight controls
@@ -797,6 +973,53 @@ def main():
             st.metric("Total Songs", len(df))
             st.metric("Clusters", df["cluster"].nunique())
             st.caption(f"Analyzing {mode} mode")
+
+            # --- Export to Spotify Section ---
+            st.markdown("---")
+            st.subheader("🎧 Export to Spotify")
+
+            # Cluster selection for export
+            cluster_ids = sorted(df["cluster"].unique())
+            export_option = st.radio(
+                "Export scope",
+                ["All Clusters", "Single Cluster"],
+                help="Export all clusters or select a specific one",
+            )
+
+            selected_export_cluster = None
+            if export_option == "Single Cluster":
+                selected_export_cluster = st.selectbox(
+                    "Select cluster to export",
+                    options=cluster_ids,
+                    format_func=lambda x: f"Cluster {x} ({len(df[df['cluster'] == x])} songs)",
+                    key="export_cluster_select",
+                )
+
+            # Playlist options
+            playlist_prefix = st.text_input(
+                "Playlist name prefix",
+                value="",
+                placeholder="e.g., My Music",
+                help="Optional prefix for playlist names",
+            )
+
+            make_private = st.checkbox(
+                "Make playlists private",
+                value=False,
+                help="Create private playlists instead of public",
+            )
+
+            # Export button
+            if st.button(
+                "🚀 Export to Spotify", type="primary", use_container_width=True
+            ):
+                export_to_spotify(
+                    df=df,
+                    mode=mode,
+                    cluster_id=selected_export_cluster,
+                    prefix=playlist_prefix,
+                    private=make_private,
+                )
 
     if df is None:
         st.info("👈 Select a data source or run dynamic clustering to begin.")

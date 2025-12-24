@@ -283,32 +283,31 @@ def main():
         min_val, max_val = get_range(valences, 1, 9)
         min_ar, max_ar = get_range(arousals, 1, 9)
 
-        # Theme & Language: 1 dimension each (semantic ordering)
-        # "none" is isolated at 0.0 with a gap to distinguish instrumentals/no-lyrics
+        # Theme & Language: 1 dimension each, natural 0-1 scale
         # Theme ordered by emotional energy/positivity (high=positive/energetic, low=negative/introspective)
         THEME_SCALE = {
-            "party": 1.0,  # highest energy
-            "flex": 0.92,  # confident, boastful
-            "love": 0.85,  # positive emotion
-            "social": 0.75,  # community focused
-            "spirituality": 0.68,  # contemplative but uplifting
-            "introspection": 0.6,  # neutral, internal
-            "street": 0.5,  # raw, realistic
-            "heartbreak": 0.4,  # sad
-            "struggle": 0.3,  # difficult
-            "other": 0.2,  # has lyrics, unknown theme
-            "none": 0.0,  # no lyrics/theme (gap of 0.2)
+            "party": 1.0,
+            "flex": 0.9,
+            "love": 0.8,
+            "social": 0.7,
+            "spirituality": 0.6,
+            "introspection": 0.5,
+            "street": 0.4,
+            "heartbreak": 0.3,
+            "struggle": 0.2,
+            "other": 0.1,
+            "none": 0.0,
         }
-        # Language: ordinal encoding with gap for "none"
+        # Language: ordinal encoding, natural 0-1 scale
         LANGUAGE_SCALE = {
             "english": 1.0,
-            "spanish": 0.85,
-            "french": 0.7,
-            "arabic": 0.6,
-            "korean": 0.5,
-            "japanese": 0.4,
-            "unknown": 0.25,  # has lyrics, unknown language
-            "none": 0.0,  # no lyrics (gap of 0.25)
+            "spanish": 0.86,
+            "french": 0.71,
+            "arabic": 0.57,
+            "korean": 0.43,
+            "japanese": 0.29,
+            "unknown": 0.14,
+            "none": 0.0,
         }
 
         count = 0
@@ -398,7 +397,7 @@ def main():
                 parts = k.split()
                 if parts and parts[0] in pitch_map:
                     p = pitch_map[parts[0]]
-                    KEY_WEIGHT = 0.5
+                    KEY_WEIGHT = 0.33  # 3 dims × 0.33 ≈ 1 equivalent dimension
                     sin_val = (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
                     cos_val = (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
                     scale_val = scale_val * KEY_WEIGHT
@@ -406,33 +405,49 @@ def main():
 
             # ═══════════════════════════════════════════════════════════════
             # LYRIC FEATURES (8 continuous + 11 theme + 8 language = 27 dims)
+            # Weight lyric features by (1 - instrumentalness) so that
+            # highly instrumental songs don't get clustered by lyrics
             # ═══════════════════════════════════════════════════════════════
+            instrumentalness_val = get_float(track, "instrumentalness", 0.0)
+            lyric_weight = (
+                1.0 - instrumentalness_val
+            )  # 0 if fully instrumental, 1 if fully vocal
+
             lyric_scalars = [
-                get_float(lyric, "lyric_valence", 0.5),  # 0: Lyric Valence
-                get_float(lyric, "lyric_arousal", 0.5),  # 1: Lyric Arousal
-                get_float(lyric, "lyric_mood_happy", 0.0),  # 2: Lyric Happy
-                get_float(lyric, "lyric_mood_sad", 0.0),  # 3: Lyric Sad
-                get_float(lyric, "lyric_mood_aggressive", 0.0),  # 4: Lyric Aggressive
-                get_float(lyric, "lyric_mood_relaxed", 0.0),  # 5: Lyric Relaxed
-                get_float(lyric, "lyric_explicit", 0.0),  # 6: Explicit
-                get_float(lyric, "lyric_narrative", 0.0),  # 7: Narrative
-                get_float(lyric, "lyric_vocabulary_richness", 0.0),  # 8: Vocab Richness
-                get_float(lyric, "lyric_repetition", 0.0),  # 9: Repetition
+                get_float(lyric, "lyric_valence", 0.5)
+                * lyric_weight,  # 0: Lyric Valence
+                get_float(lyric, "lyric_arousal", 0.5)
+                * lyric_weight,  # 1: Lyric Arousal
+                get_float(lyric, "lyric_mood_happy", 0.0)
+                * lyric_weight,  # 2: Lyric Happy
+                get_float(lyric, "lyric_mood_sad", 0.0) * lyric_weight,  # 3: Lyric Sad
+                get_float(lyric, "lyric_mood_aggressive", 0.0)
+                * lyric_weight,  # 4: Lyric Aggressive
+                get_float(lyric, "lyric_mood_relaxed", 0.0)
+                * lyric_weight,  # 5: Lyric Relaxed
+                get_float(lyric, "lyric_explicit", 0.0) * lyric_weight,  # 6: Explicit
+                get_float(lyric, "lyric_narrative", 0.0) * lyric_weight,  # 7: Narrative
+                get_float(lyric, "lyric_vocabulary_richness", 0.0)
+                * lyric_weight,  # 8: Vocab Richness
+                get_float(lyric, "lyric_repetition", 0.0)
+                * lyric_weight,  # 9: Repetition
             ]
 
-            # Theme (1 dim) - semantic scale
+            # Theme (1 dim) - semantic scale, weighted by lyric_weight
             theme = lyric.get("lyric_theme", "other")
             if not isinstance(theme, str):
                 theme = "other"
             theme = theme.lower().strip()
-            theme_val = THEME_SCALE.get(theme, 0.2)  # default to "other"
+            theme_val = THEME_SCALE.get(theme, 0.1) * lyric_weight  # default to "other"
 
-            # Language (1 dim) - ordinal scale
+            # Language (1 dim) - ordinal scale, weighted by lyric_weight
             lang = lyric.get("lyric_language", "unknown")
             if not isinstance(lang, str):
                 lang = "unknown"
             lang = lang.lower().strip()
-            lang_val = LANGUAGE_SCALE.get(lang, 0.25)  # default to "unknown"
+            lang_val = (
+                LANGUAGE_SCALE.get(lang, 0.14) * lyric_weight
+            )  # default to "unknown"
 
             # Combine all features (29 dims total)
             full_vector = (
@@ -450,9 +465,14 @@ def main():
             sample_track = audio_features[0]
             sample_lyric = lyric_by_id.get(sample_track["track_id"], {})
             emb = sample_track["embedding"]
+            sample_instrumentalness = sample_track.get("instrumentalness", 0.0)
+            sample_lyric_weight = 1.0 - sample_instrumentalness
 
             st.write(f"**{sample_track['track_name']}** by {sample_track['artist']}")
             st.write(f"Vector length: {len(emb)}")
+            st.write(
+                f"**Instrumentalness:** {sample_instrumentalness:.2f} → **Lyric Weight:** {sample_lyric_weight:.2f}"
+            )
 
             # Audio features (0-16)
             st.markdown("**Audio Features:**")
@@ -503,10 +523,10 @@ def main():
             theme_raw = sample_lyric.get("lyric_theme", "N/A")
             lang_raw = sample_lyric.get("lyric_language", "N/A")
             st.write(
-                f"Theme: {theme_raw} → {THEME_SCALE.get(str(theme_raw).lower().strip(), 0.2):.2f}"
+                f"Theme: {theme_raw} → {THEME_SCALE.get(str(theme_raw).lower().strip(), 0.1):.2f}"
             )
             st.write(
-                f"Language: {lang_raw} → {LANGUAGE_SCALE.get(str(lang_raw).lower().strip(), 0.25):.2f}"
+                f"Language: {lang_raw} → {LANGUAGE_SCALE.get(str(lang_raw).lower().strip(), 0.14):.2f}"
             )
             if len(emb) >= 29:
                 st.write(f"`Theme val`: {emb[27]:.4f}")

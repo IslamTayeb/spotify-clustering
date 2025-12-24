@@ -1,10 +1,10 @@
 # My Music Taste Analysis Report
 
-**Generated**: 2025-12-23 20:35:56
+**Generated**: 2025-12-24 11:09:07
 **Total Songs**: 1253
 **Clusters Found**: 5
 **Outliers**: 0 (0.0%)
-**Silhouette Score**: 0.089
+**Silhouette Score**: 0.102
 
 ---
 
@@ -55,112 +55,112 @@ Top 10 genres across entire library:
 
 ### Cluster 0
 
-**Size**: 65 songs (5.2% of library)
+**Size**: 410 songs (32.7% of library)
 
 **Top Genres**:
-1. Folk, World, & Country---Raï (79.6%)
-2. Pop---Chanson (40.9%)
-3. Electronic---Happy Hardcore (40.6%)
+1. Electronic---Donk (82.0%)
+2. Electronic---Eurobeat (67.3%)
+3. Electronic---Freestyle (65.1%)
 
 **Musical Profile**:
-- Median BPM: 103
-- Key: 26.2% major, 73.8% minor
-- Avg Danceability: 0.16
+- Median BPM: 109
+- Key: 38.5% major, 61.5% minor
+- Avg Danceability: 0.22
 
 **Mood**:
-- Happy: 56.9%
-- Sad: 21.7%
-- Aggressive: 77.4%
-- Relaxed: 49.8%
-- Party: 62.9%
+- Happy: 55.5%
+- Sad: 29.2%
+- Aggressive: 80.2%
+- Relaxed: 51.2%
+- Party: 54.8%
 
-**Languages**: ar: 43, sw: 11, en: 6
+**Languages**: en: 373, es: 8, fr: 7
 
-**Lyric Themes** (40 songs with lyrics):
-- Top Keywords: في, ni, ما, مش, من
-- Sentiment: negative (-0.11)
-- Vocabulary Richness: 0.50
+**Lyric Themes** (292 songs with lyrics):
+- Top Keywords: like, don, know, oh, love
+- Sentiment: positive (0.35)
+- Vocabulary Richness: 0.36
 
 **Representative Songs**:
-1. Karim Osama, Riff - لوجي - Lojy.mp3
-2. Dafencii, Khayyat - كنق الحلبة.mp3
-3. Mared, Nubi, Big Moe - 3la Wara2a.mp3
-4. El Waili, ZIAD ZAZA - Leh Betaeday2.mp3
-5. Nubi - Sheikh El Arab.mp3
+1. Kanye West - Believe What I Say.mp3
+2. Kendrick Lamar, Blxst, Amanda Reifer - Die Hard.mp3
+3. Tame Impala, Lil Yachty - Breathe Deeper - Lil Yachty Remix.mp3
+4. JAY-Z - 4-44.mp3
+5. Akintoye - Overload.mp3
 
 ---
 
 ### Cluster 1
 
-**Size**: 239 songs (19.1% of library)
+**Size**: 59 songs (4.7% of library)
 
 **Top Genres**:
-1. Electronic---Eurobeat (67.3%)
-2. Electronic---Freestyle (65.1%)
-3. Latin---Samba (41.2%)
+1. Folk, World, & Country---Raï (79.6%)
+2. Pop---Chanson (40.9%)
+3. Electronic---Bassline (40.3%)
 
 **Musical Profile**:
-- Median BPM: 114
-- Key: 48.1% major, 51.9% minor
-- Avg Danceability: 0.32
+- Median BPM: 101
+- Key: 23.7% major, 76.3% minor
+- Avg Danceability: 0.16
 
 **Mood**:
-- Happy: 53.5%
-- Sad: 37.6%
-- Aggressive: 84.6%
-- Relaxed: 57.4%
-- Party: 44.6%
+- Happy: 56.8%
+- Sad: 21.6%
+- Aggressive: 77.0%
+- Relaxed: 50.3%
+- Party: 62.3%
 
-**Languages**: en: 156, pt: 26, ja: 21
+**Languages**: ar: 42, sw: 11, id: 2
 
-**Lyric Themes** (178 songs with lyrics):
-- Top Keywords: love, know, don, oh, que
-- Sentiment: positive (0.30)
-- Vocabulary Richness: 0.42
+**Lyric Themes** (37 songs with lyrics):
+- Top Keywords: في, ni, ما, مش, أنا
+- Sentiment: negative (-0.19)
+- Vocabulary Richness: 0.49
 
 **Representative Songs**:
-1. JAY-Z - 4-44.mp3
-2. Private Island - Drugs.mp3
-3. Kanye West - Believe What I Say.mp3
-4. Rex Orange County - Television  So Far So Good.mp3
-5. Bastille, The Chamber Orchestra Of London - Million Pieces.mp3
+1. Karim Osama, Riff - لوجي - Lojy.mp3
+2. Mared, Nubi, Big Moe - 3la Wara2a.mp3
+3. Nubi - Sheikh El Arab.mp3
+4. El Waili, ZIAD ZAZA - Leh Betaeday2.mp3
+5. Shabjdeed, Al Nather - Amrikkka.mp3
 
 ---
 
 ### Cluster 2
 
-**Size**: 317 songs (25.3% of library)
+**Size**: 603 songs (48.1% of library)
 
 **Top Genres**:
-1. Electronic---Donk (82.0%)
-2. Electronic---Hard House (59.4%)
-3. Jazz---Gypsy Jazz (40.9%)
+1. Hip Hop---Cloud Rap (36.1%)
+2. Hip Hop---Trap (34.4%)
+3. Electronic---UK Garage (31.5%)
 
 **Musical Profile**:
-- Median BPM: 105
-- Key: 34.7% major, 65.3% minor
-- Avg Danceability: 0.14
+- Median BPM: 103
+- Key: 35.7% major, 64.3% minor
+- Avg Danceability: 0.09
 
 **Mood**:
-- Happy: 56.3%
-- Sad: 22.2%
-- Aggressive: 75.0%
-- Relaxed: 47.3%
-- Party: 62.5%
+- Happy: 55.0%
+- Sad: 16.6%
+- Aggressive: 74.0%
+- Relaxed: 43.8%
+- Party: 70.3%
 
-**Languages**: en: 250, es: 32, pt: 11
+**Languages**: en: 524, es: 31, pt: 12
 
-**Lyric Themes** (195 songs with lyrics):
-- Top Keywords: like, yeah, don, la, know
-- Sentiment: positive (0.17)
-- Vocabulary Richness: 0.38
+**Lyric Themes** (354 songs with lyrics):
+- Top Keywords: yeah, like, bitch, niggas, shit
+- Sentiment: negative (-0.30)
+- Vocabulary Richness: 0.40
 
 **Representative Songs**:
-1. Lil Darkie - rap music.mp3
-2. Ab-Soul - HOLLANDAISE.mp3
-3. Tame Impala, Lil Yachty - Breathe Deeper - Lil Yachty Remix.mp3
-4. Akintoye - Overload.mp3
-5. Kanye West - Yikes.mp3
+1. Migos - Avalanche.mp3
+2. Clipse, Stove God Cooks, Pusha T, Malice - F.I.C.O..mp3
+3. Future, Metro Boomin, Kendrick Lamar - Like That.mp3
+4. Ab-Soul - HOLLANDAISE.mp3
+5. Kendrick Lamar - squabble up.mp3
 
 ---
 
@@ -198,38 +198,38 @@ Top 10 genres across entire library:
 
 ### Cluster 4
 
-**Size**: 530 songs (42.3% of library)
+**Size**: 79 songs (6.3% of library)
 
 **Top Genres**:
-1. Electronic---UK Garage (48.0%)
-2. Hip Hop---Cloud Rap (36.9%)
-3. Hip Hop---Trap (35.0%)
+1. Hip Hop---Crunk (59.7%)
+2. Jazz---Latin Jazz (40.1%)
+3. Latin---Samba (38.6%)
 
 **Musical Profile**:
-- Median BPM: 103
-- Key: 34.5% major, 65.5% minor
-- Avg Danceability: 0.09
+- Median BPM: 113
+- Key: 48.1% major, 51.9% minor
+- Avg Danceability: 0.33
 
 **Mood**:
-- Happy: 54.7%
-- Sad: 16.6%
-- Aggressive: 74.2%
-- Relaxed: 43.6%
-- Party: 70.5%
+- Happy: 51.7%
+- Sad: 37.8%
+- Aggressive: 79.6%
+- Relaxed: 59.1%
+- Party: 43.3%
 
-**Languages**: en: 490, ru: 10, es: 6
+**Languages**: pt: 27, ja: 21, ko: 10
 
-**Lyric Themes** (323 songs with lyrics):
-- Top Keywords: yeah, like, bitch, niggas, nigga
-- Sentiment: negative (-0.29)
-- Vocabulary Richness: 0.40
+**Lyric Themes** (53 songs with lyrics):
+- Top Keywords: que, não, 나를, 나의, eu
+- Sentiment: neutral (0.02)
+- Vocabulary Richness: 0.58
 
 **Representative Songs**:
-1. Migos - Avalanche.mp3
-2. Clipse, Stove God Cooks, Pusha T, Malice - F.I.C.O..mp3
-3. Future, Metro Boomin, Kendrick Lamar - Like That.mp3
-4. Lil Wayne, BigXthaPlug, Jay Jones - Hip-Hop (feat. BigXthaPlug, Jay Jones).mp3
-5. Zack Fox - fafo.mp3
+1. 須田景凪 - パメラ - self cover.mp3
+2. Trio Mocoto - Não Adianta.mp3
+3. Kali Uchis, Tyler, The Creator, Bootsy Collins - After The Storm (feat. Tyler, The Creator & Bootsy Collins).mp3
+4. Bossacucanova, Adriana Calcanhotto - Previsão.mp3
+5. JANNABI - land of night.mp3
 
 ---
 

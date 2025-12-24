@@ -267,10 +267,10 @@ def extract_interpretable_lyric_features(
         Dictionary with all normalized interpretable features
     """
     if not lyrics_text or len(lyrics_text.strip()) < 10:
-        # Return zeros for instrumental/no lyrics
+        # Return neutral values for instrumental/no lyrics
         return {
-            "lyric_valence": 0.0,
-            "lyric_arousal": 0.0,
+            "lyric_valence": 0.5,
+            "lyric_arousal": 0.5,
             "lyric_mood_happy": 0.0,
             "lyric_mood_sad": 0.0,
             "lyric_mood_aggressive": 0.0,

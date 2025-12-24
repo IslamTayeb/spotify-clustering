@@ -38,16 +38,20 @@ A comprehensive end-to-end pipeline that fetches your Spotify library, downloads
 - **Triple Audio Analysis**:
   - **Essentia Models**: 1280-dim embeddings + genre/mood/BPM interpretation (always runs)
   - **MERT Embeddings**: Optional 768-dim music-understanding transformer for clustering
-  - **Interpretable Features**: 17-dim human-readable vector (voice gender, genre purity, moods)
-- **Dual Lyric Analysis**:
+  - **Interpretable Audio Features**: 17-dim human-readable vector (voice gender, genre purity, moods)
+- **Triple Lyric Analysis**:
   - **BGE-M3**: 1024-dim multilingual embeddings (default, max 8192 tokens)
   - **E5-Large**: Optional 1024-dim high-quality multilingual embeddings
+  - **GPT Interpretable**: 12-dim human-readable features (valence, arousal, theme, language, moods)
+- **Combined Interpretable Mode**: 29-dim unified audio+lyrics vector for maximum interpretability
 - **Clustering**: PCA + HAC (Hierarchical Agglomerative Clustering)
 - **Lyric Themes**: TF-IDF keyword extraction, sentiment analysis, vocabulary richness
 - **Visualization**: Interactive Plotly-based HTML visualization with UMAP
 - **Reporting**: Detailed markdown reports with cluster statistics and lyric themes
 - **Playlist Export**: Create Spotify playlists from discovered clusters
-- **Interactive Tuning**: Streamlit app for experimenting with clustering parameters
+- **Interactive Apps**:
+  - **Tuner**: Streamlit app for experimenting with clustering parameters
+  - **Interpretability**: Streamlit app for interpretable combined audio+lyrics clustering with weight sliders
 
 ## Quick Start
 
@@ -56,6 +60,7 @@ A comprehensive end-to-end pipeline that fetches your Spotify library, downloads
 Create and activate a virtual environment:
 
 Using venv:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
@@ -64,16 +69,19 @@ source .venv/bin/activate  # macOS/Linux
 ```
 
 Or using pyenv:
+
 ```bash
 pyenv activate spotify-clustering
 ```
 
 Install core dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 Install optional dependencies:
+
 ```bash
 pip install -r api/requirements.txt  # For Spotify API integration
 pip install -r requirements-lyrics.txt  # For lyrics fetching
@@ -91,11 +99,13 @@ pip install yt-dlp  # For audio downloads (Option 2)
    - Copy Client ID and Client Secret from Settings
 
 2. Create `.env` file from example:
+
    ```bash
    cp .env.example .env
    ```
 
 3. Add credentials to `.env`:
+
    ```
    SPOTIFY_CLIENT_ID=your_client_id
    SPOTIFY_CLIENT_SECRET=your_client_secret
@@ -109,13 +119,27 @@ pip install yt-dlp  # For audio downloads (Option 2)
    - Generate a "Client Access Token"
 
 2. Add token to `.env`:
+
    ```
    GENIUS_ACCESS_TOKEN=your_genius_access_token
    ```
 
+#### OpenAI API Setup (Optional - for interpretable lyrics)
+
+1. Get an API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+
+2. Add to `.env`:
+
+   ```
+   OPENAI_API_KEY=sk-your-api-key
+   ```
+
+3. Cost: ~$0.01-0.05 for a 1,500 song library (uses GPT-4o-mini)
+
 ### 3. Fetch Your Spotify Library
 
 Fetch all your saved tracks from Spotify:
+
 ```bash
 python api/fetch_audio_data.py
 ```
@@ -125,11 +149,13 @@ First run opens browser for authorization. Token is cached in `.cache` file for 
 ### 4. Download Audio Files
 
 Check which tracks need to be downloaded:
+
 ```bash
 python download/check_matches.py
 ```
 
 Download missing tracks (choose one method):
+
 ```bash
 # Option 1: Using spotdl (recommended, faster batch downloads)
 python download/download_missing.py
@@ -141,6 +167,7 @@ python download/download_ytdlp.py
 ### 5. Fetch Lyrics (Optional)
 
 Fetch lyrics for all tracks:
+
 ```bash
 python lyrics/fetch_lyrics.py
 ```
@@ -150,6 +177,7 @@ Uses smart caching - safe to stop and resume.
 ### 6. Build Master Index
 
 Create unified track mapping:
+
 ```bash
 python tools/build_master_index.py
 ```
@@ -157,6 +185,7 @@ python tools/build_master_index.py
 ### 7. Download Essentia Models
 
 Download required TensorFlow models (~22MB):
+
 ```bash
 python analysis/models/download_models.py
 ```
@@ -166,6 +195,7 @@ Downloads to `~/.essentia/models/` (one-time setup).
 ### 8. Run Analysis
 
 **Default behavior** (uses Essentia + BGE-M3):
+
 ```bash
 # First run (extracts all features, ~90 minutes for 1,500 songs)
 python run_analysis.py
@@ -175,6 +205,7 @@ python run_analysis.py --use-cache
 ```
 
 **Advanced: Using MERT for clustering** (optional, higher quality):
+
 ```bash
 # First run: Extract MERT embeddings (~45 min on GPU for 1,500 songs)
 python run_analysis.py --audio-embedding-backend mert
@@ -184,12 +215,14 @@ python run_analysis.py --use-cache --audio-embedding-backend mert
 ```
 
 **Advanced: Using E5 for lyrics** (optional, higher quality):
+
 ```bash
 # Extract E5 embeddings (~20 min on GPU for 1,500 songs)
 python run_analysis.py --use-cache --lyrics-embedding-backend e5
 ```
 
 **Full upgrade: MERT + E5** (best quality):
+
 ```bash
 python run_analysis.py --use-cache --audio-embedding-backend mert --lyrics-embedding-backend e5 --mode combined
 ```
@@ -199,11 +232,13 @@ python run_analysis.py --use-cache --audio-embedding-backend mert --lyrics-embed
 ### 9. Export to Spotify Playlists
 
 Preview playlists without creating them:
+
 ```bash
 python export/create_playlists.py --dry-run
 ```
 
 Create playlists in your Spotify account:
+
 ```bash
 python export/create_playlists.py
 ```
@@ -215,6 +250,7 @@ python export/create_playlists.py
 - `--mode lyrics`: Lyric features only
 
 Example:
+
 ```bash
 python run_analysis.py --use-cache --mode audio
 ```
@@ -256,6 +292,7 @@ spotify-clustering/
 │   │   ├── audio_analysis.py       # Essentia audio feature extraction
 │   │   ├── mert_embedding.py       # MERT audio embeddings (optional)
 │   │   ├── lyric_analysis.py       # BGE-M3/E5 lyric embeddings
+│   │   ├── lyric_features.py       # GPT-based interpretable lyric features
 │   │   ├── clustering.py           # PCA + HAC/Birch/Spectral with embedding overrides
 │   │   ├── visualization.py        # Plotly visualizations and reports
 │   │   └── genre_ladder.py         # Genre purity/fusion (entropy-based)
@@ -270,7 +307,8 @@ spotify-clustering/
 │   │   ├── music_taste_report.md   # Detailed cluster analysis
 │   │   ├── outliers.txt            # Unclustered songs
 │   │   └── analysis_data.pkl       # Serialized results
-│   └── interactive_tuner.py        # Streamlit app for parameter tuning
+│   ├── interactive_tuner.py        # Streamlit app for parameter tuning
+│   └── interactive_interpretability.py  # Streamlit app for interpretable clustering
 ├── export/                         # Spotify playlist export
 │   ├── create_playlists.py         # Create playlists from clusters
 │   ├── README.md                   # Export documentation
@@ -300,6 +338,7 @@ spotify-clustering/
 ## Complete Data Flow
 
 ### Phase 1: Data Acquisition
+
 1. **Fetch Spotify Library** (`api/fetch_audio_data.py`)
    - Connects to Spotify API using OAuth 2.0
    - Fetches all saved tracks with comprehensive metadata
@@ -328,41 +367,44 @@ spotify-clustering/
    - Saves to `spotify/master_index.json`
 
 ### Phase 2: Feature Extraction
-6. **Download ML Models** (`analysis/models/download_models.py`)
+
+1. **Download ML Models** (`analysis/models/download_models.py`)
    - One-time download of Essentia TensorFlow models (~22MB)
    - Saves to `~/.essentia/models/`
 
-7. **Extract Audio Features** (`analysis/pipeline/audio_analysis.py`)
+2. **Extract Audio Features** (`analysis/pipeline/audio_analysis.py`)
    - Processes all MP3 files using Essentia
    - Extracts 1280-dim embeddings, 400 genre probabilities, moods, BPM, key
    - Extracts voice gender (male/female vocals) and production features
    - Computes genre ladder (entropy-based purity/fusion score)
    - Caches results to `cache/audio_features.pkl`
 
-8. **Extract Lyric Features** (`analysis/pipeline/lyric_analysis.py`)
+3. **Extract Lyric Features** (`analysis/pipeline/lyric_analysis.py`)
    - Processes lyric text files using sentence-transformers
    - Generates 384-dim multilingual embeddings
    - Detects language and counts words
    - Caches results to `cache/lyric_features.pkl`
 
 ### Phase 3: Clustering & Visualization
-9. **Dimensionality Reduction** (`analysis/pipeline/clustering.py`)
+
+1. **Dimensionality Reduction** (`analysis/pipeline/clustering.py`)
    - PCA for clustering (reduces to optimal dimensions)
    - UMAP for 2D visualization
 
-10. **Clustering** (`analysis/pipeline/clustering.py`)
+2. **Clustering** (`analysis/pipeline/clustering.py`)
     - HAC (Hierarchical Agglomerative Clustering)
     - Alternative algorithms: Birch, Spectral (configurable)
     - Identifies natural groupings in musical taste
 
-11. **Generate Outputs** (`analysis/pipeline/visualization.py`)
+3. **Generate Outputs** (`analysis/pipeline/visualization.py`)
     - Interactive HTML visualization with Plotly
     - Detailed markdown report with cluster statistics
     - Outliers file (if any)
     - Serialized results for future use
 
 ### Phase 4: Export to Spotify
-12. **Create Playlists** (`export/create_playlists.py`)
+
+1. **Create Playlists** (`export/create_playlists.py`)
     - Reads clustering results from `analysis/outputs/analysis_data.pkl`
     - Creates up to 10 playlists (5 audio clusters + 5 lyric clusters)
     - Names playlists based on cluster characteristics
@@ -375,18 +417,21 @@ spotify-clustering/
 The pipeline uses a **dual-path architecture** for audio analysis:
 
 **Path 1: Essentia (Interpretation) - ALWAYS RUNS**
+
 - Extracts human-readable musical attributes
 - Genre probabilities, mood scores, BPM, key, danceability
 - Used for cluster interpretation and reporting
 - Cache: `cache/audio_features.pkl` (never modified by MERT)
 
 **Path 2: MERT (Clustering) - OPTIONAL**
+
 - Semantic audio embeddings optimized for music understanding
 - Used for clustering when `--audio-embedding-backend mert`
 - Separate cache: `cache/mert_embeddings_*.pkl`
 - Passed as in-memory override without modifying Essentia cache
 
 **Why both?**
+
 - **Essentia**: Fast, interpretable, provides genre/mood/BPM tags
 - **MERT**: Deep semantic understanding, better clustering quality
 - **Together**: Best of both worlds - accurate clustering + interpretable results
@@ -394,6 +439,7 @@ The pipeline uses a **dual-path architecture** for audio analysis:
 ### Audio Feature Extraction
 
 **Essentia (Default for clustering)**
+
 - **Embeddings**: 1280-dimensional audio representations (discogs-effnet-bs64-1)
 - **Genre**: 400 genre probabilities (genre_discogs400)
 - **Moods**: happy, sad, aggressive, relaxed, party (5 separate models)
@@ -402,12 +448,13 @@ The pipeline uses a **dual-path architecture** for audio analysis:
 - **Production**: Acoustic/electronic, timbre (bright/dark)
 
 **MERT (Optional for clustering)**
+
 - **Embeddings**: 768-dimensional transformer representations
 - **Preprocessing**: 24kHz mono, 30s excerpts, L2-normalized
 - **Optimized for**: Music similarity, semantic understanding
 - **Use case**: Higher quality clustering of similar-sounding tracks
 
-**Interpretable Feature Vector (17 dimensions)**
+**Interpretable Audio Feature Vector (17 dimensions)**
 
 When using `--audio-embedding-backend interpretable`, the pipeline constructs a human-readable feature vector instead of raw embeddings:
 
@@ -426,10 +473,61 @@ When using `--audio-embedding-backend interpretable`, the pipeline constructs a 
 | 14-16 | Key Features | 0-1 | Musical key encoding (3D) |
 
 **Why Interpretable?**
+
 - Each dimension has clear meaning (vs opaque 1280-dim embeddings)
 - Weights can be adjusted via interactive sliders
 - Easier to understand why songs cluster together
 - Combines multiple Essentia models into unified representation
+
+**Combined Interpretable Feature Vector (29 dimensions)**
+
+The Interactive Interpretability App constructs a 29-dimensional vector that combines audio AND lyric features for maximum interpretability:
+
+| Index | Feature | Range | Description |
+|-------|---------|-------|-------------|
+| 0-6 | Core Audio | 0-1 | BPM, danceability, instrumentalness, valence, arousal, engagement, approachability |
+| 7-11 | Audio Moods | 0-1 | Happy, sad, aggressive, relaxed, party |
+| 12 | Voice Gender | 0-1 | Female (0) ↔ Male (1) vocals |
+| 13 | Genre Ladder | 0-1 | Pure genre (0) ↔ Genre fusion (1) |
+| 14-16 | Key Features | 0-1 | Musical key encoding (3D) |
+| 17-18 | Lyric Emotion | 0-1 | Valence, arousal from lyrics |
+| 19-22 | Lyric Moods | 0-1 | Happy, sad, aggressive, relaxed from lyrics |
+| 23-26 | Lyric Content | 0-1 | Explicit, narrative, vocabulary richness, repetition |
+| 27 | Theme | 0-1 | Semantic scale (party=1.0 → none=0.0) |
+| 28 | Language | 0-1 | Ordinal scale (english=1.0 → none=0.0) |
+
+**Theme Scale (Semantic Encoding)**
+
+Themes are encoded on a 0-1 scale based on energy/positivity:
+
+| Theme | Value | Description |
+|-------|-------|-------------|
+| party | 1.0 | Highest energy |
+| flex | 0.9 | Confident, boastful |
+| love | 0.8 | Positive emotion |
+| social | 0.7 | Community focused |
+| spirituality | 0.6 | Contemplative but uplifting |
+| introspection | 0.5 | Neutral, internal |
+| street | 0.4 | Raw, realistic |
+| heartbreak | 0.3 | Sad |
+| struggle | 0.2 | Difficult |
+| other | 0.1 | Has lyrics, unknown theme |
+| none | 0.0 | No lyrics/instrumental |
+
+**Language Scale (Ordinal Encoding)**
+
+Languages are encoded on a 0-1 scale with even spacing:
+
+| Language | Value |
+|----------|-------|
+| english | 1.0 |
+| spanish | 0.86 |
+| french | 0.71 |
+| arabic | 0.57 |
+| korean | 0.43 |
+| japanese | 0.29 |
+| unknown | 0.14 |
+| none | 0.0 |
 
 ### Genre Ladder (Entropy-based)
 
@@ -444,6 +542,7 @@ PURE                            MIXED                          FUSION
 ```
 
 **How it works:**
+
 1. Essentia's discogs400 model outputs a 400-dimensional probability vector
 2. We compute **Shannon entropy**: `H(X) = -Σ p(x) × log(p(x))`
 3. Low entropy = one genre dominates = pure
@@ -451,6 +550,7 @@ PURE                            MIXED                          FUSION
 5. Normalize to [0, 1] across your library
 
 **Examples from a typical library:**
+
 | Song | Genre | Entropy | Interpretation |
 |------|-------|---------|----------------|
 | BANG THAT | Cloud Rap | 0.00 | AI is 100% confident |
@@ -459,6 +559,7 @@ PURE                            MIXED                          FUSION
 | Collage | Soundtrack | 1.00 | AI has no idea |
 
 **Why entropy instead of acoustic↔electronic?**
+
 - Acoustic/electronic is **redundant** with existing features (0.71 correlation with danceability)
 - Entropy is **0.54 unique** - captures something new
 - Measures artistic intent: traditionalist vs genre-bender
@@ -475,6 +576,7 @@ Captures the **vocal character** of a song using Essentia's gender classifier:
 | 1.0 | Male vocals |
 
 **Why include this?**
+
 - **0.67 uniqueness** - highest of any candidate feature
 - Won't be captured by lyrics (text doesn't reveal voice timbre)
 - Helps separate songs by vocal character
@@ -483,22 +585,66 @@ Captures the **vocal character** of a song using Essentia's gender classifier:
 ### Lyric Feature Extraction
 
 **BGE-M3 (Default)**
+
 - **Embeddings**: 1024-dimensional semantic representations
 - **Context**: 8192 tokens (very long lyrics supported)
 - **Languages**: 100+ multilingual support
 - **Language Detection**: Automatic via langdetect
 
 **E5-Large (Optional)**
+
 - **Embeddings**: 1024-dimensional high-quality representations
 - **Context**: 512 tokens
 - **Instruction**: Uses "passage: " prefix for better encoding
 - **Use case**: Higher quality lyric clustering
 
+**GPT Interpretable Lyric Features (12 dimensions)**
+
+When using `--extract-interpretable-lyrics`, GPT-4o-mini analyzes lyrics to extract human-readable features:
+
+| Feature | Range | Description |
+|---------|-------|-------------|
+| lyric_valence | 0-1 | Emotional positivity from lyrics |
+| lyric_arousal | 0-1 | Energy/intensity from lyrics |
+| lyric_mood_happy | 0-1 | Happiness detected in lyrics |
+| lyric_mood_sad | 0-1 | Sadness detected in lyrics |
+| lyric_mood_aggressive | 0-1 | Aggression detected in lyrics |
+| lyric_mood_relaxed | 0-1 | Calmness detected in lyrics |
+| lyric_explicit | 0-1 | Explicit content level |
+| lyric_narrative | 0-1 | Storytelling vs abstract |
+| lyric_vocabulary_richness | 0-1 | Lexical diversity |
+| lyric_repetition | 0-1 | How repetitive the lyrics are |
+| lyric_theme | string | Primary theme (love, party, struggle, etc.) |
+| lyric_language | string | Detected language |
+
+**Default Values for Missing Lyrics**
+
+The pipeline uses different defaults depending on the scenario:
+
+| Scenario | Valence/Arousal | Moods | Theme | Language | Other Features |
+|----------|-----------------|-------|-------|----------|----------------|
+| **No lyrics** (instrumental or missing) | 0.5 (neutral) | 0.0 | `"none"` | `"none"` | All 0.0 |
+| **GPT error** (lyrics exist but analysis failed) | 0.5 (neutral) | 0.0 | `"other"` | `"unknown"` | All 0.0 |
+
+The rationale:
+
+- **No lyrics**: Uses neutral midpoint (0.5) for valence/arousal to avoid biasing clustering
+- **GPT error**: Same neutral values since we can't determine the actual emotion
+
+**Why GPT Interpretable Lyrics?**
+
+- Captures semantic meaning, not just embedding similarity
+- Theme and language provide categorical insights
+- Emotion features complement audio mood detection
+- Can weight lyrics vs audio independently in clustering
+
 ### Dimensionality Reduction
+
 - **PCA**: Reduces features to optimal dimensions for clustering (preserves variance)
 - **UMAP**: Creates 2D projection for visualization (preserves local structure)
 
 ### Clustering
+
 - **HAC (Hierarchical Agglomerative Clustering)**: Default algorithm
   - Automatically finds optimal number of clusters
   - Ward linkage for balanced cluster sizes
@@ -506,6 +652,7 @@ Captures the **vocal character** of a song using Essentia's gender classifier:
 - **Alternative Algorithms**: Birch, Spectral (experimental)
 
 ### Visualization & Reporting
+
 - **Interactive HTML**: Plotly-based scatter plot with hover info, color-coded clusters
 - **Markdown Report**: Detailed statistics, top tracks per cluster, characteristics
 - **Serialized Data**: PKL format for programmatic access
@@ -513,6 +660,7 @@ Captures the **vocal character** of a song using Essentia's gender classifier:
 ## Available Commands & Scripts
 
 ### Spotify API
+
 ```bash
 # Fetch all saved tracks from your Spotify library
 python api/fetch_audio_data.py
@@ -526,6 +674,7 @@ python api/fetch_audio_data.py
 ```
 
 ### Audio Downloads
+
 ```bash
 # Check which tracks are downloaded vs missing
 python download/check_matches.py
@@ -542,6 +691,7 @@ python download/download_ytdlp.py
 ```
 
 ### Lyrics
+
 ```bash
 # Fetch lyrics from Genius API
 python lyrics/fetch_lyrics.py
@@ -555,6 +705,7 @@ python lyrics/fetch_lyrics.py
 ```
 
 ### Analysis Pipeline
+
 ```bash
 # Main analysis script - full pipeline
 python run_analysis.py
@@ -572,6 +723,17 @@ python run_analysis.py --lyrics-embedding-backend e5           # E5: higher qual
 
 # Recommended for exploration (interpretable features with adjustable weights):
 python run_analysis.py --use-cache --audio-embedding-backend interpretable
+
+# Extract GPT-based interpretable lyrics (requires OPENAI_API_KEY):
+python run_analysis.py --extract-interpretable-lyrics
+# This extracts theme, language, valence, arousal, moods, etc. via GPT-4o-mini
+# Uses existing cache, only makes GPT API calls for lyrics
+# Cost: ~$0.01-0.05 depending on library size
+
+# Full interpretable pipeline (best for understanding your clusters):
+python run_analysis.py --use-cache  # First: ensure audio+lyric features cached
+python run_analysis.py --extract-interpretable-lyrics  # Then: extract GPT lyric features
+streamlit run analysis/interactive_interpretability.py  # Finally: explore interactively
 
 # Advanced options (for experimenting with clustering):
 python run_analysis.py --use-cache --algorithm birch
@@ -597,6 +759,7 @@ python run_analysis.py --use-cache --pca-components 50
 ```
 
 ### Interactive Tuning
+
 ```bash
 # Launch Streamlit app for interactive parameter tuning
 streamlit run analysis/interactive_tuner.py
@@ -606,9 +769,37 @@ streamlit run analysis/interactive_tuner.py
 # - Real-time visualization updates
 # - Compare clustering algorithms
 # - Export optimal parameters
+# - Interpretable mode with feature weights
+```
+
+### Interactive Interpretability (Advanced)
+
+```bash
+# Launch Streamlit app for interpretable audio+lyrics clustering
+streamlit run analysis/interactive_interpretability.py
+
+# Features:
+# - Combined 29-dim interpretable feature vector (audio + lyrics)
+# - Adjustable weights for each feature group:
+#   - Core audio (BPM, danceability, etc.)
+#   - Audio moods (happy, sad, aggressive, etc.)
+#   - Lyric emotions (valence, arousal)
+#   - Lyric content (explicit, narrative, vocabulary)
+#   - Theme and language
+# - Automatic filtering of vocal songs without lyrics
+# - SHAP-based feature importance analysis
+# - Real-time cluster interpretation
+# - No separate lyric embeddings used - only interpretable features
+
+# Prerequisites:
+# 1. Run audio analysis: python run_analysis.py --use-cache
+# 2. Extract interpretable lyrics: python run_analysis.py --extract-interpretable-lyrics
+# 3. Launch app: streamlit run analysis/interactive_interpretability.py
+# 4. Select "Interpretability" tab → "combined" mode
 ```
 
 ### Model Management
+
 ```bash
 # Download Essentia TensorFlow models
 python analysis/models/download_models.py
@@ -618,6 +809,7 @@ python analysis/models/list_models.py
 ```
 
 ### Playlist Export
+
 ```bash
 # Preview playlists without creating (no auth needed)
 python export/create_playlists.py --dry-run
@@ -639,6 +831,7 @@ python export/create_playlists.py --lyrics-only         # Only lyric cluster pla
 ```
 
 ### Utilities
+
 ```bash
 # Build unified track index (links Spotify data with local files)
 python tools/build_master_index.py
@@ -671,6 +864,7 @@ All download scripts share a common normalization approach to ensure Spotify tra
 6. **Case-insensitive matching**
 
 Example transformations:
+
 - `"Artist: Song (Remix)"` → `artist-song-remix.mp3`
 - `"Track & Artist feat. Other"` → `track-and-artist-ft-other.mp3`
 - `"Japanese 〜 Title"` → `japanese-title.mp3`
@@ -691,10 +885,12 @@ This ensures reliable matching across different systems and download tools.
 - ~90 minutes processing time (first run)
 - ~500MB disk space for ML models (one-time download)
 - Internet connection (for API access and model downloads)
+- OpenAI API key (optional, for interpretable lyrics - ~$0.01-0.05 per library)
 
 ## Data Management
 
 ### Data Files and Storage
+
 - **Spotify metadata**: `api/data/saved_tracks.json` - Raw Spotify API data
 - **Master index**: `spotify/master_index.json` - Unified track mapping with MP3/lyrics file paths
 - **Downloaded MP3s**: `songs/data/` - Audio files (gitignored for privacy)
@@ -711,17 +907,21 @@ This ensures reliable matching across different systems and download tools.
 - **Feature cache**: `cache/`
   - `audio_features.pkl` - Essentia audio features (~500MB for 1,500 songs)
   - `mert_embeddings_24khz_30s_cls.pkl` - MERT audio embeddings (~9MB for 1,500 songs)
-  - `lyric_features.pkl` - BGE-M3 lyric embeddings (~50MB for 1,500 songs)
+  - `lyric_features.pkl` - BGE-M3 lyric embeddings + interpretable features (~50MB for 1,500 songs)
   - `lyric_features_e5.pkl` - E5 lyric embeddings (~50MB for 1,500 songs)
+  - `lyric_interpretable_features.pkl` - GPT-extracted interpretable lyric features (~1MB for 1,500 songs)
 - **OAuth tokens**: `.cache` - Spotify OAuth token (gitignored)
 - **Logs**: `logging/analysis_YYYYMMDD_HHMMSS.log` - Timestamped execution logs
 
 ### Cache Management
+
 The cache system dramatically speeds up re-runs:
+
 - **First run**: ~90 minutes (feature extraction)
 - **With cache**: <5 minutes (skip extraction, only clustering/visualization)
 
 **When to clear cache:**
+
 - New songs added to library
 - Changed feature extraction logic
 - Corrupted cache files
@@ -743,44 +943,53 @@ python run_analysis.py
 ### Common Issues
 
 **"Essentia models not found"**
+
 - Models download automatically on first run
 - Ensure internet connection
 - Check `~/.essentia/models/` directory
 - Manually download: `python analysis/models/download_models.py`
 
 **"Memory error" during feature extraction**
+
 - Reduce batch size in `analysis/pipeline/audio_analysis.py` (line ~134) from 100 to 50
 - Close other applications to free RAM
 - Consider processing in smaller batches
 
 **"Too many outliers"**
+
 - HAC algorithm doesn't produce outliers by design
 - If outliers appear, check data quality (corrupted MP3s, empty lyrics)
 - Verify master index is correctly built
 
 **"Missing features" or "No tracks found"**
+
 - Ensure data preparation scripts have been run:
+
   ```bash
   python api/fetch_audio_data.py
   python download/download_missing.py
   python lyrics/fetch_lyrics.py
   python tools/build_master_index.py
   ```
+
 - Check that files exist in expected locations
 - Verify master_index.json has valid file paths
 
 **"Spotify API authentication failed"**
+
 - Check `.env` file has correct credentials
 - Verify redirect URI is `http://127.0.0.1:3000/callback`
 - Delete `.cache` file and re-authenticate
 - Check app settings in Spotify Dashboard
 
 **"Genius API rate limit exceeded"**
+
 - Lyrics fetching respects rate limits automatically
 - Script will pause and resume when limit resets
 - Use `--delay` flag to slow down requests if needed
 
 **"Download failures" with spotdl or yt-dlp**
+
 - Check internet connection
 - Some tracks may not be available on YouTube
 - Failed downloads logged to `failed_downloads_*.txt`
@@ -788,12 +997,14 @@ python run_analysis.py
 - Consider purchasing tracks from official sources
 
 **"Clustering produces only 1 cluster"**
+
 - Increase `--n-clusters` parameter
 - Try different clustering algorithm (`--algorithm birch`)
 - May indicate homogeneous music taste
 - Use interactive tuner to experiment with parameters
 
 **"Visualization not loading in browser"**
+
 - File may be too large (>50MB)
 - Try reducing dataset size or number of clusters
 - Open HTML file directly instead of through file explorer
@@ -802,17 +1013,20 @@ python run_analysis.py
 ### Performance Optimization
 
 **Speed up feature extraction:**
+
 - Use SSD for storage
 - Increase batch size if RAM allows
 - Close unnecessary applications
 - Consider cloud computing for large libraries (>5,000 songs)
 
 **Reduce memory usage:**
+
 - Process in audio-only or lyrics-only mode
 - Reduce PCA components (`--pca-components 30`)
 - Use smaller batch sizes
 
 **Speed up clustering experiments:**
+
 - **Always use `--use-cache`** when experimenting with parameters
 - Use interactive tuner for real-time parameter adjustment
 - Start with small dataset to find optimal parameters
@@ -822,6 +1036,7 @@ python run_analysis.py
 ### Audio Analysis Models
 
 **Essentia Models (Always runs - for interpretation)**
+
 - **Embedding**: discogs-effnet-bs64-1 (1280-dim)
 - **Genre**: genre_discogs400 (400 genre probabilities)
 - **Moods**: 5 separate models (happy, sad, aggressive, relaxed, party)
@@ -830,6 +1045,7 @@ python run_analysis.py
 - **Download**: Auto-downloads to `~/.essentia/models/` (~22MB)
 
 **MERT (Optional - for clustering)**
+
 - **Model**: m-a-p/MERT-v1-95M (Music-understanding Evaluation and Representation Transformer)
 - **Embedding Size**: 768-dim
 - **Purpose**: Semantic audio representations optimized for music understanding
@@ -841,6 +1057,7 @@ python run_analysis.py
 ### Lyric Analysis Models
 
 **BGE-M3 (Default)**
+
 - **Model**: BAAI/bge-m3 (multilingual embedding model)
 - **Embedding Size**: 1024-dim
 - **Context Length**: 8192 tokens (very long lyrics supported)
@@ -848,6 +1065,7 @@ python run_analysis.py
 - **HuggingFace**: [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)
 
 **E5-Large (Optional - higher quality)**
+
 - **Model**: intfloat/multilingual-e5-large
 - **Embedding Size**: 1024-dim
 - **Context Length**: 512 tokens
@@ -858,17 +1076,20 @@ python run_analysis.py
 - **Performance**: ~20 min on GPU, ~2 hours on CPU (1,500 songs)
 
 ### Model Storage Locations
+
 - **Essentia**: `~/.essentia/models/`
 - **MERT/E5**: `~/.cache/huggingface/` (managed by transformers)
 - **Total First-Time Download**: ~2.5GB (if using all models)
 
 ### Cache Files
+
 - `cache/audio_features.pkl` - Essentia features (~500MB for 1,500 songs)
 - `cache/mert_embeddings_24khz_30s_cls.pkl` - MERT embeddings (~9MB for 1,500 songs)
-- `cache/lyric_features.pkl` - BGE-M3 embeddings (~50MB for 1,500 songs)
+- `cache/lyric_features.pkl` - BGE-M3 embeddings + interpretable features (~50MB for 1,500 songs)
 - `cache/lyric_features_e5.pkl` - E5 embeddings (~50MB for 1,500 songs)
+- `cache/lyric_interpretable_features.pkl` - GPT-extracted interpretable lyrics (~1MB for 1,500 songs)
 
-**Note**: MERT/E5 caches are separate and don't modify existing cache files.
+**Note**: MERT/E5/GPT caches are separate and don't modify existing cache files. GPT interpretable features are also merged into `lyric_features.pkl` for convenience.
 
 ## Performance
 
@@ -876,14 +1097,17 @@ python run_analysis.py
 |-------|---------------|
 | Audio feature extraction | 60-90 minutes (1,500 songs) |
 | Lyric feature extraction | 5-10 minutes |
+| GPT interpretable lyrics | 5-10 minutes (API calls) |
 | Clustering | 2-5 minutes |
 | Visualization | 30-60 seconds |
 | **Total (first run)** | **~90 minutes** |
 | **Total (with cache)** | **<5 minutes** |
+| **Interpretable pipeline** | **~100 minutes** (includes GPT) |
 
 ## Development
 
 ### Code Quality
+
 The project uses standard Python development tools:
 
 ```bash
@@ -897,6 +1121,7 @@ flake8 .              # Lint with flake8
 ```
 
 ### Testing
+
 Once tests are added, run with pytest:
 
 ```bash
@@ -907,6 +1132,7 @@ pytest -k test_function_name    # Single test function
 ```
 
 ### Jupyter Notebooks
+
 The project supports Jupyter notebooks for exploration:
 
 ```bash
@@ -915,7 +1141,9 @@ jupyter lab          # Launch JupyterLab
 ```
 
 ### Package Managers Supported
+
 The .gitignore supports various Python package managers:
+
 - **pip**: Standard requirements.txt
 - **poetry**: Poetry lock files
 - **pipenv**: Pipfile and Pipfile.lock
@@ -924,7 +1152,9 @@ The .gitignore supports various Python package managers:
 - **pixi**: Conda-based package manager
 
 ### Git Workflow
+
 Standard Git workflow with comprehensive .gitignore:
+
 - Private data (songs/, lyrics/) excluded
 - Cache and output files excluded
 - Environment files (.env, .cache) excluded
@@ -933,12 +1163,16 @@ Standard Git workflow with comprehensive .gitignore:
 ## Advanced Usage
 
 ### Custom Feature Extraction
+
 Modify feature extraction parameters in `analysis/pipeline/`:
+
 - `audio_analysis.py`: Change Essentia models, embedding dimensions
 - `lyric_analysis.py`: Change sentence-transformer model, language processing
 
 ### Custom Clustering Algorithms
+
 The clustering pipeline supports multiple algorithms:
+
 - **HAC** (Hierarchical Agglomerative): Default, balanced clusters
 - **Birch**: Memory-efficient, good for large datasets
 - **Spectral**: Graph-based, finds complex patterns
@@ -947,14 +1181,18 @@ The clustering pipeline supports multiple algorithms:
 Add custom algorithms in `analysis/pipeline/clustering.py`.
 
 ### Playlist Naming Customization
+
 Modify playlist naming logic in `export/create_playlists.py`:
+
 - Customize genre/mood mapping
 - Change language codes
 - Add custom metadata to names
 - Adjust playlist ordering
 
 ### Integration with Other Services
+
 The master index (`spotify/master_index.json`) provides a unified data structure for:
+
 - Exporting to other platforms (YouTube Music, Apple Music)
 - Integration with music players (Plex, Jellyfin)
 - Custom recommendation engines
@@ -963,24 +1201,28 @@ The master index (`spotify/master_index.json`) provides a unified data structure
 ## Use Cases
 
 ### Personal Music Discovery
+
 - Discover hidden patterns in your music taste
 - Find clusters you didn't know existed
 - Understand your mood-based listening habits
 - Identify genre blends in your library
 
 ### Playlist Curation
+
 - Auto-generate mood-based playlists
 - Create workout playlists (high energy clusters)
 - Find study music (calm, instrumental clusters)
 - Discover new connections between artists
 
 ### Music Analysis
+
 - Analyze evolution of taste over time (with historical data)
 - Compare libraries with friends
 - Study genre distributions
 - Identify language diversity in listening
 
 ### DJ and Music Production
+
 - Organize sample library by audio characteristics
 - Find complementary tracks for mixing
 - Identify BPM and key clusters
@@ -999,18 +1241,23 @@ Tested on MacBook Pro (M1, 16GB RAM) with 1,500 songs:
 | MERT audio features (optional) | 45 min (GPU) / 6 hrs (CPU) | 5 sec |
 | **BGE-M3 lyric features** | **5-10 min** | **2 sec** |
 | E5 lyric features (optional) | 20 min (GPU) / 2 hrs (CPU) | 2 sec |
+| GPT interpretable lyrics (optional) | 5-10 min | 2 sec |
 | Clustering | 2-5 min | 2-5 min |
 | Visualization | 30-60 sec | 30-60 sec |
 | **Total (default)** | **~2-3 hours** | **<5 min** |
 | **Total (with MERT+E5, GPU)** | **~3-4 hours** | **<5 min** |
+| **Total (interpretable pipeline)** | **~2.5 hours** | **<5 min** |
 
 **Extraction Time Comparison (1,500 songs):**
+
 - **Default (Essentia + BGE-M3)**: ~90 min first run
 - **With MERT (GPU)**: +45 min = ~135 min first run
 - **With MERT + E5 (GPU)**: +45 min + 20 min = ~155 min first run
 - **With MERT + E5 (CPU)**: +6 hrs + 2 hrs = ~8 hours first run
+- **Interpretable (Essentia + BGE-M3 + GPT)**: ~100 min first run
 
 Scales approximately linearly with library size:
+
 - 500 songs: ~45 min (first run, default)
 - 1,500 songs: ~90 min (first run, default)
 - 5,000 songs: ~4-5 hours (first run, default)
@@ -1018,22 +1265,26 @@ Scales approximately linearly with library size:
 ## Privacy and Data Security
 
 ### Local Processing
+
 - All audio analysis happens locally on your machine
 - Features never leave your computer
 - No telemetry or tracking
 
 ### Data Storage
+
 - Personal listening data (songs/, lyrics/) is gitignored
 - API tokens stored securely in .env (gitignored)
 - OAuth tokens cached locally in .cache (gitignored)
 
 ### API Access
+
 - Spotify API: Read-only access to your library
 - Genius API: Read-only access to public lyrics
 - No data shared with third parties
 - You can revoke API access anytime via respective dashboards
 
 ### Best Practices
+
 - Keep .env file secure
 - Don't commit .cache or private data
 - Regularly rotate API tokens
@@ -1058,6 +1309,7 @@ The project code itself is provided as-is for personal use.
 This is a personal project for analyzing music taste, but contributions are welcome!
 
 ### How to Contribute
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -1065,6 +1317,7 @@ This is a personal project for analyzing music taste, but contributions are welc
 5. Submit a pull request
 
 ### Areas for Improvement
+
 - Additional clustering algorithms
 - Alternative audio feature extractors
 - Support for more lyrics sources
@@ -1074,7 +1327,9 @@ This is a personal project for analyzing music taste, but contributions are welc
 - Better error handling
 
 ### Reporting Issues
+
 Please report issues on GitHub with:
+
 - Python version
 - Operating system
 - Library size (approximate number of songs)
@@ -1094,6 +1349,7 @@ Special thanks to the developers and researchers behind:
 - **lyricsgenius Maintainers** - Simple Genius API integration
 
 Additional credits:
+
 - Spotify for providing comprehensive Web API
 - Genius for lyrics database and API access
 - The broader Python data science community
@@ -1101,6 +1357,7 @@ Additional credits:
 ## Related Projects
 
 If you're interested in music analysis, check out:
+
 - [Essentia](https://essentia.upf.edu/) - Audio analysis library
 - [librosa](https://librosa.org/) - Audio and music analysis
 - [Music Genre Classification](https://github.com/topics/music-genre-classification) - Various approaches
@@ -1135,6 +1392,7 @@ A: Re-run when you've added significant new tracks (50+) to your library. Use `-
 
 **Q: Should I use MERT or Essentia for audio clustering?**
 A:
+
 - **Essentia (default)**: Fast, interpretable, great for most users
 - **MERT**: Higher quality clustering, better semantic understanding
 - **Recommendation**: Start with Essentia. Try MERT if you want better clustering quality
@@ -1142,6 +1400,7 @@ A:
 
 **Q: Do I need a GPU to use MERT?**
 A: No, but highly recommended:
+
 - **GPU**: ~45 min for 1,500 songs
 - **CPU**: ~6 hours for 1,500 songs
 - MERT extraction is one-time; subsequent runs use cache
@@ -1151,12 +1410,14 @@ A: No. MERT creates a separate cache (`cache/mert_embeddings_*.pkl`). Your exist
 
 **Q: What's the difference between BGE-M3 and E5 for lyrics?**
 A:
+
 - **BGE-M3 (default)**: 8192 token context (very long lyrics), good quality
 - **E5**: Higher quality embeddings, 512 token context (shorter)
 - **Recommendation**: BGE-M3 is sufficient for most users
 
 **Q: Can I mix and match embedding backends?**
 A: Yes! Examples:
+
 - Essentia audio + E5 lyrics
 - MERT audio + BGE-M3 lyrics
 - MERT audio + E5 lyrics (best quality, slowest extraction)
@@ -1164,6 +1425,7 @@ A: Yes! Examples:
 
 **Q: What is the "interpretable" audio backend?**
 A: A 17-dimensional feature vector where each dimension has explicit meaning:
+
 - BPM, danceability, instrumentalness, valence, arousal
 - Engagement, approachability, 5 mood dimensions
 - Voice gender (female↔male), genre ladder (pure↔fusion)
@@ -1173,6 +1435,7 @@ Use `--audio-embedding-backend interpretable` for clustering you can understand 
 
 **Q: What is the genre ladder?**
 A: Measures how "categorizable" a song is using Shannon entropy:
+
 - **0.0 = Pure**: AI is 95%+ confident about the genre (e.g., pure Trap)
 - **1.0 = Fusion**: AI is confused, song crosses many genres (e.g., experimental)
 
@@ -1180,15 +1443,65 @@ It captures whether an artist works within genre traditions or breaks boundaries
 
 **Q: Why not use acoustic↔electronic for the genre ladder?**
 A: We analyzed feature correlations and found:
+
 - Acoustic/electronic is **0.71 correlated** with danceability (already in vector)
 - Genre entropy has **0.54 uniqueness** - adds genuinely new information
 - Essentia already extracts `mood_acoustic` and `mood_electronic` directly
 
 **Q: What does voice gender capture?**
 A: The vocal character of a song (female=0, male=1):
+
 - **0.67 uniqueness** - highest of any candidate feature
 - Won't be captured by lyrics (text doesn't reveal voice timbre)
 - Already computed by Essentia, no extra processing needed
+
+**Q: What is the Interactive Interpretability app?**
+A: A Streamlit app (`analysis/interactive_interpretability.py`) that provides:
+
+- 29-dimensional interpretable feature vectors (combined audio + lyrics)
+- Adjustable weight sliders for each feature group
+- Automatic filtering of vocal songs without lyrics
+- SHAP-based feature importance analysis
+- Real-time cluster visualization
+
+Launch with: `streamlit run analysis/interactive_interpretability.py`
+
+**Q: How do I extract interpretable lyric features?**
+A: Run:
+
+```bash
+export OPENAI_API_KEY='sk-your-key'
+python run_analysis.py --extract-interpretable-lyrics
+```
+
+This uses GPT-4o-mini to extract theme, language, valence, arousal, and other semantic features from your lyrics. Cost is ~$0.01-0.05 depending on library size.
+
+**Q: What happens to vocal songs without lyrics in interpretable mode?**
+A: The Interactive Interpretability app automatically filters them out and displays a warning with the list of excluded tracks. This ensures clean clustering when lyric features are important.
+
+**Q: How is the theme/language encoded in the feature vector?**
+A: Both are encoded as single 0-1 values on semantic/ordinal scales:
+
+- **Theme**: party=1.0, flex=0.9, love=0.8, ... none=0.0 (ordered by energy/positivity)
+- **Language**: english=1.0, spanish=0.86, ... none=0.0 (evenly spaced)
+
+This keeps the vector compact (29 dims) while preserving meaningful relationships.
+
+**Q: How do I run the full interpretable pipeline?**
+A: Three steps:
+
+```bash
+# 1. Extract audio + lyric features (if not already cached)
+python run_analysis.py --use-cache
+
+# 2. Extract GPT-based interpretable lyrics
+python run_analysis.py --extract-interpretable-lyrics
+
+# 3. Launch interactive app
+streamlit run analysis/interactive_interpretability.py
+```
+
+Then select "Interpretability" tab → "combined" mode.
 
 ---
 

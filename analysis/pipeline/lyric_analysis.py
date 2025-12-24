@@ -269,10 +269,10 @@ def extract_lyric_features(
             'word_count': 0,
             'has_lyrics': False,
             'model_backend': backend,
-            # Zero interpretable features for tracks without lyrics
+            # Neutral interpretable features for tracks without lyrics
             # (applies to both instrumental and vocal songs without lyrics)
-            'lyric_valence': 0.0,
-            'lyric_arousal': 0.0,
+            'lyric_valence': 0.5,
+            'lyric_arousal': 0.5,
             'lyric_mood_happy': 0.0,
             'lyric_mood_sad': 0.0,
             'lyric_mood_aggressive': 0.0,
