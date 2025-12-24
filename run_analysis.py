@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
-"""
-Music Taste Analysis Pipeline
-Run: python run_analysis.py [--use-cache]
+"""Music Taste Analysis Pipeline - Ultra-Simplified Orchestrator
+
+This script analyzes your music library by extracting audio and lyric features,
+clustering similar songs, and generating interactive visualizations.
+
+Simplified Design:
+- 3 flags instead of 8 (--backend, --fresh, --audio-only)
+- Smart caching (automatic - if cache exists, use it)
+- Always uses best backends (E5 for lyrics)
+- Always generates all 3 modes (audio, lyrics, combined) for comparison
+
+Usage:
+    python run_analysis.py                    # Smart cache, interpretable backend
+    python run_analysis.py --backend mert     # Use MERT embeddings
+    python run_analysis.py --fresh            # Force re-extract everything
+    python run_analysis.py --audio-only       # Extract audio only (batch job)
 """
 
 import argparse
 import logging
-import pickle
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from analysis.pipeline.audio_analysis import (
-    extract_audio_features,
-    update_cached_features,
-)
-from analysis.pipeline.clustering import run_clustering_pipeline
-from analysis.pipeline.lyric_analysis import extract_lyric_features
-from analysis.pipeline.visualization import (
-    create_interactive_map,
-    create_combined_map,
-    generate_report,
-)
+from analysis.pipeline import orchestrator
 
-# Load .env from project root (after imports, before main)
+# Load environment variables
 load_dotenv()
 
 
 def setup_logging():
+    """Configure logging to file and console."""
     log_dir = Path("logging")
     log_dir.mkdir(exist_ok=True)
 
@@ -37,8 +40,11 @@ def setup_logging():
 
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(),
+        ],
     )
 
     logger = logging.getLogger(__name__)
@@ -47,692 +53,100 @@ def setup_logging():
 
 
 def main():
+    """Run the music taste analysis pipeline."""
+
     parser = argparse.ArgumentParser(
-        description="Analyze music taste using audio and lyric features"
+        description="Analyze music taste using audio and lyric features",
+        epilog="""
+Examples:
+  python run_analysis.py                    # Smart cache, interpretable backend
+  python run_analysis.py --backend mert     # Use MERT embeddings
+  python run_analysis.py --fresh            # Force re-extract everything
+  python run_analysis.py --audio-only       # Extract audio only (batch job)
+
+Simplified Design:
+  - Smart caching: Automatically uses cache if it exists (no flag needed)
+  - Best quality: Always uses E5 for lyric embeddings (highest quality)
+  - Complete output: Always generates all 3 modes (audio, lyrics, combined)
+  - For interactive exploration: Run streamlit run analysis/interactive_interpretability.py
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--backend",
+        choices=["essentia", "mert", "interpretable"],
+        default="interpretable",
+        help="Feature backend (default: interpretable for best interpretability)",
     )
     parser.add_argument(
-        "--use-cache", action="store_true", help="Use cached features if available"
-    )
-    parser.add_argument(
-        "--re-embed-lyrics",
+        "--fresh",
         action="store_true",
-        help="Re-generate lyric embeddings while reusing cached audio features",
-    )
-    parser.add_argument(
-        "--re-classify-audio",
-        action="store_true",
-        help="Run missing audio classifiers (valence, arousal, etc) on cached files",
+        help="Force re-extract all features (ignore cache)",
     )
     parser.add_argument(
         "--audio-only",
         action="store_true",
-        help="Only extract/update audio features, then exit (skip lyrics, clustering, visualization)",
+        help="Extract audio features only, then exit (for batch jobs)",
     )
-    parser.add_argument(
-        "--mode",
-        choices=["audio", "lyrics", "combined"],
-        default="combined",
-        help="Clustering mode (default: combined)",
-    )
-    parser.add_argument(
-        "--audio-embedding-backend",
-        choices=["essentia", "mert", "interpretable"],
-        default="essentia",
-        help="Audio embedding backend for clustering (default: essentia). "
-        "Essentia always runs for interpretation fields (genre/mood/BPM). "
-        "MERT creates separate cache for clustering-optimized embeddings. "
-        "Interpretable uses manual features (BPM, Key, Moods).",
-    )
-    parser.add_argument(
-        "--lyrics-embedding-backend",
-        choices=["bge-m3", "e5"],
-        default="bge-m3",
-        help="Lyrics embedding backend (default: bge-m3 for backward compatibility). "
-        "E5 provides higher quality embeddings with separate cache.",
-    )
-    parser.add_argument(
-        "--mert-cache-path",
-        default="cache/mert_embeddings_24khz_30s_cls.pkl",
-        help="Path to MERT embeddings cache (default: cache/mert_embeddings_24khz_30s_cls.pkl)",
-    )
-    parser.add_argument(
-        "--extract-interpretable-lyrics",
-        action="store_true",
-        help="Extract interpretable lyric features via GPT-5-mini (requires OPENAI_API_KEY). "
-        "Uses cached audio/lyric features, only extracts GPT features, then exits.",
-    )
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     logger = setup_logging()
 
+    # Create output directories
     Path("analysis/outputs").mkdir(parents=True, exist_ok=True)
-    Path("analysis/outputs/eda").mkdir(parents=True, exist_ok=True)
     Path("cache").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("MUSIC TASTE ANALYSIS PIPELINE")
     print("=" * 60)
+    print(f"Backend: {args.backend}")
+    print(f"Mode: {'Fresh extraction' if args.fresh else 'Smart caching'}")
+    print("=" * 60)
 
-    # Handle --extract-interpretable-lyrics early exit
-    if args.extract_interpretable_lyrics:
-        import os
-
-        if not os.getenv("OPENAI_API_KEY"):
-            print("\n❌ ERROR: OPENAI_API_KEY not set!")
-            print("Set it with: export OPENAI_API_KEY='sk-your-key'")
-            return
-
-        lyric_cache = Path("cache/lyric_features.pkl")
-        if not lyric_cache.exists():
-            print(f"\n❌ ERROR: {lyric_cache} not found!")
-            print("Run the main pipeline first: python run_analysis.py --use-cache")
-            return
-
-        print("\n[INTERPRETABLE LYRICS EXTRACTION]")
-        logger.info("Extracting interpretable lyric features via GPT-5-mini")
-
-        # Load existing lyric features
-        print("\n[1/3] Loading existing lyric features...")
-        with open(lyric_cache, "rb") as f:
-            lyric_features = pickle.load(f)
-
-        tracks_with_lyrics = [f for f in lyric_features if f.get("has_lyrics", False)]
-        print(f"  Found {len(tracks_with_lyrics)} tracks with lyrics")
-
-        # Load lyrics texts
-        print("\n[2/3] Loading lyrics text...")
-        lyrics_dir = Path("lyrics/temp")
-        tracks_for_extraction = []
-        lyrics_texts = []
-
-        for track in tracks_with_lyrics:
-            filename = track.get("filename", "")
-            if not filename:
-                continue
-            lyric_file = lyrics_dir / filename.replace(".mp3", ".txt")
-            if not lyric_file.exists():
-                lyric_file = lyrics_dir / f"{track['track_name']}.txt"
-            if lyric_file.exists():
-                try:
-                    with open(lyric_file, "r", encoding="utf-8") as f:
-                        lyrics_text = f.read().strip()
-                    if lyrics_text and len(lyrics_text) > 10:
-                        tracks_for_extraction.append(track)
-                        lyrics_texts.append(lyrics_text)
-                except Exception as e:
-                    logger.warning(f"Could not read {lyric_file}: {e}")
-
-        print(f"  Loaded {len(lyrics_texts)} lyrics files")
-
-        if not lyrics_texts:
-            print("\n❌ ERROR: No lyrics found!")
-            print(f"Expected lyrics in: {lyrics_dir}")
-            return
-
-        # Extract interpretable features
-        print("\n[3/3] Extracting interpretable features via GPT-5-mini...")
-        print(
-            "  (This will make API calls - costs ~$0.01-0.05 depending on library size)"
-        )
-
-        from analysis.pipeline.lyric_features import (
-            batch_extract_interpretable_features,
-        )
-
-        interpretable_features = batch_extract_interpretable_features(
-            tracks_for_extraction,
-            lyrics_texts,
-            cache_path="cache/lyric_interpretable_features.pkl",
-            use_cache=False,
-            batch_delay=0.1,
-        )
-
-        print(f"\n✅ Extracted features for {len(interpretable_features)} tracks")
-
-        # Merge into lyric_features cache
-        print("\nMerging into lyric_features.pkl...")
-        interpretable_by_id = {f["track_id"]: f for f in interpretable_features}
-
-        updated_count = 0
-        for feature in lyric_features:
-            track_id = feature["track_id"]
-            if track_id in interpretable_by_id:
-                interp = interpretable_by_id[track_id]
-                for key in [
-                    "lyric_valence",
-                    "lyric_arousal",
-                    "lyric_mood_happy",
-                    "lyric_mood_sad",
-                    "lyric_mood_aggressive",
-                    "lyric_mood_relaxed",
-                    "lyric_explicit",
-                    "lyric_narrative",
-                    "lyric_theme",
-                    "lyric_language",
-                    "lyric_vocabulary_richness",
-                    "lyric_repetition",
-                ]:
-                    if key in interp:
-                        feature[key] = interp[key]
-                updated_count += 1
-            else:
-                feature.setdefault("lyric_valence", 0.5)
-                feature.setdefault("lyric_arousal", 0.5)
-                feature.setdefault("lyric_mood_happy", 0.0)
-                feature.setdefault("lyric_mood_sad", 0.0)
-                feature.setdefault("lyric_mood_aggressive", 0.0)
-                feature.setdefault("lyric_mood_relaxed", 0.0)
-                feature.setdefault("lyric_explicit", 0.0)
-                feature.setdefault("lyric_narrative", 0.0)
-                feature.setdefault("lyric_theme", "none")
-                feature.setdefault("lyric_language", "none")
-                feature.setdefault("lyric_vocabulary_richness", 0.0)
-                feature.setdefault("lyric_repetition", 0.0)
-
-        with open(lyric_cache, "wb") as f:
-            pickle.dump(lyric_features, f)
-
-        print(f"  Updated {updated_count} tracks")
-        print(f"  Saved to: {lyric_cache}")
-        logger.info(f"Interpretable lyrics extraction complete: {updated_count} tracks")
-
-        print("\n" + "=" * 60)
-        print("INTERPRETABLE LYRICS EXTRACTION COMPLETE!")
-        print("=" * 60)
-        print("\nNext steps:")
-        print("  1. Run: streamlit run analysis/interactive_tuner.py")
-        print("  2. Select 'Interpretable Features (Audio)' backend")
-        print("  3. Adjust weights and cluster!")
-        return
-
-    logger.info(f"Starting analysis with mode: {args.mode}")
-    logger.info(f"Use cache: {args.use_cache}")
-    logger.info(f"Re-embed lyrics: {args.re_embed_lyrics}")
-    logger.info(f"Re-classify audio: {args.re_classify_audio}")
+    logger.info(f"Starting analysis: backend={args.backend}, fresh={args.fresh}")
     start_time = datetime.now()
 
-    print("\n[1/5] Extracting audio features...")
-    logger.info("Step 1/5: Audio feature extraction")
+    # =========================================================================
+    # Run pipeline (smart caching built-in)
+    # =========================================================================
+    all_results = orchestrator.run_full_pipeline(
+        backend=args.backend,
+        fresh=args.fresh,
+        audio_only=args.audio_only,
+    )
 
-    if args.re_classify_audio and Path("cache/audio_features.pkl").exists():
-        print("  Updating cached audio features with new classifiers...")
-        logger.info("Updating cached audio features")
-        audio_features = update_cached_features()
-    elif (args.use_cache or args.re_embed_lyrics) and Path(
-        "cache/audio_features.pkl"
-    ).exists():
-        print("  Loading from cache...")
-        logger.info("Loading audio features from cache")
-        with open("cache/audio_features.pkl", "rb") as f:
-            audio_features = pickle.load(f)
-
-        # Check if genre_ladder needs to be (re)computed
-        # Force recompute if not using entropy-based version
-        needs_recompute = False
-
-        # Check for entropy version marker
-        has_entropy_version = any(
-            f.get("genre_ladder_version") == "entropy" for f in audio_features[:10]
-        )
-
-        if not has_entropy_version:
-            needs_recompute = True
-            print("  Upgrading genre_ladder to entropy-based version...")
-
-        if needs_recompute:
-            logger.info("Recomputing genre_ladder (entropy-based)")
-            from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
-
-            audio_features = add_genre_ladder_to_features(audio_features)
-            # Save updated cache
-            with open("cache/audio_features.pkl", "wb") as f:
-                pickle.dump(audio_features, f)
-            print(f"  ✓ Updated cache with genre_ladder")
-    else:
-        logger.info("Extracting audio features from MP3 files")
-        audio_features = extract_audio_features()
-
-    print(f"  ✓ Processed {len(audio_features)} songs (Essentia)")
-    logger.info(f"Audio features extracted: {len(audio_features)} songs")
-
-    # Step 1.5: Extract MERT embeddings if selected (separate cache for clustering)
-    audio_embeddings_for_clustering = None
-    if args.audio_embedding_backend == "mert":
-        print("\n[1.5/5] Extracting MERT audio embeddings for clustering...")
-        logger.info("Step 1.5/5: MERT audio embedding extraction")
-
-        from analysis.pipeline.mert_embedding import extract_mert_embeddings
-
-        if args.use_cache and Path(args.mert_cache_path).exists():
-            print(f"  Loading MERT embeddings from cache...")
-            with open(args.mert_cache_path, "rb") as f:
-                audio_embeddings_for_clustering = pickle.load(f)
-        else:
-            print(f"  Extracting MERT embeddings...")
-            audio_embeddings_for_clustering = extract_mert_embeddings(
-                cache_path=args.mert_cache_path, use_cache=args.use_cache
-            )
-
-        print(f"  ✓ Processed {len(audio_embeddings_for_clustering)} songs (MERT)")
-        logger.info(
-            f"MERT embeddings extracted: {len(audio_embeddings_for_clustering)} songs"
-        )
-
-    elif args.audio_embedding_backend == "interpretable":
-        print(
-            "\n[1.5/5] Constructing Interpretable Feature embeddings (Audio + Lyrics)..."
-        )
-        logger.info("Step 1.5/5: Interpretable Feature construction")
-
-        import numpy as np
-
-        # Load lyric features early for interpretable mode
-        lyric_cache_path = "cache/lyric_features.pkl"
-        if Path(lyric_cache_path).exists():
-            print("  Loading lyric features from cache for interpretable mode...")
-            with open(lyric_cache_path, "rb") as f:
-                lyric_features_for_interp = pickle.load(f)
-        else:
-            print("  ⚠️ Lyric cache not found, extracting...")
-            lyric_features_for_interp = extract_lyric_features()
-
-        # Create lyric lookup by track_id
-        lyric_by_id = {f["track_id"]: f for f in lyric_features_for_interp}
-
-        # Theme & Language scales (same as interactive_tuner.py)
-        THEME_SCALE = {
-            "party": 1.0,
-            "flex": 0.9,
-            "love": 0.8,
-            "social": 0.7,
-            "spirituality": 0.6,
-            "introspection": 0.5,
-            "street": 0.4,
-            "heartbreak": 0.3,
-            "struggle": 0.2,
-            "other": 0.1,
-            "none": 0.0,
-        }
-        LANGUAGE_SCALE = {
-            "english": 1.0,
-            "spanish": 0.86,
-            "french": 0.71,
-            "arabic": 0.57,
-            "korean": 0.43,
-            "japanese": 0.29,
-            "unknown": 0.14,
-            "none": 0.0,
-        }
-
-        # Dynamic global min/max for normalization
-        bpms = [float(t.get("bpm", 0) or 0) for t in audio_features]
-        valences = [float(t.get("valence", 0) or 0) for t in audio_features]
-        arousals = [float(t.get("arousal", 0) or 0) for t in audio_features]
-
-        def get_range(values, default_min, default_max):
-            valid = [v for v in values if v > 0]
-            if not valid:
-                return default_min, default_max
-            return min(valid), max(valid)
-
-        min_bpm, max_bpm = get_range(bpms, 50, 200)
-        min_val, max_val = get_range(valences, 1, 9)
-        min_ar, max_ar = get_range(arousals, 1, 9)
-
-        interpretable_embeddings = []
-
-        for track in audio_features:
-            lyric = lyric_by_id.get(track["track_id"], {})
-
-            # Helper for audio features
-            def get_float(k, d=0.0):
-                v = track.get(k)
-                try:
-                    return float(v) if v is not None else d
-                except:
-                    return d
-
-            # Helper for lyric features
-            def get_lyric_float(k, d=0.0):
-                v = lyric.get(k)
-                try:
-                    return float(v) if v is not None else d
-                except:
-                    return d
-
-            # Normalize BPM
-            raw_bpm = get_float("bpm", 120)
-            norm_bpm = (
-                (raw_bpm - min_bpm) / (max_bpm - min_bpm)
-                if (max_bpm > min_bpm)
-                else 0.5
-            )
-            norm_bpm = max(0.0, min(1.0, norm_bpm))
-
-            # Normalize Valence
-            raw_val = get_float("valence", 4.5)
-            norm_val = (
-                (raw_val - min_val) / (max_val - min_val)
-                if (max_val > min_val)
-                else 0.5
-            )
-            norm_val = max(0.0, min(1.0, norm_val))
-
-            # Normalize Arousal
-            raw_ar = get_float("arousal", 4.5)
-            norm_ar = (
-                (raw_ar - min_ar) / (max_ar - min_ar) if (max_ar > min_ar) else 0.5
-            )
-            norm_ar = max(0.0, min(1.0, norm_ar))
-
-            # ═══════════════════════════════════════════════════════════════
-            # AUDIO FEATURES (14 dimensions)
-            # ═══════════════════════════════════════════════════════════════
-            audio_scalars = [
-                norm_bpm,
-                get_float("danceability", 0.5),
-                get_float("instrumentalness", 0.0),
-                norm_val,
-                norm_ar,
-                get_float("engagement_score", 0.5),
-                get_float("approachability_score", 0.5),
-                get_float("mood_happy", 0.0),
-                get_float("mood_sad", 0.0),
-                get_float("mood_aggressive", 0.0),
-                get_float("mood_relaxed", 0.0),
-                get_float("mood_party", 0.0),
-                get_float("voice_gender_male", 0.5),
-                get_float("genre_ladder", 0.5),
-            ]
-
-            # Key Features (3 dimensions)
-            key_vec = [0.0, 0.0, 0.0]
-            key_str = track.get("key", "")
-            if isinstance(key_str, str) and key_str:
-                k = key_str.lower().strip()
-                scale_val = 1.0 if "major" in k else 0.0
-                pitch_map = {
-                    "c": 0,
-                    "c#": 1,
-                    "db": 1,
-                    "d": 2,
-                    "d#": 3,
-                    "eb": 3,
-                    "e": 4,
-                    "f": 5,
-                    "f#": 6,
-                    "gb": 6,
-                    "g": 7,
-                    "g#": 8,
-                    "ab": 8,
-                    "a": 9,
-                    "a#": 10,
-                    "bb": 10,
-                    "b": 11,
-                }
-                parts = k.split()
-                if parts and parts[0] in pitch_map:
-                    p = pitch_map[parts[0]]
-                    KEY_WEIGHT = 0.33  # 3 dims × 0.33 ≈ 1 equivalent dimension
-                    sin_val = (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
-                    cos_val = (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT
-                    scale_val = scale_val * KEY_WEIGHT
-                    key_vec = [sin_val, cos_val, scale_val]
-
-            # ═══════════════════════════════════════════════════════════════
-            # LYRIC FEATURES (12 dimensions)
-            # Weight by (1 - instrumentalness) so instrumental songs
-            # don't get clustered by incidental lyrics
-            # ═══════════════════════════════════════════════════════════════
-            instrumentalness_val = get_float("instrumentalness", 0.0)
-            lyric_weight = 1.0 - instrumentalness_val
-
-            lyric_scalars = [
-                get_lyric_float("lyric_valence", 0.5) * lyric_weight,
-                get_lyric_float("lyric_arousal", 0.5) * lyric_weight,
-                get_lyric_float("lyric_mood_happy", 0.0) * lyric_weight,
-                get_lyric_float("lyric_mood_sad", 0.0) * lyric_weight,
-                get_lyric_float("lyric_mood_aggressive", 0.0) * lyric_weight,
-                get_lyric_float("lyric_mood_relaxed", 0.0) * lyric_weight,
-                get_lyric_float("lyric_explicit", 0.0) * lyric_weight,
-                get_lyric_float("lyric_narrative", 0.0) * lyric_weight,
-                get_lyric_float("lyric_vocabulary_richness", 0.0) * lyric_weight,
-                get_lyric_float("lyric_repetition", 0.0) * lyric_weight,
-            ]
-
-            # Theme (1 dim) - weighted by lyric_weight
-            theme = lyric.get("lyric_theme", "other")
-            if not isinstance(theme, str):
-                theme = "other"
-            theme = theme.lower().strip()
-            theme_val = THEME_SCALE.get(theme, 0.1) * lyric_weight
-
-            # Language (1 dim) - weighted by lyric_weight
-            lang = lyric.get("lyric_language", "unknown")
-            if not isinstance(lang, str):
-                lang = "unknown"
-            lang = lang.lower().strip()
-            lang_val = LANGUAGE_SCALE.get(lang, 0.14) * lyric_weight
-
-            # Combine all features (29 dims: 14 audio + 3 key + 10 lyric + 1 theme + 1 lang)
-            emb = np.array(
-                audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val],
-                dtype=np.float32,
-            )
-
-            interpretable_embeddings.append(
-                {"track_id": track["track_id"], "embedding": emb}
-            )
-
-        audio_embeddings_for_clustering = interpretable_embeddings
-        print(
-            f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs (29 dims: audio + lyrics)"
-        )
-
-    else:
-        logger.info("Using Essentia embeddings for clustering (default)")
-
-    # Early exit if only audio processing was requested
+    # Early exit if audio-only mode
     if args.audio_only:
         print("\n" + "=" * 60)
         print("AUDIO EXTRACTION COMPLETE!")
         print("=" * 60)
-        print(f"\nProcessed {len(audio_features)} songs")
-        print("Cache updated: cache/audio_features.pkl")
-        print("\nRun 'python tools/verify_cache.py' to verify the features.")
-        elapsed_time = datetime.now() - start_time
-        print(f"\nTotal time: {elapsed_time}")
-        logger.info(f"Audio-only mode complete. Total time: {elapsed_time}")
+        elapsed = datetime.now() - start_time
+        print(f"\nTotal time: {elapsed}")
+        print("\nNext: Run without --audio-only to cluster and visualize")
+        logger.info(f"Audio-only mode complete. Time: {elapsed}")
         return
 
-    print("\n[2/5] Extracting lyric features...")
-    logger.info("Step 2/5: Lyric feature extraction")
+    # =========================================================================
+    # Save analysis data for dashboard
+    # =========================================================================
+    orchestrator.save_analysis_data(all_results)
 
-    # Determine lyric cache path based on backend
-    lyric_backend = args.lyrics_embedding_backend
-    if lyric_backend == "bge-m3":
-        lyric_cache = "cache/lyric_features.pkl"  # Preserve existing name for default
-    elif lyric_backend == "e5":
-        lyric_cache = "cache/lyric_features_e5.pkl"
-    else:
-        lyric_cache = f"cache/lyric_features_{lyric_backend}.pkl"
-
-    if args.use_cache and not args.re_embed_lyrics and Path(lyric_cache).exists():
-        print(f"  Loading from cache ({lyric_backend})...")
-        logger.info(f"Loading lyric features from cache ({lyric_backend})")
-        with open(lyric_cache, "rb") as f:
-            lyric_features = pickle.load(f)
-    else:
-        logger.info(f"Extracting lyric features using {lyric_backend}")
-        lyric_features = extract_lyric_features(
-            backend=lyric_backend, cache_path=lyric_cache
-        )
-
-    print(f"  ✓ Processed {len(lyric_features)} songs ({lyric_backend})")
-    logger.info(f"Lyric features extracted: {len(lyric_features)} songs")
-
-    print("\n[3/5] Running clustering pipeline...")
-    logger.info("Step 3/5: Clustering")
-
-    # Run clustering for all 3 modes to create separate visualizations
-    modes = ["audio", "lyrics", "combined"] if args.mode == "combined" else [args.mode]
-    all_results = {}
-
-    for mode in modes:
-        print(f"\n  Running {mode} mode clustering...")
-        logger.info(f"Running clustering in {mode} mode")
-
-        # Use mode-specific PCA components for 75% cumulative variance
-        # Determined via tools/find_optimal_pca.py
-        pca_components_map = {
-            "audio": 118,  # 75.01% variance
-            "lyrics": 162,  # 75.02% variance
-            "combined": 142,  # 75.04% variance (audio) + 75.04% variance (lyrics)
-        }
-        n_pca = pca_components_map[mode]
-
-        # If using Interpretable features (low dimension), skip PCA (set n_pca to None/high or handle in clustering.py)
-        # Assuming run_clustering_pipeline handles n_pca_components >= n_features by skipping or just transforming.
-        # But specifically for interpretable, we might want to preserve the exact dimensions.
-        # Let's set a flag or just let standard PCA run if dimensions are higher.
-        # Actually, for Interpretable, dimensions are ~15. 118 is > 15, so PCA might just be identity or standard projection.
-        # Ideally we skip PCA for interpretable to keep it "interpretable".
-        if args.audio_embedding_backend == "interpretable" and mode != "lyrics":
-            # For audio/combined, skip PCA for the audio part
-            # The pipeline function might not have an explicit "skip_pca" arg exposed here cleanly,
-            # but setting n_pca_components to a large number usually preserves dimensions.
-            # However, let's keep it simple for now and rely on the pipeline's behavior.
-            pass
-
-        # Pass embedding overrides if MERT/E5/Interpretable selected
-        lyric_embeddings_for_clustering = None
-        if lyric_backend == "e5":
-            lyric_embeddings_for_clustering = lyric_features
-
-        mode_results = run_clustering_pipeline(
-            audio_features,  # Always Essentia (for interpretation)
-            lyric_features,
-            mode=mode,
-            audio_embeddings_override=audio_embeddings_for_clustering,  # MERT or Interpretable if selected
-            lyric_embeddings_override=lyric_embeddings_for_clustering,  # E5 if selected
-            n_pca_components=n_pca,
-            clustering_algorithm="hac",
-            n_clusters_hac=5,
-            linkage_method="ward",
-            umap_n_neighbors=20,
-            umap_min_dist=0.2,
-            umap_n_components=3,
-        )
-
-        all_results[mode] = mode_results
-
-        print(f"    ✓ Found {mode_results['n_clusters']} clusters")
-        print(
-            f"    ✓ Outliers: {mode_results['n_outliers']} songs ({mode_results['n_outliers'] / len(mode_results['dataframe']) * 100:.1f}%)"
-        )
-        print(f"    ✓ Silhouette score: {mode_results['silhouette_score']:.3f}")
-        logger.info(
-            f"{mode} mode: {mode_results['n_clusters']} clusters, {mode_results['n_outliers']} outliers, silhouette={mode_results['silhouette_score']:.3f}"
-        )
-
-    # Use combined mode for the main report (or the only mode if not combined)
-    results = all_results.get("combined", all_results[args.mode])
-
-    # Store metadata about the run
-    all_results["metadata"] = {
-        "audio_backend": args.audio_embedding_backend,
-        "lyrics_backend": args.lyrics_embedding_backend,
-        "timestamp": datetime.now().isoformat(),
-        "mode": args.mode,
-    }
-
-    print("\n[4/5] Generating interactive visualizations...")
-    logger.info("Step 4/5: Generating visualizations")
-
-    # Determine output file suffix based on backends
-    backend_suffix = ""
-    if args.audio_embedding_backend == "mert" or args.lyrics_embedding_backend == "e5":
-        audio_suffix = "_mert" if args.audio_embedding_backend == "mert" else ""
-        lyrics_suffix = "_e5" if args.lyrics_embedding_backend == "e5" else ""
-        backend_suffix = f"{audio_suffix}{lyrics_suffix}"
-
-    # Create combined visualization with all 3 modes
-    if len(all_results) == 3:
-        print("  Creating combined visualization with all 3 modes...")
-        combined_fig = create_combined_map(all_results)
-        combined_output = (
-            f"analysis/outputs/music_taste_map_combined_comparison{backend_suffix}.html"
-        )
-        combined_fig.write_html(
-            combined_output,
-            config={"displayModeBar": True, "displaylogo": False},
-            include_plotlyjs="cdn",
-        )
-        print(f"  ✓ Saved combined comparison to {combined_output}")
-        logger.info("Combined visualization saved")
-
-    # Also create individual HTMLs for detailed exploration
-    for mode, mode_results in all_results.items():
-        if mode == "metadata":
-            continue
-
-        output_file = f"analysis/outputs/music_taste_map_{mode}{backend_suffix}.html"
-        fig = create_interactive_map(mode_results["dataframe"], mode_results)
-        fig.write_html(
-            output_file,
-            config={"displayModeBar": True, "displaylogo": False},
-            include_plotlyjs="cdn",
-        )
-        print(f"  ✓ Saved {mode} mode to {output_file}")
-        logger.info(f"Visualization saved to {output_file}")
-
-    print("\n[5/5] Generating report...")
-    logger.info("Step 5/5: Generating report")
-    generate_report(results, output_dir="analysis/outputs")
-    print("  ✓ Report saved to analysis/outputs/music_taste_report.md")
-    print("  ✓ Outliers saved to analysis/outputs/outliers.txt")
-    logger.info("Report saved to outputs/music_taste_report.md")
-
-    with open("analysis/outputs/analysis_data.pkl", "wb") as f:
-        pickle.dump(all_results, f)
-    logger.info("Analysis data saved to analysis/outputs/analysis_data.pkl")
-
-    elapsed_time = datetime.now() - start_time
-
+    # =========================================================================
+    # Print summary
+    # =========================================================================
+    elapsed = datetime.now() - start_time
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE!")
     print("=" * 60)
-    print("\nOutputs:")
-    if args.mode == "combined":
-        print("  📊 COMBINED VISUALIZATION (recommended):")
-        print("     - analysis/outputs/music_taste_map_combined_comparison.html")
-        print("       (side-by-side comparison of all 3 modes)")
-        print("\n  📈 INDIVIDUAL VISUALIZATIONS (detailed exploration):")
-        print("     - analysis/outputs/music_taste_map_audio.html")
-        print("     - analysis/outputs/music_taste_map_lyrics.html")
-        print("     - analysis/outputs/music_taste_map_combined.html")
-    else:
-        print(
-            f"  - analysis/outputs/music_taste_map_{args.mode}.html (interactive visualization)"
-        )
-    print("\n  📝 REPORTS:")
-    print("     - analysis/outputs/music_taste_report.md (detailed cluster analysis)")
-    print("     - analysis/outputs/outliers.txt (unclustered songs)")
-    print("     - analysis/outputs/analysis_data.pkl (serialized results)")
-    print(f"\nTotal time: {elapsed_time}")
-    print("\nNext steps:")
-    if args.mode == "combined":
-        print("  1. Open analysis/outputs/music_taste_map_combined_comparison.html")
-        print("     to see all 3 modes side-by-side")
-        print("  2. Read analysis/outputs/music_taste_report.md for insights")
-        print("  3. Explore individual mode HTMLs for detailed views")
-    else:
-        print("  1. Open the HTML visualization in your browser")
-        print("  2. Read analysis/outputs/music_taste_report.md for insights")
-        print("  3. Check analysis/outputs/outliers.txt for unique songs")
+    print("\nOutput:")
+    print("  💾 analysis_data.pkl (saved for dashboard)")
+    print(f"\nTotal time: {elapsed}")
+    print("\nNext step:")
+    print("  Run: streamlit run analysis/interactive_interpretability.py")
+    print("\n  All visualizations, reports, and analysis are in the interactive dashboard.")
 
-    logger.info(f"Analysis complete! Total time: {elapsed_time}")
-    logger.info("All outputs saved successfully")
+    logger.info(f"Analysis complete! Total time: {elapsed}")
 
 
 if __name__ == "__main__":
