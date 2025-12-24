@@ -107,7 +107,7 @@ def main():
 
             if not file_options:
                 st.error("No analysis data files found in analysis/outputs/")
-                st.info("Run `python run_analysis.py` first to generate data")
+                st.info("Run `python analysis/run_analysis.py` first to generate data")
                 st.stop()
 
             default_file = "analysis/outputs/analysis_data.pkl"
@@ -146,7 +146,7 @@ def main():
                 audio_features, lyric_features, mert_features = loaders.load_cached_features()
 
             if not audio_features:
-                st.error("No cached features found! Run `python run_analysis.py` first.")
+                st.error("No cached features found! Run `python analysis/run_analysis.py` first.")
                 st.stop()
 
             # Load popularity data

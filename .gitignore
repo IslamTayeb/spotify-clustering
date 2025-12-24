@@ -215,8 +215,8 @@ data/
 temp/
 
 # Analysis outputs and logs
-cache/
-logging/
+analysis/cache/
+analysis/logging/
 backup/
 backups/
 errors.log

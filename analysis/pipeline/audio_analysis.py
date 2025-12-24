@@ -39,14 +39,14 @@ def load_genre_labels(model_name: str = 'discogs400') -> List[str]:
     global GENRE_LABELS
     if model_name not in GENRE_LABELS:
         if model_name == 'discogs400':
-            filepath = Path(__file__).parent.parent / 'data' / 'genre_discogs400_labels.json'
+            filepath = Path(__file__).parent.parent / 'labels' / 'genre_discogs400_labels.json'
             if not filepath.exists():
                 logger.error(f"Discogs 400 genre labels file not found: {filepath}. Falling back to generic labels.")
                 GENRE_LABELS[model_name] = [f"genre_{i}" for i in range(400)]
             else:
                 GENRE_LABELS[model_name] = _load_labels_from_json(filepath)
         elif model_name == 'mtg_jamendo_genre':
-            filepath = Path(__file__).parent.parent / 'data' / 'mtg_jamendo_genre_labels.json'
+            filepath = Path(__file__).parent.parent / 'labels' / 'mtg_jamendo_genre_labels.json'
             if not filepath.exists():
                 logger.error(f"MTG-Jamendo genre labels file not found: {filepath}. Falling back to generic labels.")
                 GENRE_LABELS[model_name] = [f"mtg_jamendo_genre_{i}" for i in range(87)]
@@ -420,7 +420,7 @@ class AudioFeatureExtractor:
             return None
 
 
-def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List[Dict]:
+def update_cached_features(cache_path: str = 'analysis/cache/audio_features.pkl') -> List[Dict]:
     """
     Update existing cached features with missing fields (valence, arousal, new models).
     Loads audio but skips re-calculating the main embedding if possible.
@@ -661,7 +661,7 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
 
 
 def extract_audio_features(master_index_path: str = 'spotify/master_index.json',
-                          cache_path: str = 'cache/audio_features.pkl') -> List[Dict]:
+                          cache_path: str = 'analysis/cache/audio_features.pkl') -> List[Dict]:
 
     with open(master_index_path, 'r') as f:
         master_index = json.load(f)

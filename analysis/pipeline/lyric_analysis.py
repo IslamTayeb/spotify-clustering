@@ -186,11 +186,11 @@ def extract_lyric_features(
     # Auto-generate cache path based on backend
     if cache_path is None:
         if backend == 'bge-m3':
-            cache_path = 'cache/lyric_features.pkl'  # Preserve existing name
+            cache_path = 'analysis/cache/lyric_features.pkl'  # Preserve existing name
         elif backend == 'e5':
-            cache_path = 'cache/lyric_features_e5.pkl'
+            cache_path = 'analysis/cache/lyric_features_e5.pkl'
         else:
-            cache_path = f'cache/lyric_features_{backend}.pkl'
+            cache_path = f'analysis/cache/lyric_features_{backend}.pkl'
 
     # Check cache
     cache_file = Path(cache_path)
@@ -311,7 +311,7 @@ def extract_lyric_features(
         interpretable_features = batch_extract_interpretable_features(
             tracks_with_lyrics,
             lyrics_texts,
-            cache_path='cache/lyric_interpretable_features.pkl',
+            cache_path='analysis/cache/lyric_interpretable_features.pkl',
             use_cache=True
         )
 

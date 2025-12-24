@@ -342,7 +342,7 @@ def batch_extract_interpretable_features(
     cache_file = (
         Path(cache_path)
         if cache_path
-        else Path("cache/lyric_interpretable_features.pkl")
+        else Path("analysis/cache/lyric_interpretable_features.pkl")
     )
     cache_file.parent.mkdir(parents=True, exist_ok=True)
 

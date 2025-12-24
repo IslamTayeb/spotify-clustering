@@ -4,9 +4,10 @@
 This module provides high-level orchestration functions that coordinate all steps
 of the analysis pipeline: feature extraction, clustering, visualization, and reporting.
 
-Used by run_analysis.py CLI for batch processing.
+Used by analysis/run_analysis.py CLI for batch processing.
 """
 
+import json
 import logging
 import pickle
 from datetime import datetime
@@ -18,6 +19,31 @@ from analysis.pipeline.interpretable_features import build_interpretable_feature
 from analysis.pipeline.clustering import run_clustering_pipeline
 
 logger = logging.getLogger(__name__)
+
+
+def load_popularity_data(saved_tracks_path: str = "spotify/saved_tracks.json") -> Dict[str, float]:
+    """Load popularity scores from saved_tracks.json.
+
+    Args:
+        saved_tracks_path: Path to saved_tracks.json
+
+    Returns:
+        Dict mapping track_id to popularity (0-100)
+    """
+    path = Path(saved_tracks_path)
+    if not path.exists():
+        logger.warning(f"Saved tracks file not found: {saved_tracks_path}")
+        return {}
+
+    with open(path, "r") as f:
+        tracks = json.load(f)
+
+    popularity_data = {
+        track["track_id"]: track.get("popularity", 0)
+        for track in tracks
+    }
+    logger.info(f"Loaded popularity data for {len(popularity_data)} tracks")
+    return popularity_data
 
 
 def run_full_pipeline(
@@ -68,36 +94,46 @@ def run_full_pipeline(
 
     elif backend == "interpretable":
         logger.info("[1.5/5] Constructing interpretable features...")
-        print("\n[1.5/5] Constructing interpretable features (Audio + Lyrics)...")
+        print("\n[1.5/5] Constructing interpretable features (Audio + Lyrics + Popularity)...")
 
-        # Load lyrics early for interpretable mode
-        # Note: Always use E5 backend (best quality) for lyrics
-        lyric_features_for_interp = feature_cache.load_lyric_features(
-            backend="e5",
+        # Load GPT-extracted interpretable lyric features directly
+        # No embedding models (BGE-M3, E5) needed - only semantic attributes
+        lyric_features_for_interp = feature_cache.load_interpretable_lyric_features(
             fresh=fresh
         )
 
+        # Load popularity data from Spotify metadata
+        popularity_data = load_popularity_data()
+
         # Build interpretable features (uses shared module!)
         audio_embeddings_for_clustering = build_interpretable_features(
-            audio_features, lyric_features_for_interp
+            audio_features, lyric_features_for_interp, popularity_data=popularity_data
         )
-        print(f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs (29 dims)")
+        print(f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs (30 dims)")
 
     else:  # backend == "essentia"
         logger.info("Using Essentia embeddings for clustering (default)")
 
     # =========================================================================
-    # STEP 2: Load/extract lyric features
+    # STEP 2: Load/extract lyric features (only for non-interpretable backends)
     # =========================================================================
-    logger.info("[2/5] Loading lyric features...")
-    print("\n[2/5] Extracting lyric features...")
+    if backend == "interpretable":
+        # For interpretable backend, lyrics are already embedded in the 30-dim vector
+        # Just reuse the GPT interpretable lyric features loaded earlier
+        logger.info("[2/5] Lyric features already included in interpretable vector")
+        print("\n[2/5] Lyric features (GPT interpretable)...")
+        lyric_features = lyric_features_for_interp
+        print(f"  ✓ Processed {len(lyric_features)} songs (GPT interpretable)")
+    else:
+        logger.info("[2/5] Loading lyric features...")
+        print("\n[2/5] Extracting lyric features...")
 
-    # Always use E5 backend (best quality, as per simplified design)
-    lyric_features = feature_cache.load_lyric_features(
-        backend="e5",
-        fresh=fresh
-    )
-    print(f"  ✓ Processed {len(lyric_features)} songs (E5)")
+        # Use E5 backend for non-interpretable pipelines
+        lyric_features = feature_cache.load_lyric_features(
+            backend="e5",
+            fresh=fresh
+        )
+        print(f"  ✓ Processed {len(lyric_features)} songs (E5)")
 
     # =========================================================================
     # STEP 3: Run clustering for all 3 modes (audio, lyrics, combined)
@@ -113,26 +149,36 @@ def run_full_pipeline(
         print(f"\n  Running {mode} mode clustering...")
         logger.info(f"Clustering in {mode} mode")
 
-        # Get PCA components for this mode from config
-        n_pca = config.PCA_COMPONENTS_MAP.get(mode, 118)
+        # For interpretable backend: use subsets of 30-dim vector per mode
+        # - audio: dims 0-16 (14 audio + 3 key = 17 dims)
+        # - lyrics: dims 17-28 (10 lyric + 1 theme + 1 language = 12 dims)
+        # - combined: all 30 dims
+        if backend == "interpretable":
+            mode_results = run_clustering_pipeline(
+                audio_features,
+                lyric_features,
+                mode=mode,
+                audio_embeddings_override=audio_embeddings_for_clustering,
+                lyric_embeddings_override=None,
+                n_pca_components=None,  # Skip PCA for interpretable vector
+                **config.DEFAULT_CLUSTERING_PARAMS,
+                **config.DEFAULT_UMAP_PARAMS,
+            )
+        else:
+            # For non-interpretable backends, use PCA and separate embeddings
+            n_pca = config.PCA_COMPONENTS_MAP.get(mode, 118)
+            lyric_embeddings_override = lyric_features if backend != "essentia" else None
 
-        # For interpretable backend, skip PCA (already low-dim: 29)
-        # For audio mode only, we may want to skip PCA to preserve interpretability
-        skip_pca = (backend == "interpretable" and mode != "lyrics")
-
-        # Pass embedding overrides if MERT/Interpretable selected
-        lyric_embeddings_override = lyric_features if backend != "essentia" else None
-
-        mode_results = run_clustering_pipeline(
-            audio_features,
-            lyric_features,
-            mode=mode,
-            audio_embeddings_override=audio_embeddings_for_clustering,
-            lyric_embeddings_override=lyric_embeddings_override,
-            n_pca_components=n_pca if not skip_pca else None,
-            **config.DEFAULT_CLUSTERING_PARAMS,
-            **config.DEFAULT_UMAP_PARAMS,
-        )
+            mode_results = run_clustering_pipeline(
+                audio_features,
+                lyric_features,
+                mode=mode,
+                audio_embeddings_override=audio_embeddings_for_clustering,
+                lyric_embeddings_override=lyric_embeddings_override,
+                n_pca_components=n_pca,
+                **config.DEFAULT_CLUSTERING_PARAMS,
+                **config.DEFAULT_UMAP_PARAMS,
+            )
 
         all_results[mode] = mode_results
 
@@ -148,7 +194,7 @@ def run_full_pipeline(
     # Add metadata
     all_results["metadata"] = {
         "audio_backend": backend,
-        "lyrics_backend": "e5",  # Always E5 (as per simplified design)
+        "lyrics_backend": "gpt-interpretable" if backend == "interpretable" else "e5",
         "timestamp": datetime.now().isoformat(),
         "mode": "combined",  # Always run all 3 modes
     }

@@ -3,7 +3,7 @@
 
 This module provides the single source of truth for constructing 30-dimensional
 interpretable feature vectors from audio and lyric features. Used by both the
-CLI (run_analysis.py) and Streamlit dashboard (interactive_interpretability.py).
+CLI (analysis/run_analysis.py) and Streamlit dashboard (interactive_interpretability.py).
 
 Vector Structure (30 dimensions):
 - Audio features (14 dims): BPM, danceability, instrumentalness, valence, arousal,
@@ -18,8 +18,11 @@ CRITICAL: All lyric-related features are weighted by (1 - instrumentalness) to e
 that instrumental songs are NOT clustered based on non-existent lyric content.
 """
 
+import json
 import logging
+from pathlib import Path
 from typing import List, Dict, Any, Optional
+
 import numpy as np
 
 from analysis.pipeline.config import THEME_SCALE, LANGUAGE_SCALE
@@ -83,33 +86,79 @@ def build_interpretable_features(
                     f"Valence: [{min_val:.1f}, {max_val:.1f}], "
                     f"Arousal: [{min_ar:.1f}, {max_ar:.1f}]")
 
-    # Process each track
+    # Track songs without lyric features (for logging only, NOT skipped)
+    songs_without_lyrics = []
+
+    # Process ALL tracks - no skipping
+    tracks_to_process = []
     for track in audio_features:
-        lyric = lyric_by_id.get(track["track_id"], {})
+        track_id = track["track_id"]
+        track_name = track.get("track_name", "unknown")
+        artist = track.get("artist", "unknown")
+        instrumentalness = track.get("instrumentalness", 0.5)
+        lyric = lyric_by_id.get(track_id, {})
 
-        # Helper functions for safe float extraction
-        def get_float(k, d=0.0):
-            """Get float from track with default."""
+        has_lyric_features = bool(lyric)  # Empty dict = no lyric features
+
+        if not has_lyric_features:
+            # Log but DON'T skip - will use 0 for lyric features
+            songs_without_lyrics.append({
+                "track_id": track_id,
+                "track_name": track_name,
+                "artist": artist,
+                "instrumentalness": instrumentalness,
+            })
+
+        tracks_to_process.append((track, lyric))
+
+    # Save songs without lyrics to JSON for reference (not skipped, just noted)
+    if songs_without_lyrics:
+        noted_path = Path("analysis/outputs/songs_without_lyric_features.json")
+        noted_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(noted_path, "w") as f:
+            json.dump(songs_without_lyrics, f, indent=2)
+        logger.info(
+            f"Note: {len(songs_without_lyrics)} songs have no lyric features (will use 0s). "
+            f"Saved to {noted_path}"
+        )
+
+    logger.info(f"Processing ALL {len(tracks_to_process)} tracks")
+
+    # Process valid tracks
+    for track, lyric in tracks_to_process:
+        track_id = track["track_id"]
+        track_name = track.get("track_name", "unknown")
+        instrumentalness = track.get("instrumentalness", 0.5)
+        is_instrumental = instrumentalness >= 0.5
+
+        # Helper functions - raise errors if data is missing
+        def require_float(k):
+            """Get float from track, raise error if missing."""
             v = track.get(k)
+            if v is None:
+                raise ValueError(f"Missing required audio feature '{k}' for track '{track_name}' ({track_id})")
             try:
-                return float(v) if v is not None else d
-            except:
-                return d
+                return float(v)
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Invalid audio feature '{k}' for track '{track_name}' ({track_id}): {v}") from e
 
-        def get_lyric_float(k, d=0.0):
-            """Get float from lyric with default."""
+        def get_lyric_float(k, default=0.0):
+            """Get float from lyric, return default if missing (for any song)."""
             v = lyric.get(k)
+            if v is None:
+                return default  # Use default for any missing lyric feature
             try:
-                return float(v) if v is not None else d
-            except:
-                return d
+                return float(v)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Invalid lyric feature '{k}' for track '{track_name}' ({track_id}): {v}, using default {default}")
+                return default
 
         # =====================================================================
         # NORMALIZE AUDIO FEATURES
         # =====================================================================
 
         # Normalize BPM to [0, 1]
-        raw_bpm = get_float("bpm", 120)
+        raw_bpm = require_float("bpm")
         norm_bpm = (
             (raw_bpm - min_bpm) / (max_bpm - min_bpm)
             if (max_bpm > min_bpm)
@@ -118,7 +167,7 @@ def build_interpretable_features(
         norm_bpm = max(0.0, min(1.0, norm_bpm))
 
         # Normalize Valence to [0, 1]
-        raw_val = get_float("valence", 4.5)
+        raw_val = require_float("valence")
         norm_val = (
             (raw_val - min_val) / (max_val - min_val)
             if (max_val > min_val)
@@ -127,7 +176,7 @@ def build_interpretable_features(
         norm_val = max(0.0, min(1.0, norm_val))
 
         # Normalize Arousal to [0, 1]
-        raw_ar = get_float("arousal", 4.5)
+        raw_ar = require_float("arousal")
         norm_ar = (
             (raw_ar - min_ar) / (max_ar - min_ar)
             if (max_ar > min_ar)
@@ -140,19 +189,19 @@ def build_interpretable_features(
         # =====================================================================
         audio_scalars = [
             norm_bpm,                               # 0: BPM (normalized)
-            get_float("danceability", 0.5),         # 1: Danceability
-            get_float("instrumentalness", 0.0),     # 2: Instrumentalness
+            require_float("danceability"),          # 1: Danceability
+            require_float("instrumentalness"),      # 2: Instrumentalness
             norm_val,                               # 3: Valence (normalized)
             norm_ar,                                # 4: Arousal (normalized)
-            get_float("engagement_score", 0.5),     # 5: Engagement
-            get_float("approachability_score", 0.5), # 6: Approachability
-            get_float("mood_happy", 0.0),           # 7: Mood - Happy
-            get_float("mood_sad", 0.0),             # 8: Mood - Sad
-            get_float("mood_aggressive", 0.0),      # 9: Mood - Aggressive
-            get_float("mood_relaxed", 0.0),         # 10: Mood - Relaxed
-            get_float("mood_party", 0.0),           # 11: Mood - Party
-            get_float("voice_gender_male", 0.5),    # 12: Voice Gender (0=female, 1=male)
-            get_float("genre_ladder", 0.5),         # 13: Genre Ladder (0=acoustic, 1=electronic)
+            require_float("engagement_score"),      # 5: Engagement
+            require_float("approachability_score"), # 6: Approachability
+            require_float("mood_happy"),            # 7: Mood - Happy
+            require_float("mood_sad"),              # 8: Mood - Sad
+            require_float("mood_aggressive"),       # 9: Mood - Aggressive
+            require_float("mood_relaxed"),          # 10: Mood - Relaxed
+            require_float("mood_party"),            # 11: Mood - Party
+            require_float("voice_gender_male"),     # 12: Voice Gender (0=female, 1=male)
+            require_float("genre_ladder"),          # 13: Genre Ladder (0=pure, 1=fusion)
         ]
 
         # =====================================================================
@@ -191,7 +240,7 @@ def build_interpretable_features(
         # CRITICAL: Weighted by (1 - instrumentalness) to prevent instrumental
         #           songs from being clustered by default lyric values
         # =====================================================================
-        instrumentalness_val = get_float("instrumentalness", 0.0)
+        instrumentalness_val = require_float("instrumentalness")
         lyric_weight = 1.0 - instrumentalness_val  # Key weighting factor!
 
         lyric_scalars = [
@@ -210,34 +259,46 @@ def build_interpretable_features(
         # =====================================================================
         # THEME (1 dimension) - Semantic scale, weighted by lyric_weight
         # =====================================================================
-        theme = lyric.get("lyric_theme", "other")
+        theme = lyric.get("lyric_theme")
+        if theme is None:
+            theme = "none"  # Default for missing lyric features
         if not isinstance(theme, str):
-            theme = "other"
+            logger.warning(f"Invalid lyric_theme for track '{track_name}' ({track_id}): {theme}, using 'none'")
+            theme = "none"
         theme = theme.lower().strip()
-        theme_val = THEME_SCALE.get(theme, 0.1) * lyric_weight  # 27: Theme
+        if theme not in THEME_SCALE:
+            logger.warning(f"Unknown theme '{theme}' for track '{track_name}' ({track_id}), using 'other'")
+            theme = "other"
+        theme_val = THEME_SCALE[theme] * lyric_weight  # 27: Theme
 
         # =====================================================================
         # LANGUAGE (1 dimension) - Ordinal encoding, weighted by lyric_weight
         # =====================================================================
-        lang = lyric.get("lyric_language", "unknown")
+        lang = lyric.get("lyric_language")
+        if lang is None:
+            lang = "none"  # Default for missing lyric features
         if not isinstance(lang, str):
-            lang = "unknown"
+            logger.warning(f"Invalid lyric_language for track '{track_name}' ({track_id}): {lang}, using 'none'")
+            lang = "none"
         lang = lang.lower().strip()
-        lang_val = LANGUAGE_SCALE.get(lang, 0.14) * lyric_weight  # 28: Language
+        if lang not in LANGUAGE_SCALE:
+            logger.warning(f"Unknown language '{lang}' for track '{track_name}' ({track_id}), using 'unknown'")
+            lang = "unknown"
+        lang_val = LANGUAGE_SCALE[lang] * lyric_weight  # 28: Language
 
         # =====================================================================
         # POPULARITY (1 dimension) - Normalized Spotify popularity score
         # =====================================================================
         if popularity_data:
-            raw_pop = popularity_data.get(track["track_id"], 0)
-            norm_pop = (
-                (raw_pop - min_pop) / (max_pop - min_pop)
-                if (max_pop > min_pop)
-                else 0.5
-            )
-            norm_pop = max(0.0, min(1.0, norm_pop))
+            raw_pop = popularity_data.get(track_id, 50)  # Default to 50 if missing
         else:
-            norm_pop = 0.5  # Default to neutral if no popularity data
+            raw_pop = 50  # Default popularity
+        norm_pop = (
+            (raw_pop - min_pop) / (max_pop - min_pop)
+            if (max_pop > min_pop)
+            else 0.5
+        )
+        norm_pop = max(0.0, min(1.0, norm_pop))
 
         # =====================================================================
         # COMBINE ALL FEATURES (30 dimensions total)
@@ -250,8 +311,10 @@ def build_interpretable_features(
         # Add embedding to track dict
         track["embedding"] = embedding
 
-    logger.info(f"Built interpretable features for {len(audio_features)} tracks")
-    return audio_features
+    # Return ALL processed tracks (no skipping)
+    processed_tracks = [track for track, _ in tracks_to_process]
+    logger.info(f"Built interpretable features for {len(processed_tracks)} tracks (ALL included)")
+    return processed_tracks
 
 
 def apply_feature_weights(

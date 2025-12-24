@@ -250,8 +250,8 @@ def main():
         print(f"\n  📁 Models saved to: {MODELS_DIR}")
         print("\n  🎯 Next steps:")
         print("     1. Run: python analysis/models/list_models.py (to verify)")
-        print("     2. Run: python run_analysis.py --re-classify-audio (to extract features)")
-        print("     3. Or run full pipeline: python run_analysis.py")
+        print("     2. Run: python analysis/run_analysis.py --re-classify-audio (to extract features)")
+        print("     3. Or run full pipeline: python analysis/run_analysis.py")
 
     print("\n" + "=" * 80)
 

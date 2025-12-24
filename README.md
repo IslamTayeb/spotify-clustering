@@ -198,33 +198,33 @@ Downloads to `~/.essentia/models/` (one-time setup).
 
 ```bash
 # First run (extracts all features, ~90 minutes for 1,500 songs)
-python run_analysis.py
+python analysis/run_analysis.py
 
 # Subsequent runs (uses cache, <5 minutes)
-python run_analysis.py --use-cache
+python analysis/run_analysis.py --use-cache
 ```
 
 **Advanced: Using MERT for clustering** (optional, higher quality):
 
 ```bash
 # First run: Extract MERT embeddings (~45 min on GPU for 1,500 songs)
-python run_analysis.py --audio-embedding-backend mert
+python analysis/run_analysis.py --audio-embedding-backend mert
 
 # Subsequent runs: Use cached MERT embeddings
-python run_analysis.py --use-cache --audio-embedding-backend mert
+python analysis/run_analysis.py --use-cache --audio-embedding-backend mert
 ```
 
 **Advanced: Using E5 for lyrics** (optional, higher quality):
 
 ```bash
 # Extract E5 embeddings (~20 min on GPU for 1,500 songs)
-python run_analysis.py --use-cache --lyrics-embedding-backend e5
+python analysis/run_analysis.py --use-cache --lyrics-embedding-backend e5
 ```
 
 **Full upgrade: MERT + E5** (best quality):
 
 ```bash
-python run_analysis.py --use-cache --audio-embedding-backend mert --lyrics-embedding-backend e5 --mode combined
+python analysis/run_analysis.py --use-cache --audio-embedding-backend mert --lyrics-embedding-backend e5 --mode combined
 ```
 
 **Note**: Essentia ALWAYS runs for interpretation (genre/mood/BPM), even when using MERT for clustering. MERT/E5 create separate caches without modifying existing files.
@@ -252,7 +252,7 @@ python export/create_playlists.py
 Example:
 
 ```bash
-python run_analysis.py --use-cache --mode audio
+python analysis/run_analysis.py --use-cache --mode audio
 ```
 
 ## Outputs
@@ -264,7 +264,7 @@ After running, check the `outputs/` directory:
 - **outliers.txt** - Songs that don't fit any cluster
 - **analysis_data.pkl** - Serialized results for future use
 
-Logs are saved to `logging/analysis_YYYYMMDD_HHMMSS.log` for debugging and monitoring progress.
+Logs are saved to `analysis/logging/analysis_YYYYMMDD_HHMMSS.log` for debugging and monitoring progress.
 
 ## Project Structure
 
@@ -308,7 +308,8 @@ spotify-clustering/
 │   │   ├── outliers.txt            # Unclustered songs
 │   │   └── analysis_data.pkl       # Serialized results
 │   ├── interactive_tuner.py        # Streamlit app for parameter tuning
-│   └── interactive_interpretability.py  # Streamlit app for interpretable clustering
+│   ├── interactive_interpretability.py  # Streamlit app for interpretable clustering
+│   └── run_analysis.py             # Main pipeline orchestration script
 ├── export/                         # Spotify playlist export
 │   ├── create_playlists.py         # Create playlists from clusters
 │   ├── README.md                   # Export documentation
@@ -323,11 +324,10 @@ spotify-clustering/
 │   ├── verify_cache.py             # Verify cached features
 │   └── validate_genre_ladder.py    # Validate genre purity/fusion scores
 ├── songs/data/                     # MP3 files (gitignored)
-├── cache/                          # Feature cache (speeds up re-runs)
+├── analysis/cache/                          # Feature cache (speeds up re-runs)
 │   ├── audio_features.pkl          # Cached audio features
 │   └── lyric_features.pkl          # Cached lyric features
-├── logging/                        # Timestamped log files
-├── run_analysis.py                 # Main pipeline orchestration script
+├── analysis/logging/                        # Timestamped log files
 ├── requirements.txt                # Core analysis dependencies
 ├── .env                            # API credentials (gitignored)
 ├── .cache                          # Spotify OAuth token (gitignored)
@@ -377,13 +377,13 @@ spotify-clustering/
    - Extracts 1280-dim embeddings, 400 genre probabilities, moods, BPM, key
    - Extracts voice gender (male/female vocals) and production features
    - Computes genre ladder (entropy-based purity/fusion score)
-   - Caches results to `cache/audio_features.pkl`
+   - Caches results to `analysis/cache/audio_features.pkl`
 
 3. **Extract Lyric Features** (`analysis/pipeline/lyric_analysis.py`)
    - Processes lyric text files using sentence-transformers
    - Generates 384-dim multilingual embeddings
    - Detects language and counts words
-   - Caches results to `cache/lyric_features.pkl`
+   - Caches results to `analysis/cache/lyric_features.pkl`
 
 ### Phase 3: Clustering & Visualization
 
@@ -421,13 +421,13 @@ The pipeline uses a **dual-path architecture** for audio analysis:
 - Extracts human-readable musical attributes
 - Genre probabilities, mood scores, BPM, key, danceability
 - Used for cluster interpretation and reporting
-- Cache: `cache/audio_features.pkl` (never modified by MERT)
+- Cache: `analysis/cache/audio_features.pkl` (never modified by MERT)
 
 **Path 2: MERT (Clustering) - OPTIONAL**
 
 - Semantic audio embeddings optimized for music understanding
 - Used for clustering when `--audio-embedding-backend mert`
-- Separate cache: `cache/mert_embeddings_*.pkl`
+- Separate cache: `analysis/cache/mert_embeddings_*.pkl`
 - Passed as in-memory override without modifying Essentia cache
 
 **Why both?**
@@ -708,37 +708,37 @@ python lyrics/fetch_lyrics.py
 
 ```bash
 # Main analysis script - full pipeline
-python run_analysis.py
+python analysis/run_analysis.py
 
 # Common options:
-python run_analysis.py --use-cache              # Skip feature extraction (use cached)
-python run_analysis.py --mode audio             # Audio features only
-python run_analysis.py --mode lyrics            # Lyric features only
-python run_analysis.py --mode combined          # Both (default)
+python analysis/run_analysis.py --use-cache              # Skip feature extraction (use cached)
+python analysis/run_analysis.py --mode audio             # Audio features only
+python analysis/run_analysis.py --mode lyrics            # Lyric features only
+python analysis/run_analysis.py --mode combined          # Both (default)
 
 # Embedding backend selection:
-python run_analysis.py --audio-embedding-backend mert          # MERT: deep semantic understanding
-python run_analysis.py --audio-embedding-backend interpretable # Interpretable: 17-dim human-readable features
-python run_analysis.py --lyrics-embedding-backend e5           # E5: higher quality lyrics clustering
+python analysis/run_analysis.py --audio-embedding-backend mert          # MERT: deep semantic understanding
+python analysis/run_analysis.py --audio-embedding-backend interpretable # Interpretable: 17-dim human-readable features
+python analysis/run_analysis.py --lyrics-embedding-backend e5           # E5: higher quality lyrics clustering
 
 # Recommended for exploration (interpretable features with adjustable weights):
-python run_analysis.py --use-cache --audio-embedding-backend interpretable
+python analysis/run_analysis.py --use-cache --audio-embedding-backend interpretable
 
 # Extract GPT-based interpretable lyrics (requires OPENAI_API_KEY):
-python run_analysis.py --extract-interpretable-lyrics
+python analysis/run_analysis.py --extract-interpretable-lyrics
 # This extracts theme, language, valence, arousal, moods, etc. via GPT-4o-mini
 # Uses existing cache, only makes GPT API calls for lyrics
 # Cost: ~$0.01-0.05 depending on library size
 
 # Full interpretable pipeline (best for understanding your clusters):
-python run_analysis.py --use-cache  # First: ensure audio+lyric features cached
-python run_analysis.py --extract-interpretable-lyrics  # Then: extract GPT lyric features
+python analysis/run_analysis.py --use-cache  # First: ensure audio+lyric features cached
+python analysis/run_analysis.py --extract-interpretable-lyrics  # Then: extract GPT lyric features
 streamlit run analysis/interactive_interpretability.py  # Finally: explore interactively
 
 # Advanced options (for experimenting with clustering):
-python run_analysis.py --use-cache --algorithm birch
-python run_analysis.py --use-cache --n-clusters 8
-python run_analysis.py --use-cache --pca-components 50
+python analysis/run_analysis.py --use-cache --algorithm birch
+python analysis/run_analysis.py --use-cache --n-clusters 8
+python analysis/run_analysis.py --use-cache --pca-components 50
 
 # IMPORTANT: Always use --use-cache when experimenting with parameters
 # Feature extraction takes ~90 minutes and should only run once
@@ -792,8 +792,8 @@ streamlit run analysis/interactive_interpretability.py
 # - No separate lyric embeddings used - only interpretable features
 
 # Prerequisites:
-# 1. Run audio analysis: python run_analysis.py --use-cache
-# 2. Extract interpretable lyrics: python run_analysis.py --extract-interpretable-lyrics
+# 1. Run audio analysis: python analysis/run_analysis.py --use-cache
+# 2. Extract interpretable lyrics: python analysis/run_analysis.py --extract-interpretable-lyrics
 # 3. Launch app: streamlit run analysis/interactive_interpretability.py
 # 4. Select "Interpretability" tab → "combined" mode
 ```
@@ -829,6 +829,38 @@ python export/create_playlists.py --lyrics-only         # Only lyric cluster pla
 # - Audio: "Audio Cluster 0: genre_152 - Aggressive"
 # - Lyrics: "Lyrics Cluster 0: Style 0 (AR)"
 ```
+
+#### Playlist Export Details
+
+**Prerequisites:**
+- Spotify Developer Credentials with playlist modification permissions
+- Completed clustering analysis (`analysis/run_analysis.py`)
+- Python dependencies: `spotipy` (included in main requirements.txt)
+
+**Setup:**
+
+No changes to your `.env` file are needed. The script automatically requests `playlist-modify-public` and `playlist-modify-private` scopes. First run opens browser for authorization.
+
+**Playlist Types:**
+
+- **Audio Cluster Playlists**: Named based on dominant genre and mood (e.g., "Audio Cluster 2: genre_185 - aggressive")
+- **Lyric Cluster Playlists**: Named based on primary language and style (e.g., "Lyrics Cluster 1: Primarily PT")
+
+**Technical Details:**
+- Batch processing: Tracks added in batches of 100 (Spotify API limit)
+- Authentication: OAuth 2.0 with automatic token caching (`.cache` file)
+- Data source: `analysis/outputs/analysis_data.pkl`
+- Track URIs: Constructed as `spotify:track:{track_id}`
+
+**Troubleshooting:**
+
+*Authentication Error:* Delete `.cache` file and re-run
+
+*Missing Tracks:* Some tracks may not be added if removed from Spotify or unavailable in your region
+
+*Playlist Limit:* Spotify limits total playlists per account
+
+**Important:** Running the script multiple times creates duplicate playlists. Delete old playlists manually before re-running.
 
 ### Utilities
 
@@ -904,14 +936,14 @@ This ensures reliable matching across different systems and download tools.
   - `music_taste_report.md` - Detailed cluster analysis
   - `analysis_data.pkl` - Serialized results
   - `outliers.txt` - Unclustered songs (if any)
-- **Feature cache**: `cache/`
+- **Feature cache**: `analysis/cache/`
   - `audio_features.pkl` - Essentia audio features (~500MB for 1,500 songs)
   - `mert_embeddings_24khz_30s_cls.pkl` - MERT audio embeddings (~9MB for 1,500 songs)
   - `lyric_features.pkl` - BGE-M3 lyric embeddings + interpretable features (~50MB for 1,500 songs)
   - `lyric_features_e5.pkl` - E5 lyric embeddings (~50MB for 1,500 songs)
   - `lyric_interpretable_features.pkl` - GPT-extracted interpretable lyric features (~1MB for 1,500 songs)
 - **OAuth tokens**: `.cache` - Spotify OAuth token (gitignored)
-- **Logs**: `logging/analysis_YYYYMMDD_HHMMSS.log` - Timestamped execution logs
+- **Logs**: `analysis/logging/analysis_YYYYMMDD_HHMMSS.log` - Timestamped execution logs
 
 ### Cache Management
 
@@ -931,11 +963,11 @@ The cache system dramatically speeds up re-runs:
 python tools/verify_cache.py
 
 # Clear cache manually
-rm cache/audio_features.pkl
-rm cache/lyric_features.pkl
+rm analysis/cache/audio_features.pkl
+rm analysis/cache/lyric_features.pkl
 
 # Next run will rebuild cache
-python run_analysis.py
+python analysis/run_analysis.py
 ```
 
 ## Troubleshooting
@@ -1083,11 +1115,11 @@ python run_analysis.py
 
 ### Cache Files
 
-- `cache/audio_features.pkl` - Essentia features (~500MB for 1,500 songs)
-- `cache/mert_embeddings_24khz_30s_cls.pkl` - MERT embeddings (~9MB for 1,500 songs)
-- `cache/lyric_features.pkl` - BGE-M3 embeddings + interpretable features (~50MB for 1,500 songs)
-- `cache/lyric_features_e5.pkl` - E5 embeddings (~50MB for 1,500 songs)
-- `cache/lyric_interpretable_features.pkl` - GPT-extracted interpretable lyrics (~1MB for 1,500 songs)
+- `analysis/cache/audio_features.pkl` - Essentia features (~500MB for 1,500 songs)
+- `analysis/cache/mert_embeddings_24khz_30s_cls.pkl` - MERT embeddings (~9MB for 1,500 songs)
+- `analysis/cache/lyric_features.pkl` - BGE-M3 embeddings + interpretable features (~50MB for 1,500 songs)
+- `analysis/cache/lyric_features_e5.pkl` - E5 embeddings (~50MB for 1,500 songs)
+- `analysis/cache/lyric_interpretable_features.pkl` - GPT-extracted interpretable lyrics (~1MB for 1,500 songs)
 
 **Note**: MERT/E5/GPT caches are separate and don't modify existing cache files. GPT interpretable features are also merged into `lyric_features.pkl` for convenience.
 
@@ -1406,7 +1438,7 @@ A: No, but highly recommended:
 - MERT extraction is one-time; subsequent runs use cache
 
 **Q: Will MERT overwrite my existing cache?**
-A: No. MERT creates a separate cache (`cache/mert_embeddings_*.pkl`). Your existing `cache/audio_features.pkl` is never modified.
+A: No. MERT creates a separate cache (`analysis/cache/mert_embeddings_*.pkl`). Your existing `analysis/cache/audio_features.pkl` is never modified.
 
 **Q: What's the difference between BGE-M3 and E5 for lyrics?**
 A:
@@ -1471,7 +1503,7 @@ A: Run:
 
 ```bash
 export OPENAI_API_KEY='sk-your-key'
-python run_analysis.py --extract-interpretable-lyrics
+python analysis/run_analysis.py --extract-interpretable-lyrics
 ```
 
 This uses GPT-4o-mini to extract theme, language, valence, arousal, and other semantic features from your lyrics. Cost is ~$0.01-0.05 depending on library size.
@@ -1492,10 +1524,10 @@ A: Three steps:
 
 ```bash
 # 1. Extract audio + lyric features (if not already cached)
-python run_analysis.py --use-cache
+python analysis/run_analysis.py --use-cache
 
 # 2. Extract GPT-based interpretable lyrics
-python run_analysis.py --extract-interpretable-lyrics
+python analysis/run_analysis.py --extract-interpretable-lyrics
 
 # 3. Launch interactive app
 streamlit run analysis/interactive_interpretability.py

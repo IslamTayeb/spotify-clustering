@@ -2,7 +2,7 @@
 """Centralized configuration for music analysis pipeline.
 
 This module provides a single source of truth for all configuration settings
-used across the CLI (run_analysis.py) and Streamlit dashboard
+used across the CLI (analysis/run_analysis.py) and Streamlit dashboard
 (interactive_interpretability.py).
 """
 
@@ -27,16 +27,16 @@ PCA_COMPONENTS_MAP: Dict[str, int] = {
 
 # Default clustering parameters for Hierarchical Agglomerative Clustering (HAC)
 DEFAULT_CLUSTERING_PARAMS: Dict[str, Any] = {
-    "algorithm": "hac",
+    "clustering_algorithm": "hac",
     "n_clusters_hac": 5,
     "linkage_method": "ward",
 }
 
 # Default UMAP parameters for dimensionality reduction to 3D
 DEFAULT_UMAP_PARAMS: Dict[str, Any] = {
-    "n_neighbors": 20,
-    "min_dist": 0.2,
-    "n_components": 3,
+    "umap_n_neighbors": 20,
+    "umap_min_dist": 0.2,
+    "umap_n_components": 3,
 }
 
 
@@ -62,14 +62,39 @@ THEME_SCALE: Dict[str, float] = {
 
 # Language scale for interpretable lyric features
 # Maps detected language to ordinal encoding
+# Language family buckets - grouped by musical tradition similarity
 LANGUAGE_SCALE: Dict[str, float] = {
+    # English (standalone - dominant Western pop/hip-hop baseline)
     "english": 1.0,
-    "spanish": 0.86,
-    "french": 0.71,
-    "arabic": 0.57,
-    "korean": 0.43,
-    "japanese": 0.29,
-    "unknown": 0.14,
+    # Romance (Latin pop, reggaeton, shared production)
+    "spanish": 0.85,
+    "portuguese": 0.85,
+    "french": 0.85,
+    # Germanic (European pop traditions)
+    "german": 0.70,
+    "swedish": 0.70,
+    "norwegian": 0.70,
+    # Slavic (Eastern European traditions)
+    "russian": 0.55,
+    "ukrainian": 0.55,
+    "serbian": 0.55,
+    "czech": 0.55,
+    # Middle Eastern (maqam scales, shared instrumentation)
+    "arabic": 0.40,
+    "hebrew": 0.40,
+    "turkish": 0.40,
+    # South Asian
+    "punjabi": 0.30,
+    # East Asian (K-pop/J-pop/C-pop aesthetics)
+    "korean": 0.20,
+    "japanese": 0.20,
+    "chinese": 0.20,
+    "vietnamese": 0.20,
+    # African
+    "luganda": 0.10,
+    # Other/Unknown
+    "multilingual": 0.0,
+    "unknown": 0.0,
     "none": 0.0,
 }
 
@@ -80,11 +105,11 @@ LANGUAGE_SCALE: Dict[str, float] = {
 
 # Feature cache file paths
 CACHE_PATHS: Dict[str, str] = {
-    "audio": "cache/audio_features.pkl",
-    "lyrics_bge": "cache/lyric_features.pkl",          # Legacy default (bge-m3)
-    "lyrics_e5": "cache/lyric_features_e5.pkl",        # Higher quality (E5)
-    "mert": "cache/mert_embeddings_24khz_30s_cls.pkl",
-    "lyric_interpretable": "cache/lyric_interpretable_features.pkl",
+    "audio": "analysis/cache/audio_features.pkl",
+    "lyrics_bge": "analysis/cache/lyric_features.pkl",          # Legacy default (bge-m3)
+    "lyrics_e5": "analysis/cache/lyric_features_e5.pkl",        # Higher quality (E5)
+    "mert": "analysis/cache/mert_embeddings_24khz_30s_cls.pkl",
+    "lyric_interpretable": "analysis/cache/lyric_interpretable_features.pkl",
 }
 
 
@@ -103,4 +128,4 @@ def get_lyric_cache_path(backend: str) -> str:
         return CACHE_PATHS["lyrics_e5"]
     else:
         # Custom backend - generate cache path
-        return f"cache/lyric_features_{backend}.pkl"
+        return f"analysis/cache/lyric_features_{backend}.pkl"

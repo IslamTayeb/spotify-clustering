@@ -86,7 +86,7 @@ def upgrade_audio_cache_if_needed(audio_features: List[Dict[str, Any]]) -> List[
         audio_features = add_genre_ladder_to_features(audio_features)
 
         # Save updated cache
-        save_to_cache(audio_features, "cache/audio_features.pkl", "audio")
+        save_to_cache(audio_features, "analysis/cache/audio_features.pkl", "audio")
         logger.info("✓ Updated audio cache with genre_ladder")
 
     return audio_features
@@ -107,7 +107,7 @@ def load_audio_features(
     """
     from analysis.pipeline.audio_analysis import extract_audio_features, update_cached_features
 
-    cache_path = "cache/audio_features.pkl"
+    cache_path = "analysis/cache/audio_features.pkl"
 
     # Re-classify existing cache
     if re_classify and Path(cache_path).exists():
@@ -154,8 +154,42 @@ def load_lyric_features(
     return extract_lyric_features(backend=backend, cache_path=cache_path)
 
 
+def load_interpretable_lyric_features(
+    fresh: bool = False
+) -> List[Dict[str, Any]]:
+    """Load GPT-extracted interpretable lyric features.
+
+    These are the semantic features extracted by GPT (lyric_valence, lyric_arousal,
+    lyric_theme, lyric_language, etc.) stored separately from embedding-based features.
+
+    Args:
+        fresh: If True, force re-extraction (ignore cache)
+
+    Returns:
+        List of interpretable lyric feature dicts
+
+    Raises:
+        FileNotFoundError: If cache doesn't exist (run --extract-interpretable-lyrics first)
+    """
+    from analysis.pipeline.config import CACHE_PATHS
+
+    cache_path = CACHE_PATHS["lyric_interpretable"]
+
+    # Load from cache
+    if not fresh:
+        cached = load_from_cache(cache_path, "interpretable lyric (GPT)")
+        if cached:
+            return cached
+
+    # Cache doesn't exist - user needs to extract first
+    raise FileNotFoundError(
+        f"Interpretable lyric features not found at {cache_path}.\n"
+        "Run 'python analysis/run_analysis.py --extract-interpretable-lyrics' first to extract GPT features."
+    )
+
+
 def load_mert_embeddings(
-    cache_path: str = "cache/mert_embeddings_24khz_30s_cls.pkl",
+    cache_path: str = "analysis/cache/mert_embeddings_24khz_30s_cls.pkl",
     fresh: bool = False
 ) -> List[Dict[str, Any]]:
     """Load MERT audio embeddings with smart caching.

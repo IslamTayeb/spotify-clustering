@@ -26,6 +26,45 @@ from sklearn.preprocessing import StandardScaler
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Names for all 30 embedding dimensions (used for clustering)
+# These match the structure in interpretable_features.py
+EMBEDDING_DIM_NAMES = [
+    # Audio features (14 dims: indices 0-13)
+    "emb_bpm",                    # 0: BPM (normalized to [0,1])
+    "emb_danceability",           # 1: Danceability
+    "emb_instrumentalness",       # 2: Instrumentalness
+    "emb_valence",                # 3: Valence (normalized to [0,1])
+    "emb_arousal",                # 4: Arousal (normalized to [0,1])
+    "emb_engagement",             # 5: Engagement score
+    "emb_approachability",        # 6: Approachability score
+    "emb_mood_happy",             # 7: Mood - Happy
+    "emb_mood_sad",               # 8: Mood - Sad
+    "emb_mood_aggressive",        # 9: Mood - Aggressive
+    "emb_mood_relaxed",           # 10: Mood - Relaxed
+    "emb_mood_party",             # 11: Mood - Party
+    "emb_voice_gender",           # 12: Voice Gender (0=female, 1=male)
+    "emb_genre_ladder",           # 13: Genre Ladder (0=acoustic, 1=electronic)
+    # Key features (3 dims: indices 14-16)
+    "emb_key_sin",                # 14: Key pitch (sin component)
+    "emb_key_cos",                # 15: Key pitch (cos component)
+    "emb_key_scale",              # 16: Key scale (0=minor, 0.33=major)
+    # Lyric features (10 dims: indices 17-26) - weighted by (1-instrumentalness)
+    "emb_lyric_valence",          # 17: Lyric valence
+    "emb_lyric_arousal",          # 18: Lyric arousal
+    "emb_lyric_mood_happy",       # 19: Lyric mood - Happy
+    "emb_lyric_mood_sad",         # 20: Lyric mood - Sad
+    "emb_lyric_mood_aggressive",  # 21: Lyric mood - Aggressive
+    "emb_lyric_mood_relaxed",     # 22: Lyric mood - Relaxed
+    "emb_lyric_explicit",         # 23: Explicit content
+    "emb_lyric_narrative",        # 24: Narrative style
+    "emb_lyric_vocabulary",       # 25: Vocabulary richness
+    "emb_lyric_repetition",       # 26: Repetition score
+    # Theme, Language, Popularity (3 dims: indices 27-29)
+    "emb_theme",                  # 27: Theme (ordinal scale)
+    "emb_language",               # 28: Language (ordinal scale)
+    "emb_popularity",             # 29: Popularity (normalized to [0,1])
+]
+
 
 def load_temporal_metadata(saved_tracks_path: str = 'spotify/saved_tracks.json') -> Dict:
     """Load temporal metadata from saved_tracks.json and return as dict keyed by track_id"""
@@ -78,17 +117,39 @@ def prepare_features(
     """
     # Use override embeddings if provided, else use default
     audio_source = audio_embeddings_override if audio_embeddings_override else audio_features
-    lyric_source = lyric_embeddings_override if lyric_embeddings_override else lyric_features
 
+    # Extract audio embeddings (always needed)
     audio_emb = np.vstack([f['embedding'] for f in audio_source])
-    lyric_emb = np.vstack([f['embedding'] for f in lyric_source])
-
     logger.info(f"Raw Audio embedding shape: {audio_emb.shape}")
-    logger.info(f"Raw Lyric embedding shape: {lyric_emb.shape}")
 
+    # For interpretable mode (n_pca_components=None), slice the 30-dim vector by mode:
+    # - audio: dims 0-16 (14 audio + 3 key = 17 dims)
+    # - lyrics: dims 17-28 (10 lyric + 1 theme + 1 language = 12 dims)
+    # - combined: all 30 dims
+    if n_pca_components is None:
+        if mode == 'audio':
+            # Audio features only: BPM, danceability, instrumentalness, valence, arousal,
+            # engagement, approachability, moods (5), voice gender, genre ladder, key (3)
+            features = audio_emb[:, 0:17]
+            logger.info(f"Using interpretable AUDIO features ({features.shape[1]} dims)")
+        elif mode == 'lyrics':
+            # Lyric features only: lyric valence, arousal, moods (4), explicit, narrative,
+            # vocabulary, repetition, theme, language
+            features = audio_emb[:, 17:29]
+            logger.info(f"Using interpretable LYRIC features ({features.shape[1]} dims)")
+        else:  # combined
+            # All 30 dims
+            features = audio_emb
+            logger.info(f"Using interpretable COMBINED features ({features.shape[1]} dims)")
+
+        features_norm = StandardScaler().fit_transform(features)
+        return features_norm, list(range(len(audio_source)))
+
+    # Audio mode: only use audio embeddings (no lyric embeddings needed)
     if mode == 'audio':
-        # Standardize then PCA
+        # Standardize
         audio_norm = StandardScaler().fit_transform(audio_emb)
+
         n_components = min(audio_norm.shape[0], audio_norm.shape[1], n_pca_components)
 
         logger.info(f"Reducing Audio to {n_components} components via PCA...")
@@ -98,12 +159,23 @@ def prepare_features(
 
         return audio_reduced, list(range(len(audio_features)))
 
-    elif mode == 'lyrics':
-        has_lyrics = np.array([f['has_lyrics'] for f in lyric_features])
+    # For lyrics and combined modes, extract lyric embeddings
+    lyric_source = lyric_embeddings_override if lyric_embeddings_override else lyric_features
+    lyric_emb = np.vstack([f['embedding'] for f in lyric_source])
+    logger.info(f"Raw Lyric embedding shape: {lyric_emb.shape}")
+
+    if mode == 'lyrics':
+        has_lyrics = np.array([f.get('has_lyrics', True) for f in lyric_features])
         valid_indices = np.where(has_lyrics)[0].tolist()
 
-        # Standardize then PCA
+        # Standardize
         lyric_norm = StandardScaler().fit_transform(lyric_emb[has_lyrics])
+
+        # Skip PCA if n_pca_components is None (e.g., interpretable mode)
+        if n_pca_components is None:
+            logger.info(f"Using raw lyric features without PCA ({lyric_norm.shape[1]} dims)")
+            return lyric_norm, valid_indices
+
         n_components = min(lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components)
 
         logger.info(f"Reducing Lyrics to {n_components} components via PCA...")
@@ -117,6 +189,13 @@ def prepare_features(
         # Standardize first
         audio_norm = StandardScaler().fit_transform(audio_emb)
         lyric_norm = StandardScaler().fit_transform(lyric_emb)
+
+        # Skip PCA if n_pca_components is None (e.g., interpretable mode)
+        if n_pca_components is None:
+            # For interpretable mode, audio_emb already contains combined features
+            # No need to concatenate with lyrics - just use audio directly
+            logger.info(f"Using interpretable features without PCA ({audio_norm.shape[1]} dims)")
+            return audio_norm, list(range(len(audio_features)))
 
         # PCA Reduction to balance modalities
         n_components_audio = min(audio_norm.shape[0], audio_norm.shape[1], n_pca_components)
@@ -348,30 +427,69 @@ def run_clustering_pipeline(
     audio_by_id = {f['track_id']: f for f in audio_features}
     lyric_by_id = {f['track_id']: f for f in lyric_features}
 
-    common_ids = set(audio_by_id.keys()) & set(lyric_by_id.keys())
-    logger.info(f"Found {len(common_ids)} tracks with both audio and lyric features")
     logger.info(f"Audio features: {len(audio_features)}, Lyric features: {len(lyric_features)}")
 
-    # For combined mode, filter out vocal songs without lyrics
-    # Note: Instrumental songs (instrumentalness >= 0.5) are kept even without lyrics
-    #       Non-instrumental songs (vocal) without lyrics are filtered out
-    if mode == 'combined':
+    # Mode-specific track selection
+    # - audio: ALL tracks (use audio dims 0-16 of interpretable vector)
+    # - lyrics: only tracks with actual lyrics (use lyric dims 17-28)
+    # - combined: ALL tracks (missing lyrics get 0s, weighted by 1-instrumentalness)
+
+    if mode == 'audio':
+        # Audio mode: use all audio features
+        selected_ids = set(audio_by_id.keys())
+        logger.info(f"Audio mode: using all {len(selected_ids)} tracks")
+    elif mode == 'combined':
+        # Combined mode: instrumental + vocal with lyrics
+        # Skip vocal songs (instrumentalness < 0.5) that don't have lyrics
+        selected_ids = set()
+        skipped_vocal_no_lyrics = 0
+        for tid in audio_by_id.keys():
+            audio = audio_by_id[tid]
+            lyric = lyric_by_id.get(tid, {})
+
+            is_instrumental = audio.get('instrumentalness', 0.5) >= 0.5
+            lyric_lang = lyric.get('lyric_language', 'none')
+            has_lyrics = lyric_lang not in ('none', None)
+
+            # Include if: instrumental OR (vocal AND has lyrics)
+            if is_instrumental or has_lyrics:
+                selected_ids.add(tid)
+            else:
+                skipped_vocal_no_lyrics += 1
+
+        logger.info(f"Combined mode: {len(selected_ids)} tracks (skipped {skipped_vocal_no_lyrics} vocal without lyrics)")
+    else:  # lyrics mode
+        # Lyrics mode: only tracks with actual lyric features (non-zero lyric dims)
+        # Exclude instrumental songs and songs without lyric data
+        common_ids = set(audio_by_id.keys()) & set(lyric_by_id.keys())
+        logger.info(f"Found {len(common_ids)} tracks with both audio and lyric features")
+
         filtered_ids = set()
         for tid in common_ids:
             audio = audio_by_id[tid]
             lyric = lyric_by_id[tid]
-            # Exclude if song is vocal (instrumentalness < 0.5) but has no lyrics
-            # Keep instrumental songs (instrumentalness >= 0.5) even without lyrics
-            if audio.get('instrumentalness', 0.5) < 0.5 and not lyric.get('has_lyrics', False):
+
+            # Check if song has lyrics:
+            # - GPT interpretable format: lyric_language != 'none'
+            lyric_lang = lyric.get('lyric_language', 'none')
+            has_lyrics = lyric_lang not in ('none', None)
+
+            is_instrumental = audio.get('instrumentalness', 0.5) >= 0.5
+
+            # Lyrics mode: only include tracks with actual lyrics, exclude instrumental
+            if not has_lyrics or is_instrumental:
                 filtered_ids.add(tid)
 
         if filtered_ids:
-            logger.info(f"Filtering out {len(filtered_ids)} vocal songs without lyrics in combined mode")
+            logger.info(f"Filtering out {len(filtered_ids)} tracks in lyrics mode (instrumental or no lyrics)")
             common_ids = common_ids - filtered_ids
-            logger.info(f"Remaining tracks for combined analysis: {len(common_ids)}")
 
-    aligned_audio = [audio_by_id[tid] for tid in sorted(common_ids)]
-    aligned_lyrics = [lyric_by_id[tid] for tid in sorted(common_ids)]
+        selected_ids = common_ids
+        logger.info(f"Remaining tracks for lyrics analysis: {len(selected_ids)}")
+
+    aligned_audio = [audio_by_id[tid] for tid in sorted(selected_ids)]
+    # For audio mode, create empty lyric placeholders (not used but needed for alignment)
+    aligned_lyrics = [lyric_by_id.get(tid, {'track_id': tid}) for tid in sorted(selected_ids)]
 
     # Align override embeddings if provided
     aligned_audio_override = None
@@ -379,12 +497,12 @@ def run_clustering_pipeline(
 
     if audio_embeddings_override:
         audio_override_by_id = {f['track_id']: f for f in audio_embeddings_override}
-        aligned_audio_override = [audio_override_by_id[tid] for tid in sorted(common_ids) if tid in audio_override_by_id]
-        logger.info(f"Using MERT embeddings for audio clustering ({len(aligned_audio_override)} tracks)")
+        aligned_audio_override = [audio_override_by_id[tid] for tid in sorted(selected_ids) if tid in audio_override_by_id]
+        logger.info(f"Using override embeddings for audio clustering ({len(aligned_audio_override)} tracks)")
 
     if lyric_embeddings_override:
         lyric_override_by_id = {f['track_id']: f for f in lyric_embeddings_override}
-        aligned_lyric_override = [lyric_override_by_id[tid] for tid in sorted(common_ids) if tid in lyric_override_by_id]
+        aligned_lyric_override = [lyric_override_by_id[tid] for tid in sorted(selected_ids) if tid in lyric_override_by_id]
         logger.info(f"Using E5 embeddings for lyric clustering ({len(aligned_lyric_override)} tracks)")
 
     # Step 1: Prepare PCA-reduced features for CLUSTERING
@@ -502,8 +620,9 @@ def run_clustering_pipeline(
             'danceability': audio_f['danceability'],
             'instrumentalness': audio_f['instrumentalness'],
             'is_vocal': audio_f['instrumentalness'] < 0.5,
-            'language': lyric_f['language'],
-            'has_lyrics': lyric_f['has_lyrics'],
+            # Support both old-style (language, has_lyrics) and GPT interpretable (lyric_language)
+            'language': lyric_f.get('language', lyric_f.get('lyric_language', 'unknown')),
+            'has_lyrics': lyric_f.get('has_lyrics', lyric_f.get('lyric_language', 'none') != 'none'),
             # Lyric Features (Tier 1: Parallel emotional dimensions)
             'lyric_valence': lyric_f.get('lyric_valence', 0.5),
             'lyric_arousal': lyric_f.get('lyric_arousal', 0.5),
@@ -519,6 +638,14 @@ def run_clustering_pipeline(
             'lyric_vocabulary_richness': lyric_f.get('lyric_vocabulary_richness', 0),
             'lyric_repetition': lyric_f.get('lyric_repetition', 0)
         })
+
+        # Add all 30 embedding dimensions if available (for interpretable mode)
+        # This allows inspection of exactly what values are used for clustering
+        if 'embedding' in audio_f and audio_f['embedding'] is not None:
+            emb = audio_f['embedding']
+            if len(emb) == 30:
+                for dim_idx, dim_name in enumerate(EMBEDDING_DIM_NAMES):
+                    df_data[-1][dim_name] = float(emb[dim_idx])
 
     df = pd.DataFrame(df_data)
 
@@ -592,9 +719,9 @@ def run_clustering_pipeline(
 if __name__ == '__main__':
     import pickle
 
-    with open('cache/audio_features.pkl', 'rb') as f:
+    with open('analysis/cache/audio_features.pkl', 'rb') as f:
         audio_features = pickle.load(f)
-    with open('cache/lyric_features.pkl', 'rb') as f:
+    with open('analysis/cache/lyric_features.pkl', 'rb') as f:
         lyric_features = pickle.load(f)
 
     results = run_clustering_pipeline(audio_features, lyric_features)

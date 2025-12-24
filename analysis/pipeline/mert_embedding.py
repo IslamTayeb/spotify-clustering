@@ -188,7 +188,7 @@ class MERTEmbeddingExtractor:
 
 def extract_mert_embeddings(
     master_index_path: str = 'spotify/master_index.json',
-    cache_path: str = 'cache/mert_embeddings_24khz_30s_cls.pkl',
+    cache_path: str = 'analysis/cache/mert_embeddings_24khz_30s_cls.pkl',
     batch_size: int = 8,
     save_interval: int = 50,
     use_cache: bool = True,

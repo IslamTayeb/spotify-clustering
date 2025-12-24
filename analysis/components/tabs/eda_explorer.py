@@ -26,52 +26,40 @@ def render_eda_explorer(df: pd.DataFrame):
     # Vector Analysis Section
     with st.expander("🧮 Interpretable Embedding Features (30 dimensions)", expanded=True):
         st.subheader("Feature Vector Analysis - Clustering Features")
-        st.caption("These 30 normalized features are used for clustering (not raw dataframe columns)")
+        st.caption("These 30 normalized features are the EXACT values used for clustering")
 
         # IMPORTANT: This section explains the interpretable vector structure
-        # The actual 30-dim embedding is stored as numpy array, not as separate columns
         st.info(
             "**Vector Structure (30 dimensions):**\n\n"
-            "- Audio features (14): BPM, danceability, instrumentalness, valence, arousal, "
+            "- **Audio (14):** BPM, danceability, instrumentalness, valence, arousal, "
             "engagement, approachability, moods (5), voice gender, genre ladder\n"
-            "- Key features (3): Circular encoding (sin/cos) + major/minor scale\n"
-            "- Lyric features (10): valence, arousal, moods (4), explicit, narrative, vocabulary, repetition\n"
-            "- Theme (1): Semantic scale (introspective → energetic)\n"
-            "- Language (1): Ordinal encoding\n"
-            "- Popularity (1): Spotify popularity normalized to [0,1]\n\n"
-            "All values normalized to [0,1]. Lyric features weighted by (1 - instrumentalness)."
+            "- **Key (3):** Circular encoding (sin/cos) + major/minor scale (weighted 0.33)\n"
+            "- **Lyrics (10):** valence, arousal, moods (4), explicit, narrative, vocabulary, repetition\n"
+            "- **Theme (1):** Semantic scale (0=none → 1=party)\n"
+            "- **Language (1):** Ordinal encoding (0=none → 1=english)\n"
+            "- **Popularity (1):** Spotify popularity normalized to [0,1]\n\n"
+            "All values in [0,1]. Lyric features weighted by (1 - instrumentalness)."
         )
 
-        # Try to identify which columns represent the embedding features
-        # These are the ACTUAL features used in clustering (normalized)
-        embedding_feature_cols = [
-            col for col in df.columns
-            if col in [
-                # Core audio (14 dims - normalized in embedding)
-                'danceability', 'instrumentalness', 'engagement_score', 'approachability_score',
-                'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
-                'voice_gender_male', 'voice_gender_female', 'genre_ladder',
-                # Lyric features (10 dims - normalized in embedding)
-                'lyric_valence', 'lyric_arousal',
-                'lyric_mood_happy', 'lyric_mood_sad', 'lyric_mood_aggressive', 'lyric_mood_relaxed',
-                'lyric_explicit', 'lyric_narrative', 'lyric_vocabulary_richness', 'lyric_repetition',
-                # Note: BPM, valence, arousal are normalized in the embedding but stored raw in dataframe
-                # Note: Theme and language are ordinal/categorical, popularity now in embedding
-            ]
-        ]
+        # Look for emb_* columns (the actual 30-dim embedding values)
+        embedding_feature_cols = [col for col in df.columns if col.startswith("emb_")]
 
         if not embedding_feature_cols:
-            st.warning("No embedding feature columns found in dataframe")
+            st.warning(
+                "No embedding columns (emb_*) found in dataframe. "
+                "This data may have been generated before embedding columns were added. "
+                "Re-run the analysis pipeline to include all 30 dimensions."
+            )
         else:
             # 1. Overview Metrics
             st.markdown("### 📊 Feature Statistics")
-            st.caption(f"Analyzing {len(embedding_feature_cols)} features available in dataframe (subset of 30-dim vector)")
+            st.caption(f"Analyzing all {len(embedding_feature_cols)} embedding dimensions used for clustering")
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Features in Dataframe", len(embedding_feature_cols))
-                st.caption("(Subset of 30 embedding dims)")
+                st.metric("Embedding Dimensions", len(embedding_feature_cols))
+                st.caption("(All clustering features)" if len(embedding_feature_cols) == 30 else f"(Expected 30, got {len(embedding_feature_cols)})")
 
             with col2:
                 # Calculate average vector magnitude for available features

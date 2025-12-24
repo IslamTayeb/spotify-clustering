@@ -72,7 +72,7 @@ REQUIRED_FIELDS = {
 }
 
 
-def verify_cache(cache_path='cache/audio_features.pkl'):
+def verify_cache(cache_path='analysis/cache/audio_features.pkl'):
     """Verify all tracks have all required fields"""
     if not Path(cache_path).exists():
         print(f"❌ Cache file not found: {cache_path}")
@@ -236,7 +236,7 @@ def verify_cache(cache_path='cache/audio_features.pkl'):
         print("💡 SOLUTION")
         print("=" * 80)
         print("\n  Run this command to extract all missing features:")
-        print("  python run_analysis.py --re-classify-audio")
+        print("  python analysis/run_analysis.py --re-classify-audio")
         print("\n  This will:")
         print("  - Load your existing cache")
         print("  - Detect all tracks missing features")

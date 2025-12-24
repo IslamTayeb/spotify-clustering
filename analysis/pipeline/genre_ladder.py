@@ -29,7 +29,7 @@ def load_genre_labels(model_name: str = "discogs400") -> List[str]:
     """Load genre labels for a specific model."""
     if model_name == "discogs400":
         filepath = (
-            Path(__file__).parent.parent / "data" / "genre_discogs400_labels.json"
+            Path(__file__).parent.parent / "labels" / "genre_discogs400_labels.json"
         )
         if filepath.exists():
             with open(filepath, "r") as f:

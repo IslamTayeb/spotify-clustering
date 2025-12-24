@@ -49,17 +49,17 @@ def find_pca_for_variance(features, target_variance=0.75, mode_name=""):
 
 def main():
     # Load cached features
-    audio_path = Path("cache/audio_features.pkl")
-    lyric_path = Path("cache/lyric_features.pkl")
+    audio_path = Path("analysis/cache/audio_features.pkl")
+    lyric_path = Path("analysis/cache/lyric_features.pkl")
 
     if not audio_path.exists():
-        print("Error: cache/audio_features.pkl not found")
-        print("Run: python run_analysis.py first to generate cache")
+        print("Error: analysis/cache/audio_features.pkl not found")
+        print("Run: python analysis/run_analysis.py first to generate cache")
         return
 
     if not lyric_path.exists():
-        print("Error: cache/lyric_features.pkl not found")
-        print("Run: python run_analysis.py first to generate cache")
+        print("Error: analysis/cache/lyric_features.pkl not found")
+        print("Run: python analysis/run_analysis.py first to generate cache")
         return
 
     print("=" * 70)
@@ -133,7 +133,7 @@ def main():
     print(f"                       then concatenated. Audio will explain {audio_combined_var*100:.1f}%,")
     print(f"                       lyrics will explain {lyric_combined_var*100:.1f}%)")
 
-    print("\nUpdate run_analysis.py line 157 with appropriate value based on mode.")
+    print("\nUpdate analysis/run_analysis.py line 157 with appropriate value based on mode.")
     print("For combined mode, use the higher of the two individual requirements.")
 
     # Suggest specific value for combined mode

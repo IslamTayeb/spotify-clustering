@@ -16,7 +16,7 @@ import pandas as pd
 from pathlib import Path
 
 
-def load_audio_features(cache_path="cache/audio_features.pkl"):
+def load_audio_features(cache_path="analysis/cache/audio_features.pkl"):
     """Load audio features from cache."""
     if not Path(cache_path).exists():
         print(f"Error: Cache file not found: {cache_path}")
@@ -59,7 +59,7 @@ def validate_genre_ladder(features):
     if len(ladder_values) == 0:
         print("\n⚠️  No genre_ladder values found!")
         print(
-            "   Run: python run_analysis.py --audio-embedding-backend interpretable --use-cache"
+            "   Run: python analysis/run_analysis.py --audio-embedding-backend interpretable --use-cache"
         )
         return None
 
