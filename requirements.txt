@@ -3,6 +3,7 @@ langdetect==1.0.9
 librosa>=0.10.0
 lyricsgenius==3.7.5
 numpy==2.4.0
+openai>=1.0.0
 pandas==2.3.3
 plotly==6.5.0
 python-dotenv==1.2.1

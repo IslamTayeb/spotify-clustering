@@ -292,8 +292,13 @@ class AudioFeatureExtractor:
             if not self.voice_gender_model:
                 raise RuntimeError("Voice gender model not loaded - cannot extract features")
             gender_probs = self.voice_gender_model(embeddings).mean(axis=0)
-            voice_gender_female = float(gender_probs[0])
-            voice_gender_male = float(gender_probs[1])
+            # For instrumental songs, set both to 0.0 (no voice present)
+            if instrumentalness >= 0.5:
+                voice_gender_female = 0.0
+                voice_gender_male = 0.0
+            else:
+                voice_gender_female = float(gender_probs[0])
+                voice_gender_male = float(gender_probs[1])
 
             # NEW (2024): Timbre extraction (bright vs dark)
             if not self.timbre_model:
@@ -573,8 +578,14 @@ def update_cached_features(cache_path: str = 'cache/audio_features.pkl') -> List
                 if not extractor.voice_gender_model:
                     raise RuntimeError("Voice gender model not loaded - cannot extract features")
                 gender_probs = extractor.voice_gender_model(embeddings).mean(axis=0)
-                feature['voice_gender_female'] = float(gender_probs[0])
-                feature['voice_gender_male'] = float(gender_probs[1])
+                # For instrumental songs, set both to 0.0 (no voice present)
+                instrumentalness = feature.get('instrumentalness', 0.5)
+                if instrumentalness >= 0.5:
+                    feature['voice_gender_female'] = 0.0
+                    feature['voice_gender_male'] = 0.0
+                else:
+                    feature['voice_gender_female'] = float(gender_probs[0])
+                    feature['voice_gender_male'] = float(gender_probs[1])
 
             # 10. NEW (2024): Timbre
             if 'timbre_bright' not in feature or 'timbre_dark' not in feature:

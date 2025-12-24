@@ -255,6 +255,8 @@ def extract_lyric_features(
     features = []
 
     # Process tracks without lyrics (fast - just add zero vectors)
+    # This includes both instrumental songs (valid, kept in combined mode)
+    # and vocal songs without lyrics (will be filtered out in combined mode)
     for track in tracks_without_lyrics:
         features.append({
             'track_id': track['track_id'],
@@ -266,7 +268,21 @@ def extract_lyric_features(
             'language': 'unknown',
             'word_count': 0,
             'has_lyrics': False,
-            'model_backend': backend
+            'model_backend': backend,
+            # Zero interpretable features for tracks without lyrics
+            # (applies to both instrumental and vocal songs without lyrics)
+            'lyric_valence': 0.0,
+            'lyric_arousal': 0.0,
+            'lyric_mood_happy': 0.0,
+            'lyric_mood_sad': 0.0,
+            'lyric_mood_aggressive': 0.0,
+            'lyric_mood_relaxed': 0.0,
+            'lyric_explicit': 0.0,
+            'lyric_narrative': 0.0,
+            'lyric_theme': 'none',
+            'lyric_language': 'none',
+            'lyric_vocabulary_richness': 0.0,
+            'lyric_repetition': 0.0
         })
 
     # Batch process tracks with lyrics using the model
@@ -284,9 +300,30 @@ def extract_lyric_features(
         normalize_embeddings=True  # L2 normalization for cosine distance
     )
 
-    # Combine embeddings with metadata
+    # Extract interpretable features (GPT + local)
+    logger.info("Extracting interpretable lyric features...")
+    try:
+        try:
+            from .lyric_features import batch_extract_interpretable_features
+        except ImportError:
+            from analysis.pipeline.lyric_features import batch_extract_interpretable_features
+
+        interpretable_features = batch_extract_interpretable_features(
+            tracks_with_lyrics,
+            lyrics_texts,
+            cache_path='cache/lyric_interpretable_features.pkl',
+            use_cache=True
+        )
+
+        # Create lookup by track_id
+        interpretable_by_id = {f['track_id']: f for f in interpretable_features}
+    except Exception as e:
+        logger.warning(f"Could not extract interpretable features: {e}")
+        interpretable_by_id = {}
+
+    # Combine embeddings with metadata and interpretable features
     for track, embedding, metadata in zip(tracks_with_lyrics, embeddings, lyrics_metadata):
-        features.append({
+        feature_dict = {
             'track_id': track['track_id'],
             'track_name': track['track_name'],
             'artist': track['artist'],
@@ -297,7 +334,20 @@ def extract_lyric_features(
             'word_count': metadata['word_count'],
             'has_lyrics': True,
             'model_backend': backend  # Track which model was used
-        })
+        }
+
+        # Merge interpretable features if available
+        if track['track_id'] in interpretable_by_id:
+            interpretable = interpretable_by_id[track['track_id']]
+            # Add all interpretable features (excluding track metadata)
+            for key in ['lyric_valence', 'lyric_arousal', 'lyric_mood_happy', 'lyric_mood_sad',
+                       'lyric_mood_aggressive', 'lyric_mood_relaxed', 'lyric_explicit',
+                       'lyric_narrative', 'lyric_theme', 'lyric_language',
+                       'lyric_vocabulary_richness', 'lyric_repetition']:
+                if key in interpretable:
+                    feature_dict[key] = interpretable[key]
+
+        features.append(feature_dict)
 
     # Save cache
     cache_file.parent.mkdir(parents=True, exist_ok=True)

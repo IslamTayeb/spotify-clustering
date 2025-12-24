@@ -10,6 +10,8 @@ import pickle
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from analysis.pipeline.audio_analysis import (
     extract_audio_features,
     update_cached_features,
@@ -21,6 +23,9 @@ from analysis.pipeline.visualization import (
     create_combined_map,
     generate_report,
 )
+
+# Load .env from project root (after imports, before main)
+load_dotenv()
 
 
 def setup_logging():
@@ -90,6 +95,12 @@ def main():
         default="cache/mert_embeddings_24khz_30s_cls.pkl",
         help="Path to MERT embeddings cache (default: cache/mert_embeddings_24khz_30s_cls.pkl)",
     )
+    parser.add_argument(
+        "--extract-interpretable-lyrics",
+        action="store_true",
+        help="Extract interpretable lyric features via GPT-5-mini (requires OPENAI_API_KEY). "
+        "Uses cached audio/lyric features, only extracts GPT features, then exits.",
+    )
     args = parser.parse_args()
 
     logger = setup_logging()
@@ -101,6 +112,138 @@ def main():
     print("=" * 60)
     print("MUSIC TASTE ANALYSIS PIPELINE")
     print("=" * 60)
+
+    # Handle --extract-interpretable-lyrics early exit
+    if args.extract_interpretable_lyrics:
+        import os
+
+        if not os.getenv("OPENAI_API_KEY"):
+            print("\n❌ ERROR: OPENAI_API_KEY not set!")
+            print("Set it with: export OPENAI_API_KEY='sk-your-key'")
+            return
+
+        lyric_cache = Path("cache/lyric_features.pkl")
+        if not lyric_cache.exists():
+            print(f"\n❌ ERROR: {lyric_cache} not found!")
+            print("Run the main pipeline first: python run_analysis.py --use-cache")
+            return
+
+        print("\n[INTERPRETABLE LYRICS EXTRACTION]")
+        logger.info("Extracting interpretable lyric features via GPT-5-mini")
+
+        # Load existing lyric features
+        print("\n[1/3] Loading existing lyric features...")
+        with open(lyric_cache, "rb") as f:
+            lyric_features = pickle.load(f)
+
+        tracks_with_lyrics = [f for f in lyric_features if f.get("has_lyrics", False)]
+        print(f"  Found {len(tracks_with_lyrics)} tracks with lyrics")
+
+        # Load lyrics texts
+        print("\n[2/3] Loading lyrics text...")
+        lyrics_dir = Path("lyrics/temp")
+        tracks_for_extraction = []
+        lyrics_texts = []
+
+        for track in tracks_with_lyrics:
+            filename = track.get("filename", "")
+            if not filename:
+                continue
+            lyric_file = lyrics_dir / filename.replace(".mp3", ".txt")
+            if not lyric_file.exists():
+                lyric_file = lyrics_dir / f"{track['track_name']}.txt"
+            if lyric_file.exists():
+                try:
+                    with open(lyric_file, "r", encoding="utf-8") as f:
+                        lyrics_text = f.read().strip()
+                    if lyrics_text and len(lyrics_text) > 10:
+                        tracks_for_extraction.append(track)
+                        lyrics_texts.append(lyrics_text)
+                except Exception as e:
+                    logger.warning(f"Could not read {lyric_file}: {e}")
+
+        print(f"  Loaded {len(lyrics_texts)} lyrics files")
+
+        if not lyrics_texts:
+            print("\n❌ ERROR: No lyrics found!")
+            print(f"Expected lyrics in: {lyrics_dir}")
+            return
+
+        # Extract interpretable features
+        print("\n[3/3] Extracting interpretable features via GPT-5-mini...")
+        print(
+            "  (This will make API calls - costs ~$0.01-0.05 depending on library size)"
+        )
+
+        from analysis.pipeline.lyric_features import (
+            batch_extract_interpretable_features,
+        )
+
+        interpretable_features = batch_extract_interpretable_features(
+            tracks_for_extraction,
+            lyrics_texts,
+            cache_path="cache/lyric_interpretable_features.pkl",
+            use_cache=False,
+            batch_delay=0.1,
+        )
+
+        print(f"\n✅ Extracted features for {len(interpretable_features)} tracks")
+
+        # Merge into lyric_features cache
+        print("\nMerging into lyric_features.pkl...")
+        interpretable_by_id = {f["track_id"]: f for f in interpretable_features}
+
+        updated_count = 0
+        for feature in lyric_features:
+            track_id = feature["track_id"]
+            if track_id in interpretable_by_id:
+                interp = interpretable_by_id[track_id]
+                for key in [
+                    "lyric_valence",
+                    "lyric_arousal",
+                    "lyric_mood_happy",
+                    "lyric_mood_sad",
+                    "lyric_mood_aggressive",
+                    "lyric_mood_relaxed",
+                    "lyric_explicit",
+                    "lyric_narrative",
+                    "lyric_theme",
+                    "lyric_language",
+                    "lyric_vocabulary_richness",
+                    "lyric_repetition",
+                ]:
+                    if key in interp:
+                        feature[key] = interp[key]
+                updated_count += 1
+            else:
+                feature.setdefault("lyric_valence", 0.0)
+                feature.setdefault("lyric_arousal", 0.0)
+                feature.setdefault("lyric_mood_happy", 0.0)
+                feature.setdefault("lyric_mood_sad", 0.0)
+                feature.setdefault("lyric_mood_aggressive", 0.0)
+                feature.setdefault("lyric_mood_relaxed", 0.0)
+                feature.setdefault("lyric_explicit", 0.0)
+                feature.setdefault("lyric_narrative", 0.0)
+                feature.setdefault("lyric_theme", "none")
+                feature.setdefault("lyric_language", "none")
+                feature.setdefault("lyric_vocabulary_richness", 0.0)
+                feature.setdefault("lyric_repetition", 0.0)
+
+        with open(lyric_cache, "wb") as f:
+            pickle.dump(lyric_features, f)
+
+        print(f"  Updated {updated_count} tracks")
+        print(f"  Saved to: {lyric_cache}")
+        logger.info(f"Interpretable lyrics extraction complete: {updated_count} tracks")
+
+        print("\n" + "=" * 60)
+        print("INTERPRETABLE LYRICS EXTRACTION COMPLETE!")
+        print("=" * 60)
+        print("\nNext steps:")
+        print("  1. Run: streamlit run analysis/interactive_tuner.py")
+        print("  2. Select 'Interpretable Features (Audio)' backend")
+        print("  3. Adjust weights and cluster!")
+        return
 
     logger.info(f"Starting analysis with mode: {args.mode}")
     logger.info(f"Use cache: {args.use_cache}")

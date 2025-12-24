@@ -89,19 +89,52 @@ def compute_feature_importance(
     """
     if continuous_features is None:
         continuous_features = [
-            'bpm', 'danceability', 'instrumentalness', 'valence', 'arousal',
-            'engagement_score', 'approachability_score',
-            'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
-            'timbre_bright', 'timbre_dark',
-            'voice_gender_male', 'voice_gender_female',
-            'mood_acoustic', 'mood_electronic',
-            'word_count',
+            # ═══════════════════════════════════════════════════════════════
+            # AUDIO FEATURES (Essentia models)
+            # ═══════════════════════════════════════════════════════════════
+            # Tier 1: Core emotional dimensions (have lyric parallels)
+            "valence",
+            "arousal",  # ↔ lyric_valence, lyric_arousal
+            "mood_happy",
+            "mood_sad",
+            "mood_aggressive",
+            "mood_relaxed",  # ↔ lyric_mood_happy, lyric_mood_sad, lyric_mood_aggressive, lyric_mood_relaxed
+            # Tier 2: Audio-specific emotional nuance (no lyric parallel)
+            "mood_party",
+            # Tier 3: Audio-unique technical features
+            "bpm",
+            "danceability",
+            "instrumentalness",
+            "engagement_score",
+            "approachability_score",
+            "timbre_bright",
+            "timbre_dark",
+            "voice_gender_male",
+            "voice_gender_female",
+            "mood_acoustic",
+            "mood_electronic",
+            "genre_ladder",
+            # ═══════════════════════════════════════════════════════════════
+            # LYRIC FEATURES (gpt-5-mini-2025-08-07 + local)
+            # ═══════════════════════════════════════════════════════════════
+            # Tier 1: Core emotional dimensions (parallel to audio)
+            "lyric_valence",
+            "lyric_arousal",  # ↔ valence, arousal
+            "lyric_mood_happy",
+            "lyric_mood_sad",
+            "lyric_mood_aggressive",
+            "lyric_mood_relaxed",  # ↔ mood_happy, mood_sad, mood_aggressive, mood_relaxed
+            # Tier 3: Lyric-unique features
+            "lyric_explicit",
+            "lyric_narrative",
+            "lyric_vocabulary_richness",
+            "lyric_repetition",
         ]
 
     # Filter to only include features that exist in the dataframe
     continuous_features = [f for f in continuous_features if f in df.columns]
 
-    cluster_mask = df['cluster'] == cluster_id
+    cluster_mask = df["cluster"] == cluster_id
     cluster_df = df[cluster_mask]
 
     results = []
@@ -116,18 +149,22 @@ def compute_feature_importance(
         # Compute means and stds (handling NaN)
         cluster_mean = np.nanmean(cluster_values) if len(cluster_values) > 0 else np.nan
         global_mean = np.nanmean(global_values)
-        cluster_std = np.nanstd(cluster_values, ddof=1) if len(cluster_values) > 1 else 0.0
+        cluster_std = (
+            np.nanstd(cluster_values, ddof=1) if len(cluster_values) > 1 else 0.0
+        )
         global_std = np.nanstd(global_values, ddof=1)
 
-        results.append({
-            'feature': feature,
-            'effect_size': effect_size,
-            'cluster_mean': cluster_mean,
-            'global_mean': global_mean,
-            'cluster_std': cluster_std,
-            'global_std': global_std,
-            'type': 'continuous'
-        })
+        results.append(
+            {
+                "feature": feature,
+                "effect_size": effect_size,
+                "cluster_mean": cluster_mean,
+                "global_mean": global_mean,
+                "cluster_std": cluster_std,
+                "global_std": global_std,
+                "type": "continuous",
+            }
+        )
 
     # Handle categorical features
     if categorical_features:
@@ -150,28 +187,32 @@ def compute_feature_importance(
                 # Treat prob_ratio > 1 as positive effect, < 1 as negative
                 # Convert to log scale for better interpretation
                 if prob_ratio > 0:
-                    effect_size = np.log2(prob_ratio)  # Log2: 2x more common = +1, 2x less common = -1
+                    effect_size = np.log2(
+                        prob_ratio
+                    )  # Log2: 2x more common = +1, 2x less common = -1
                 else:
                     effect_size = -10.0  # Very negative for absent features
 
-                results.append({
-                    'feature': f"{feature}={value}",
-                    'effect_size': effect_size,
-                    'cluster_mean': cluster_freq,
-                    'global_mean': global_freq,
-                    'cluster_std': 0.0,
-                    'global_std': 0.0,
-                    'type': 'categorical'
-                })
+                results.append(
+                    {
+                        "feature": f"{feature}={value}",
+                        "effect_size": effect_size,
+                        "cluster_mean": cluster_freq,
+                        "global_mean": global_freq,
+                        "cluster_std": 0.0,
+                        "global_std": 0.0,
+                        "type": "categorical",
+                    }
+                )
 
     # Create DataFrame and sort by absolute effect size
     results_df = pd.DataFrame(results)
 
     if len(results_df) > 0:
-        results_df['abs_effect_size'] = results_df['effect_size'].abs()
-        results_df = results_df.sort_values('abs_effect_size', ascending=False)
-        results_df['importance_rank'] = range(1, len(results_df) + 1)
-        results_df = results_df.drop(columns=['abs_effect_size'])
+        results_df["abs_effect_size"] = results_df["effect_size"].abs()
+        results_df = results_df.sort_values("abs_effect_size", ascending=False)
+        results_df["importance_rank"] = range(1, len(results_df) + 1)
+        results_df = results_df.drop(columns=["abs_effect_size"])
 
     return results_df
 
@@ -205,15 +246,15 @@ def get_top_features(
 
     top_features = importance_df.head(n)
 
-    cluster_size = len(df[df['cluster'] == cluster_id])
+    cluster_size = len(df[df["cluster"] == cluster_id])
     total_size = len(df)
     cluster_percentage = (cluster_size / total_size * 100) if total_size > 0 else 0.0
 
     return {
-        'top_features': top_features,
-        'cluster_size': cluster_size,
-        'cluster_percentage': cluster_percentage,
-        'all_features': importance_df,
+        "top_features": top_features,
+        "cluster_size": cluster_size,
+        "cluster_percentage": cluster_percentage,
+        "all_features": importance_df,
     }
 
 

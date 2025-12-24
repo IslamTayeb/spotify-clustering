@@ -129,12 +129,27 @@ def load_raw_data():
 
 
 def prepare_features_dynamic(
-    audio_features, lyric_features, mode, n_pca_components, skip_pca=False
+    audio_features,
+    lyric_features,
+    mode,
+    n_pca_components,
+    skip_pca=False,
+    interpretable_mode=False,
 ):
-    """Prepare features for clustering (logic ported from interactive_tuner.py)."""
+    """Prepare features for clustering (logic ported from interactive_tuner.py).
+
+    Args:
+        interpretable_mode: If True and mode="combined", use only audio embeddings
+            (which already contain lyric interpretable features). Does NOT use
+            the cached lyric embeddings.
+    """
 
     # For combined mode, filter out vocal songs without lyrics
+    # Note: Instrumental songs (instrumentalness >= 0.5) are kept even without lyrics
+    #       Non-instrumental songs (vocal) without lyrics are filtered out
     if mode == "combined":
+        # Filter tracks where instrumentalness < 0.5 (vocal) but has_lyrics is False
+        # Keep instrumental songs (instrumentalness >= 0.5) even without lyrics
         valid_mask = [
             not (
                 audio.get("instrumentalness", 0.5) < 0.5
@@ -146,7 +161,11 @@ def prepare_features_dynamic(
         lyric_features = [f for f, valid in zip(lyric_features, valid_mask) if valid]
 
     audio_emb = np.vstack([f["embedding"] for f in audio_features])
-    lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
+
+    # For interpretable mode with combined, we don't use lyric embeddings
+    # The audio embedding already contains lyric interpretable features
+    if not interpretable_mode:
+        lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
 
     valid_indices = list(range(len(audio_features)))
 
@@ -157,11 +176,17 @@ def prepare_features_dynamic(
         elif mode == "lyrics":
             has_lyrics = np.array([f["has_lyrics"] for f in lyric_features])
             valid_indices = np.where(has_lyrics)[0].tolist()
+            lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
             features_reduced = StandardScaler().fit_transform(lyric_emb[has_lyrics])
         else:  # combined
-            audio_norm = StandardScaler().fit_transform(audio_emb)
-            lyric_norm = StandardScaler().fit_transform(lyric_emb)
-            features_reduced = np.hstack([audio_norm, lyric_norm])
+            if interpretable_mode:
+                # Interpretable mode: audio embedding already has lyric features
+                # Just use audio embeddings (no lyric embeddings needed)
+                features_reduced = StandardScaler().fit_transform(audio_emb)
+            else:
+                audio_norm = StandardScaler().fit_transform(audio_emb)
+                lyric_norm = StandardScaler().fit_transform(lyric_emb)
+                features_reduced = np.hstack([audio_norm, lyric_norm])
         return features_reduced, valid_indices
 
     # PCA
@@ -174,35 +199,45 @@ def prepare_features_dynamic(
     elif mode == "lyrics":
         has_lyrics = np.array([f["has_lyrics"] for f in lyric_features])
         valid_indices = np.where(has_lyrics)[0].tolist()
+        lyric_emb = np.vstack([f["embedding"] for f in lyric_features])
         lyric_norm = StandardScaler().fit_transform(lyric_emb[has_lyrics])
         n_components = min(lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components)
         pca = PCA(n_components=n_components, random_state=42)
         features_reduced = pca.fit_transform(lyric_norm)
 
     else:  # combined
-        audio_norm = StandardScaler().fit_transform(audio_emb)
-        lyric_norm = StandardScaler().fit_transform(lyric_emb)
+        if interpretable_mode:
+            # Interpretable mode: audio embedding already has lyric features
+            audio_norm = StandardScaler().fit_transform(audio_emb)
+            n_components = min(
+                audio_norm.shape[0], audio_norm.shape[1], n_pca_components
+            )
+            pca = PCA(n_components=n_components, random_state=42)
+            features_reduced = pca.fit_transform(audio_norm)
+        else:
+            audio_norm = StandardScaler().fit_transform(audio_emb)
+            lyric_norm = StandardScaler().fit_transform(lyric_emb)
 
-        n_components_audio = min(
-            audio_norm.shape[0], audio_norm.shape[1], n_pca_components
-        )
-        n_components_lyric = min(
-            lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components
-        )
+            n_components_audio = min(
+                audio_norm.shape[0], audio_norm.shape[1], n_pca_components
+            )
+            n_components_lyric = min(
+                lyric_norm.shape[0], lyric_norm.shape[1], n_pca_components
+            )
 
-        pca_audio = PCA(n_components=n_components_audio, random_state=42)
-        audio_reduced = pca_audio.fit_transform(audio_norm)
+            pca_audio = PCA(n_components=n_components_audio, random_state=42)
+            audio_reduced = pca_audio.fit_transform(audio_norm)
 
-        pca_lyric = PCA(n_components=n_components_lyric, random_state=42)
-        lyric_reduced = pca_lyric.fit_transform(lyric_norm)
+            pca_lyric = PCA(n_components=n_components_lyric, random_state=42)
+            lyric_reduced = pca_lyric.fit_transform(lyric_norm)
 
-        features_reduced = np.hstack([audio_reduced, lyric_reduced])
+            features_reduced = np.hstack([audio_reduced, lyric_reduced])
 
     return features_reduced, valid_indices
 
 
 def create_dataframe_from_clustering(
-    audio_features, valid_indices, labels, umap_coords=None
+    audio_features, valid_indices, labels, umap_coords=None, lyric_features=None
 ):
     """Create a DataFrame compatible with the dashboard from dynamic clustering results."""
     data = []
@@ -232,8 +267,14 @@ def create_dataframe_from_clustering(
         except:
             return str(g_idx)
 
+    # Create lyric lookup by track_id if lyric_features provided
+    lyric_by_id = {}
+    if lyric_features:
+        lyric_by_id = {f["track_id"]: f for f in lyric_features}
+
     for i, idx in enumerate(valid_indices):
         track = audio_features[idx]
+        lyric_track = lyric_by_id.get(track["track_id"], {})
 
         # Determine top genre
         genre = "Unknown"
@@ -267,6 +308,45 @@ def create_dataframe_from_clustering(
             "voice_gender_male": track.get("voice_gender_male", 0),
             "voice_gender_female": track.get("voice_gender_female", 0),
             "genre_ladder": track.get("genre_ladder", 0.5),
+            # Lyric Features (Tier 1: Parallel emotional dimensions)
+            # Try track first (if merged), then lyric_track
+            "lyric_valence": track.get("lyric_valence")
+            if "lyric_valence" in track
+            else lyric_track.get("lyric_valence", 0.5),
+            "lyric_arousal": track.get("lyric_arousal")
+            if "lyric_arousal" in track
+            else lyric_track.get("lyric_arousal", 0.5),
+            "lyric_mood_happy": track.get("lyric_mood_happy")
+            if "lyric_mood_happy" in track
+            else lyric_track.get("lyric_mood_happy", 0),
+            "lyric_mood_sad": track.get("lyric_mood_sad")
+            if "lyric_mood_sad" in track
+            else lyric_track.get("lyric_mood_sad", 0),
+            "lyric_mood_aggressive": track.get("lyric_mood_aggressive")
+            if "lyric_mood_aggressive" in track
+            else lyric_track.get("lyric_mood_aggressive", 0),
+            "lyric_mood_relaxed": track.get("lyric_mood_relaxed")
+            if "lyric_mood_relaxed" in track
+            else lyric_track.get("lyric_mood_relaxed", 0),
+            # Lyric Features (Tier 3: Lyric-unique)
+            "lyric_explicit": track.get("lyric_explicit")
+            if "lyric_explicit" in track
+            else lyric_track.get("lyric_explicit", 0),
+            "lyric_narrative": track.get("lyric_narrative")
+            if "lyric_narrative" in track
+            else lyric_track.get("lyric_narrative", 0),
+            "lyric_theme": track.get("lyric_theme")
+            if "lyric_theme" in track
+            else lyric_track.get("lyric_theme", "other"),
+            "lyric_language": track.get("lyric_language")
+            if "lyric_language" in track
+            else lyric_track.get("lyric_language", "unknown"),
+            "lyric_vocabulary_richness": track.get("lyric_vocabulary_richness")
+            if "lyric_vocabulary_richness" in track
+            else lyric_track.get("lyric_vocabulary_richness", 0),
+            "lyric_repetition": track.get("lyric_repetition")
+            if "lyric_repetition" in track
+            else lyric_track.get("lyric_repetition", 0),
         }
 
         # Add UMAP coords if available
@@ -378,7 +458,58 @@ def main():
                 st.success(f"Using MERT for {len(audio_features)} tracks")
 
             elif "Interpretable" in backend:
-                st.info("✨ Using interpretable features (BPM, Key, Moods)")
+                st.info("✨ Using interpretable features: Audio + Lyric (combined)")
+                st.caption(
+                    "Note: Lyric embeddings are NOT used. Only interpretable lyric features (valence, moods, themes, etc.)"
+                )
+
+                # Create lyric lookup by track_id
+                lyric_by_id = {f["track_id"]: f for f in lyric_features}
+
+                # Filter out vocal songs without lyrics for combined mode
+                # Vocal = instrumentalness < 0.5
+                # Keep instrumental songs even without lyrics
+                filtered_out_tracks = []
+                keep_indices = []
+                for i, (audio, lyric) in enumerate(zip(audio_features, lyric_features)):
+                    is_vocal = audio.get("instrumentalness", 0.5) < 0.5
+                    has_lyrics = lyric.get("has_lyrics", False)
+                    if is_vocal and not has_lyrics:
+                        filtered_out_tracks.append(
+                            {
+                                "track_name": audio.get("track_name", "Unknown"),
+                                "artist": audio.get("artist", "Unknown"),
+                                "instrumentalness": audio.get("instrumentalness", 0),
+                            }
+                        )
+                    else:
+                        keep_indices.append(i)
+
+                if filtered_out_tracks:
+                    with st.expander(
+                        f"⚠️ Filtered out {len(filtered_out_tracks)} vocal songs without lyrics",
+                        expanded=False,
+                    ):
+                        st.write(
+                            "These are non-instrumental songs that don't have lyrics data:"
+                        )
+                        filtered_df = pd.DataFrame(filtered_out_tracks)
+                        st.dataframe(
+                            filtered_df, use_container_width=True, hide_index=True
+                        )
+                        st.caption(
+                            "These songs are excluded because they're vocal (instrumentalness < 0.5) but have no lyrics."
+                        )
+
+                # Apply the filter
+                audio_features = [audio_features[i] for i in keep_indices]
+                lyric_features = [lyric_features[i] for i in keep_indices]
+                # Update lyric lookup after filtering
+                lyric_by_id = {f["track_id"]: f for f in lyric_features}
+
+                st.success(
+                    f"Using {len(audio_features)} tracks (filtered {len(filtered_out_tracks)} vocal songs without lyrics)"
+                )
 
                 # Dynamic global min/max for normalization
                 bpms = [float(t.get("bpm", 0) or 0) for t in audio_features]
@@ -395,60 +526,95 @@ def main():
                 min_val, max_val = get_range(valences, 1, 9)
                 min_ar, max_ar = get_range(arousals, 1, 9)
 
+                # Theme & Language: 1 dimension each (semantic ordering)
+                # "none" is isolated at 0.0 with a gap to distinguish instrumentals/no-lyrics
+                # Theme ordered by emotional energy/positivity (high=positive/energetic, low=negative/introspective)
+                THEME_SCALE = {
+                    "party": 1.0,  # highest energy
+                    "flex": 0.92,  # confident, boastful
+                    "love": 0.85,  # positive emotion
+                    "social": 0.75,  # community focused
+                    "spirituality": 0.68,  # contemplative but uplifting
+                    "introspection": 0.6,  # neutral, internal
+                    "street": 0.5,  # raw, realistic
+                    "heartbreak": 0.4,  # sad
+                    "struggle": 0.3,  # difficult
+                    "other": 0.2,  # has lyrics, unknown theme
+                    "none": 0.0,  # no lyrics/theme (gap of 0.2)
+                }
+                # Language: ordinal encoding with gap for "none"
+                LANGUAGE_SCALE = {
+                    "english": 1.0,
+                    "spanish": 0.85,
+                    "french": 0.7,
+                    "arabic": 0.6,
+                    "korean": 0.5,
+                    "japanese": 0.4,
+                    "unknown": 0.25,  # has lyrics, unknown language
+                    "none": 0.0,  # no lyrics (gap of 0.25)
+                }
+
                 for track in audio_features:
+                    lyric = lyric_by_id.get(track["track_id"], {})
 
-                    def get_float(k, d=0.0):
-                        v = track.get(k)
+                    def get_float(d, k, default=0.0):
+                        v = d.get(k)
                         try:
-                            return float(v) if v is not None else d
-                        except:
-                            return d
+                            return float(v) if v is not None else default
+                        except Exception:
+                            return default
 
-                    # Normalize BPM
-                    raw_bpm = get_float("bpm", 120)
-                    norm_bpm = (
-                        (raw_bpm - min_bpm) / (max_bpm - min_bpm)
-                        if (max_bpm > min_bpm)
-                        else 0.5
+                    # Normalize BPM/Valence/Arousal
+                    raw_bpm = get_float(track, "bpm", 120)
+                    norm_bpm = max(
+                        0.0,
+                        min(
+                            1.0,
+                            (raw_bpm - min_bpm) / (max_bpm - min_bpm)
+                            if max_bpm > min_bpm
+                            else 0.5,
+                        ),
                     )
-                    norm_bpm = max(0.0, min(1.0, norm_bpm))
-
-                    # Normalize Valence
-                    raw_val = get_float("valence", 4.5)
-                    norm_val = (
-                        (raw_val - min_val) / (max_val - min_val)
-                        if (max_val > min_val)
-                        else 0.5
+                    raw_val = get_float(track, "valence", 4.5)
+                    norm_val = max(
+                        0.0,
+                        min(
+                            1.0,
+                            (raw_val - min_val) / (max_val - min_val)
+                            if max_val > min_val
+                            else 0.5,
+                        ),
                     )
-                    norm_val = max(0.0, min(1.0, norm_val))
-
-                    # Normalize Arousal
-                    raw_ar = get_float("arousal", 4.5)
-                    norm_ar = (
-                        (raw_ar - min_ar) / (max_ar - min_ar)
-                        if (max_ar > min_ar)
-                        else 0.5
+                    raw_ar = get_float(track, "arousal", 4.5)
+                    norm_ar = max(
+                        0.0,
+                        min(
+                            1.0,
+                            (raw_ar - min_ar) / (max_ar - min_ar)
+                            if max_ar > min_ar
+                            else 0.5,
+                        ),
                     )
-                    norm_ar = max(0.0, min(1.0, norm_ar))
 
-                    scalars = [
+                    # Audio scalars (14 dims)
+                    audio_scalars = [
                         norm_bpm,
-                        get_float("danceability", 0.5),
-                        get_float("instrumentalness", 0.0),
+                        get_float(track, "danceability", 0.5),
+                        get_float(track, "instrumentalness", 0.0),
                         norm_val,
                         norm_ar,
-                        get_float("engagement_score", 0.5),
-                        get_float("approachability_score", 0.5),
-                        get_float("mood_happy", 0.0),
-                        get_float("mood_sad", 0.0),
-                        get_float("mood_aggressive", 0.0),
-                        get_float("mood_relaxed", 0.0),
-                        get_float("mood_party", 0.0),
-                        get_float("voice_gender_male", 0.5),  # Female(0) ↔ Male(1)
-                        get_float("genre_ladder", 0.5),  # Genre-based feature
+                        get_float(track, "engagement_score", 0.5),
+                        get_float(track, "approachability_score", 0.5),
+                        get_float(track, "mood_happy", 0.0),
+                        get_float(track, "mood_sad", 0.0),
+                        get_float(track, "mood_aggressive", 0.0),
+                        get_float(track, "mood_relaxed", 0.0),
+                        get_float(track, "mood_party", 0.0),
+                        get_float(track, "voice_gender_male", 0.5),
+                        get_float(track, "genre_ladder", 0.5),
                     ]
 
-                    # Key Features
+                    # Key features (3 dims)
                     key_vec = [0.0, 0.0, 0.0]
                     key_str = track.get("key", "")
                     if isinstance(key_str, str) and key_str:
@@ -476,167 +642,97 @@ def main():
                         parts = k.split()
                         if parts and parts[0] in pitch_map:
                             p = pitch_map[parts[0]]
-
-                            # Downweight key influence (3 dimensions) to approx 1 feature weight
                             KEY_WEIGHT = 0.5
+                            key_vec = [
+                                (0.5 * np.sin(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT,
+                                (0.5 * np.cos(2 * np.pi * p / 12) + 0.5) * KEY_WEIGHT,
+                                scale_val * KEY_WEIGHT,
+                            ]
 
-                            sin_val = (
-                                0.5 * np.sin(2 * np.pi * p / 12) + 0.5
-                            ) * KEY_WEIGHT
-                            cos_val = (
-                                0.5 * np.cos(2 * np.pi * p / 12) + 0.5
-                            ) * KEY_WEIGHT
-                            scale_val = scale_val * KEY_WEIGHT
-
-                            key_vec = [sin_val, cos_val, scale_val]
-
-                    track["embedding"] = np.array(scalars + key_vec, dtype=np.float32)
-
-                # Debug: Show sample vector breakdown
-                with st.expander("🔍 Debug: Sample Vectors", expanded=False):
-                    st.write("**First 3 tracks' interpretable vectors:**")
-                    feature_names = [
-                        "0: BPM (norm)",
-                        "1: Danceability",
-                        "2: Instrumentalness",
-                        "3: Valence (norm)",
-                        "4: Arousal (norm)",
-                        "5: Engagement",
-                        "6: Approachability",
-                        "7: Mood Happy",
-                        "8: Mood Sad",
-                        "9: Mood Aggressive",
-                        "10: Mood Relaxed",
-                        "11: Mood Party",
-                        "12: Voice Gender Male",
-                        "13: Genre Ladder",
-                        "14: Key Sin",
-                        "15: Key Cos",
-                        "16: Key Scale",
+                    # Lyric scalars (10 dims)
+                    lyric_scalars = [
+                        get_float(lyric, "lyric_valence", 0.5),
+                        get_float(lyric, "lyric_arousal", 0.5),
+                        get_float(lyric, "lyric_mood_happy", 0.0),
+                        get_float(lyric, "lyric_mood_sad", 0.0),
+                        get_float(lyric, "lyric_mood_aggressive", 0.0),
+                        get_float(lyric, "lyric_mood_relaxed", 0.0),
+                        get_float(lyric, "lyric_explicit", 0.0),
+                        get_float(lyric, "lyric_narrative", 0.0),
+                        get_float(lyric, "lyric_vocabulary_richness", 0.0),
+                        get_float(lyric, "lyric_repetition", 0.0),
                     ]
 
-                    for sample_idx in range(min(3, len(audio_features))):
-                        sample_track = audio_features[sample_idx]
-                        emb = sample_track["embedding"]
+                    # Theme (1 dim) - semantic scale
+                    theme = lyric.get("lyric_theme", "other")
+                    theme = theme.lower().strip() if isinstance(theme, str) else "other"
+                    theme_val = THEME_SCALE.get(theme, 0.2)  # default to "other"
 
-                        st.markdown(
-                            f"### {sample_idx + 1}. {sample_track['track_name']} by {sample_track['artist']}"
-                        )
+                    # Language (1 dim) - ordinal scale
+                    lang = lyric.get("lyric_language", "unknown")
+                    lang = lang.lower().strip() if isinstance(lang, str) else "unknown"
+                    lang_val = LANGUAGE_SCALE.get(lang, 0.25)  # default to "unknown"
 
-                        # Create a compact display
-                        vec_data = []
-                        for i, name in enumerate(feature_names):
-                            if i < len(emb):
-                                vec_data.append(
-                                    {"Feature": name, "Value": f"{emb[i]:.4f}"}
-                                )
-
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.dataframe(
-                                pd.DataFrame(vec_data[:9]),
-                                hide_index=True,
-                                use_container_width=True,
-                            )
-                        with col2:
-                            st.dataframe(
-                                pd.DataFrame(vec_data[9:]),
-                                hide_index=True,
-                                use_container_width=True,
-                            )
-
-                        # Show raw values
-                        raw_vgm = sample_track.get("voice_gender_male")
-                        raw_gl = sample_track.get("genre_ladder")
-                        vgm_str = f"{raw_vgm:.3f}" if raw_vgm is not None else "N/A"
-                        gl_str = f"{raw_gl:.3f}" if raw_gl is not None else "N/A"
-                        st.caption(
-                            f"Raw: BPM={sample_track.get('bpm', 'N/A')}, Key={sample_track.get('key', 'N/A')}, "
-                            f"voice_gender_male={vgm_str}, "
-                            f"genre_ladder={gl_str}"
-                        )
-                        st.markdown("---")
-
-                    # Show statistics across all tracks
-                    st.write("**Feature Statistics (all tracks):**")
-                    all_embs = np.vstack([t["embedding"] for t in audio_features])
-                    stats_data = []
-                    for i, name in enumerate(feature_names[: len(all_embs[0])]):
-                        col_vals = all_embs[:, i]
-                        stats_data.append(
-                            {
-                                "Feature": name.split(": ")[1]
-                                if ": " in name
-                                else name,
-                                "Min": f"{col_vals.min():.3f}",
-                                "Max": f"{col_vals.max():.3f}",
-                                "Mean": f"{col_vals.mean():.3f}",
-                                "Std": f"{col_vals.std():.3f}",
-                            }
-                        )
-                    st.dataframe(
-                        pd.DataFrame(stats_data),
-                        hide_index=True,
-                        use_container_width=True,
+                    track["embedding"] = np.array(
+                        audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val],
+                        dtype=np.float32,
                     )
 
-                # Add weight controls for feature groups
+                # Debug expander
+                with st.expander("🔍 Debug: Sample Vector", expanded=False):
+                    sample_track = audio_features[0]
+                    sample_lyric = lyric_by_id.get(sample_track["track_id"], {})
+                    emb = sample_track["embedding"]
+                    st.write(
+                        f"**{sample_track['track_name']}** by {sample_track['artist']}"
+                    )
+                    st.write(
+                        f"Vector length: {len(emb)} (Audio:14 + Key:3 + Lyric:10 + Theme:1 + Lang:1 = 29)"
+                    )
+                    theme_raw = sample_lyric.get("lyric_theme", "N/A")
+                    lang_raw = sample_lyric.get("lyric_language", "N/A")
+                    st.write(
+                        f"Theme: {theme_raw} → {THEME_SCALE.get(str(theme_raw).lower().strip(), 0.2):.2f}, "
+                        f"Language: {lang_raw} → {LANGUAGE_SCALE.get(str(lang_raw).lower().strip(), 0.25):.2f}"
+                    )
+
+                # Weight controls
                 st.markdown("---")
-                st.subheader("🎛️ Feature Group Weights")
-                st.caption(
-                    "Adjust relative importance of feature groups. Each feature in a group is multiplied by the group weight."
-                )
+                st.subheader("🎛️ Audio Feature Weights")
+                core_weight = st.slider("🎵 Core Audio", 0.0, 2.0, 1.0, 0.1)
+                mood_weight = st.slider("😊 Audio Moods", 0.0, 2.0, 1.0, 0.1)
+                genre_weight = st.slider("🎸 Genre Ladder", 0.0, 2.0, 1.0, 0.1)
+                key_weight = st.slider("🎹 Key", 0.0, 2.0, 1.0, 0.1)
 
-                core_weight = st.slider(
-                    "Core Features Weight (BPM, Danceability, etc.)",
-                    0.0,
-                    2.0,
-                    1.0,
-                    0.1,
-                    help="Weight for core features: BPM, danceability, instrumentalness, valence, arousal, engagement, approachability",
+                st.markdown("---")
+                st.subheader("📝 Lyric Feature Weights")
+                lyric_emotion_weight = st.slider(
+                    "💭 Lyric Emotions", 0.0, 2.0, 1.0, 0.1
                 )
-                mood_weight = st.slider(
-                    "Mood Features Weight",
-                    0.0,
-                    2.0,
-                    1.0,
-                    0.1,
-                    help="Weight for mood features: happy, sad, aggressive, relaxed, party (5 features)",
-                )
-                genre_weight = st.slider(
-                    "Genre Ladder Weight",
-                    0.0,
-                    2.0,
-                    1.0,
-                    0.1,
-                    help="Weight for genre_ladder feature (0=acoustic, 1=electronic)",
-                )
-                key_weight = st.slider(
-                    "Key Features Weight",
-                    0.0,
-                    2.0,
-                    1.0,
-                    0.1,
-                    help="Weight for key features: sin, cos, scale (3 features)",
-                )
+                lyric_content_weight = st.slider("🔞 Content", 0.0, 2.0, 1.0, 0.1)
+                theme_weight = st.slider("🏷️ Theme", 0.0, 2.0, 1.0, 0.1)
+                language_weight = st.slider("🌍 Language", 0.0, 2.0, 1.0, 0.1)
 
-                # Apply weights to embeddings
-                # Each feature group is multiplied by its weight
+                # Apply weights
+                # Vector structure (29 dims total):
+                #   0-6:   Core audio (bpm, danceability, instrumentalness, valence, arousal, engagement, approachability)
+                #   7-11:  Audio moods (happy, sad, aggressive, relaxed, party)
+                #   12-13: Voice gender + genre ladder
+                #   14-16: Key (sin, cos, scale)
+                #   17-22: Lyric emotions (valence, arousal, happy, sad, aggressive, relaxed)
+                #   23-26: Lyric content (explicit, narrative, vocabulary_richness, repetition)
+                #   27:    Theme (1 dim)
+                #   28:    Language (1 dim)
                 for track in audio_features:
                     emb = track["embedding"].copy()
-
-                    # Core features (indices 0-6): 7 features
-                    emb[0:7] = emb[0:7] * core_weight
-
-                    # Mood features (indices 7-11): 5 features
-                    emb[7:12] = emb[7:12] * mood_weight
-
-                    # Genre ladder (index 12): single feature
-                    emb[12] = emb[12] * genre_weight
-
-                    # Key features (indices 13-15): 3 features
-                    emb[13:16] = emb[13:16] * key_weight
-
+                    emb[0:7] = emb[0:7] * core_weight  # Core audio
+                    emb[7:12] = emb[7:12] * mood_weight  # Audio moods
+                    emb[12:14] = emb[12:14] * core_weight  # Voice gender + genre ladder
+                    emb[14:17] = emb[14:17] * key_weight  # Key
+                    emb[17:23] = emb[17:23] * lyric_emotion_weight  # Lyric emotions
+                    emb[23:27] = emb[23:27] * lyric_content_weight  # Lyric content
+                    emb[27] = emb[27] * theme_weight  # Theme (1 dim)
+                    emb[28] = emb[28] * language_weight  # Language (1 dim)
                     track["embedding"] = emb
 
             mode = st.selectbox("Feature Mode", ["combined", "audio", "lyrics"])
@@ -649,12 +745,14 @@ def main():
             if st.button("Run Clustering"):
                 with st.spinner("Processing..."):
                     # 1. Prepare Features
+                    is_interpretable = "Interpretable" in backend
                     pca_feats, valid_idx = prepare_features_dynamic(
                         audio_features,
                         lyric_features,
                         mode,
                         n_pca_components=100,
-                        skip_pca=("Interpretable" in backend),
+                        skip_pca=is_interpretable,
+                        interpretable_mode=is_interpretable,
                     )
 
                     # 2. Cluster
@@ -681,7 +779,7 @@ def main():
 
                     # 4. Create DF
                     df = create_dataframe_from_clustering(
-                        audio_features, valid_idx, labels, coords
+                        audio_features, valid_idx, labels, coords, lyric_features
                     )
 
                     # Save to session state to persist across reruns

@@ -353,12 +353,15 @@ def run_clustering_pipeline(
     logger.info(f"Audio features: {len(audio_features)}, Lyric features: {len(lyric_features)}")
 
     # For combined mode, filter out vocal songs without lyrics
+    # Note: Instrumental songs (instrumentalness >= 0.5) are kept even without lyrics
+    #       Non-instrumental songs (vocal) without lyrics are filtered out
     if mode == 'combined':
         filtered_ids = set()
         for tid in common_ids:
             audio = audio_by_id[tid]
             lyric = lyric_by_id[tid]
             # Exclude if song is vocal (instrumentalness < 0.5) but has no lyrics
+            # Keep instrumental songs (instrumentalness >= 0.5) even without lyrics
             if audio.get('instrumentalness', 0.5) < 0.5 and not lyric.get('has_lyrics', False):
                 filtered_ids.add(tid)
 
@@ -493,7 +496,7 @@ def run_clustering_pipeline(
             'approachability_score': audio_f.get('approachability_score', 0.0),
             'engagement_score': audio_f.get('engagement_score', 0.0),
             'mtg_jamendo_probs': audio_f.get('mtg_jamendo_probs', []),
-            
+
             'bpm': audio_f['bpm'],
             'key': audio_f['key'],
             'danceability': audio_f['danceability'],
@@ -501,7 +504,21 @@ def run_clustering_pipeline(
             'is_vocal': audio_f['instrumentalness'] < 0.5,
             'language': lyric_f['language'],
             'word_count': lyric_f['word_count'],
-            'has_lyrics': lyric_f['has_lyrics']
+            'has_lyrics': lyric_f['has_lyrics'],
+            # Lyric Features (Tier 1: Parallel emotional dimensions)
+            'lyric_valence': lyric_f.get('lyric_valence', 0.5),
+            'lyric_arousal': lyric_f.get('lyric_arousal', 0.5),
+            'lyric_mood_happy': lyric_f.get('lyric_mood_happy', 0),
+            'lyric_mood_sad': lyric_f.get('lyric_mood_sad', 0),
+            'lyric_mood_aggressive': lyric_f.get('lyric_mood_aggressive', 0),
+            'lyric_mood_relaxed': lyric_f.get('lyric_mood_relaxed', 0),
+            # Lyric Features (Tier 3: Lyric-unique)
+            'lyric_explicit': lyric_f.get('lyric_explicit', 0),
+            'lyric_narrative': lyric_f.get('lyric_narrative', 0),
+            'lyric_theme': lyric_f.get('lyric_theme', 'other'),
+            'lyric_language': lyric_f.get('lyric_language', 'unknown'),
+            'lyric_vocabulary_richness': lyric_f.get('lyric_vocabulary_richness', 0),
+            'lyric_repetition': lyric_f.get('lyric_repetition', 0)
         })
 
     df = pd.DataFrame(df_data)
@@ -523,7 +540,7 @@ def run_clustering_pipeline(
     if 'added_at' in df.columns and 'release_date' in df.columns:
         df['added_at'] = pd.to_datetime(df['added_at'])
         df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
-        
+
         # Ensure compatible timezones
         if df['added_at'].dt.tz is not None and df['release_date'].dt.tz is None:
              df['release_date'] = df['release_date'].dt.tz_localize('UTC')
@@ -531,7 +548,7 @@ def run_clustering_pipeline(
              df['added_at'] = df['added_at'].dt.tz_localize('UTC')
 
         df['age_at_add_years'] = (df['added_at'] - df['release_date']).dt.days / 365.25
-        
+
         # NOTE: Temporal features removed from clustering as requested
         # Time period groupings
         df['added_year'] = df['added_at'].dt.year
