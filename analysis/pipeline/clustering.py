@@ -716,6 +716,148 @@ def run_clustering_pipeline(
     }
 
 
+def run_subcluster_pipeline(
+    df: pd.DataFrame,
+    pca_features: np.ndarray,
+    parent_cluster: int,
+    n_subclusters: int = 2,
+    algorithm: str = 'hac',
+    linkage: str = 'ward',
+    umap_n_neighbors: int = 15,
+    umap_min_dist: float = 0.1,
+) -> Dict:
+    """
+    Re-cluster songs within a single parent cluster.
+
+    This function takes an existing clustering result and creates sub-clusters
+    within a specific cluster, allowing for hierarchical exploration of music taste.
+
+    Args:
+        df: Full DataFrame with 'cluster' column from main clustering
+        pca_features: Full PCA features array (aligned with df rows)
+        parent_cluster: Which cluster ID to sub-cluster
+        n_subclusters: Number of sub-clusters to create (2-10)
+        algorithm: Clustering algorithm ('hac', 'birch', 'spectral')
+        linkage: HAC linkage method ('ward', 'complete', 'average')
+        umap_n_neighbors: UMAP n_neighbors parameter
+        umap_min_dist: UMAP min_dist parameter
+
+    Returns:
+        Dict with:
+        - 'subcluster_df': DataFrame for parent cluster with 'subcluster' column
+        - 'subcluster_labels': Array of sub-cluster assignments (0, 1, 2, ...)
+        - 'umap_coords': New 3D UMAP coordinates for sub-cluster visualization
+        - 'parent_cluster': The parent cluster ID
+        - 'n_subclusters': Actual number of sub-clusters created
+        - 'silhouette_score': Quality metric for the sub-clustering
+        - 'pca_features_subset': PCA features for the subset (for potential further sub-clustering)
+    """
+    logger.info(f"Sub-clustering Cluster {parent_cluster} into {n_subclusters} sub-clusters")
+    logger.info(f"Algorithm: {algorithm}, Linkage: {linkage}")
+
+    # Step 1: Filter to parent cluster
+    cluster_mask = df['cluster'].values == parent_cluster
+    subset_df = df[cluster_mask].copy()
+    subset_pca = pca_features[cluster_mask]
+
+    n_songs = len(subset_df)
+    logger.info(f"Parent cluster {parent_cluster} contains {n_songs} songs")
+
+    if n_songs < n_subclusters:
+        logger.warning(f"Cannot create {n_subclusters} sub-clusters from {n_songs} songs")
+        n_subclusters = max(2, n_songs // 2)
+        logger.info(f"Adjusted to {n_subclusters} sub-clusters")
+
+    if n_songs < 2:
+        logger.error(f"Cluster {parent_cluster} has fewer than 2 songs, cannot sub-cluster")
+        return {
+            'subcluster_df': subset_df,
+            'subcluster_labels': np.zeros(n_songs, dtype=int),
+            'umap_coords': np.zeros((n_songs, 3)),
+            'parent_cluster': parent_cluster,
+            'n_subclusters': 1,
+            'silhouette_score': 0.0,
+            'pca_features_subset': subset_pca,
+        }
+
+    # Step 2: Run clustering on subset
+    if algorithm == 'hac':
+        logger.info(f"Running HAC (n_clusters={n_subclusters}, linkage={linkage})")
+        clusterer = AgglomerativeClustering(
+            n_clusters=n_subclusters,
+            linkage=linkage
+        )
+    elif algorithm == 'birch':
+        logger.info(f"Running Birch (n_clusters={n_subclusters})")
+        clusterer = Birch(
+            n_clusters=n_subclusters,
+            threshold=0.5,
+            branching_factor=50
+        )
+    elif algorithm == 'spectral':
+        logger.info(f"Running Spectral Clustering (n_clusters={n_subclusters})")
+        # Adjust n_neighbors if subset is small
+        actual_n_neighbors = min(15, n_songs - 1)
+        clusterer = SpectralClustering(
+            n_clusters=n_subclusters,
+            affinity='nearest_neighbors',
+            n_neighbors=actual_n_neighbors,
+            assign_labels='kmeans',
+            random_state=42
+        )
+    else:
+        logger.warning(f"Unknown algorithm '{algorithm}', defaulting to HAC")
+        clusterer = AgglomerativeClustering(
+            n_clusters=n_subclusters,
+            linkage='ward'
+        )
+
+    subcluster_labels = clusterer.fit_predict(subset_pca)
+    subset_df['subcluster'] = subcluster_labels
+
+    actual_n_subclusters = len(set(subcluster_labels)) - (1 if -1 in subcluster_labels else 0)
+    logger.info(f"Created {actual_n_subclusters} sub-clusters")
+
+    # Step 3: Compute UMAP for visualization of subset
+    logger.info(f"Computing UMAP for sub-cluster visualization...")
+    # Adjust UMAP parameters for smaller datasets
+    actual_n_neighbors = min(umap_n_neighbors, n_songs - 1)
+    if actual_n_neighbors < 2:
+        actual_n_neighbors = 2
+
+    reducer = umap.UMAP(
+        n_components=3,
+        n_neighbors=actual_n_neighbors,
+        min_dist=umap_min_dist,
+        metric='cosine',
+        random_state=42
+    )
+    umap_coords = reducer.fit_transform(subset_pca)
+
+    # Step 4: Calculate silhouette score
+    if actual_n_subclusters > 1 and n_songs > actual_n_subclusters:
+        sil_score = silhouette_score(subset_pca, subcluster_labels)
+    else:
+        sil_score = 0.0
+
+    logger.info(f"Sub-clustering complete. Silhouette score: {sil_score:.3f}")
+
+    # Log sub-cluster sizes
+    for sc_id in sorted(set(subcluster_labels)):
+        sc_size = (subcluster_labels == sc_id).sum()
+        logger.info(f"  Sub-cluster {sc_id}: {sc_size} songs")
+
+    return {
+        'subcluster_df': subset_df,
+        'subcluster_labels': subcluster_labels,
+        'umap_coords': umap_coords,
+        'parent_cluster': parent_cluster,
+        'n_subclusters': actual_n_subclusters,
+        'silhouette_score': float(sil_score),
+        'pca_features_subset': subset_pca,
+    }
+
+
 if __name__ == '__main__':
     import pickle
 

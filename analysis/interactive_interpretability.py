@@ -29,10 +29,12 @@ import pandas as pd
 # Import component modules
 from analysis.components.data import loaders, feature_prep, dataframe_builder
 from analysis.components.clustering import algorithms, controls, metrics
+from analysis.components.clustering import subcluster_controls, subcluster_results
 from analysis.components.visualization import umap_3d
 from analysis.components.widgets import feature_selectors, cluster_inspector
 from analysis.components.export import spotify_export
 from analysis.components.tabs import simplified_tabs
+from analysis.pipeline.clustering import run_subcluster_pipeline
 
 # Page configuration
 st.set_page_config(
@@ -233,6 +235,11 @@ def main():
                     st.session_state["dynamic_df"] = df
                     st.session_state["algo_name"] = algo_name
                     st.session_state["mode"] = mode
+                    st.session_state["pca_features"] = pca_feats  # Store for sub-clustering
+
+                    # Clear any existing sub-cluster data when re-clustering
+                    if "subcluster_data" in st.session_state:
+                        del st.session_state["subcluster_data"]
 
                     st.success("✅ Clustering Complete!")
 
@@ -252,10 +259,41 @@ def main():
             # Export Controls
             spotify_export.render_export_controls(df, mode)
 
+            # Sub-Clustering Controls (only in Dynamic Tuning mode when pca_features available)
+            if "pca_features" in st.session_state:
+                parent_cluster, n_subclusters, algo, linkage = subcluster_controls.render_subcluster_controls(df)
+
+                if parent_cluster is not None:
+                    if subcluster_controls.render_subcluster_button():
+                        with st.spinner(f"Sub-clustering Cluster {parent_cluster}..."):
+                            subcluster_data = run_subcluster_pipeline(
+                                df=df,
+                                pca_features=st.session_state["pca_features"],
+                                parent_cluster=parent_cluster,
+                                n_subclusters=n_subclusters,
+                                algorithm=algo,
+                                linkage=linkage,
+                            )
+                            st.session_state["subcluster_data"] = subcluster_data
+                            st.rerun()
+
+                    if subcluster_controls.render_clear_subcluster_button():
+                        if "subcluster_data" in st.session_state:
+                            del st.session_state["subcluster_data"]
+                            st.rerun()
+
     # Main Content
     if df is None:
         st.info("👈 Select a data source or run dynamic clustering to begin.")
         st.stop()
+
+    # Sub-cluster results (displayed above tabs when available)
+    if "subcluster_data" in st.session_state:
+        subcluster_results.render_subcluster_results(st.session_state["subcluster_data"])
+
+        # Export sub-clusters option
+        with st.expander("🎧 Export Sub-Clusters to Spotify"):
+            spotify_export.render_subcluster_export(st.session_state["subcluster_data"])
 
     # Tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
