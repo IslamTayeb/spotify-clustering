@@ -1,6 +1,6 @@
 # Spotify Music Taste Clustering
 
-A Python pipeline for analyzing and clustering your Spotify library using interpretable audio features and GPT-powered lyric classification. The hallmark of this project is a **32-dimensional interpretable feature vector** that enables meaningful music clustering with explainable results.
+A Python pipeline for analyzing and clustering your Spotify library using interpretable audio features and GPT-powered lyric classification. The hallmark of this project is a **33-dimensional interpretable feature vector** that enables meaningful music clustering with explainable results.
 
 ## Why This Project Exists
 
@@ -10,7 +10,7 @@ A Python pipeline for analyzing and clustering your Spotify library using interp
 - I wanted deeper analysis of patterns in my own listening habits
 
 **The Solution:**
-Local audio analysis using Essentia's pre-trained classifiers combined with GPT-powered lyric classification, producing a 32-dimensional interpretable vector where every dimension has human-readable meaning.
+Local audio analysis using Essentia's pre-trained classifiers combined with GPT-powered lyric classification, producing a 33-dimensional interpretable vector where every dimension has human-readable meaning.
 
 **The Key Insight:**
 Interpretable features beat raw embeddings for meaningful music clustering. You can explain *why* songs cluster together (genre, mood, energy) rather than having opaque similarity scores.
@@ -36,8 +36,8 @@ The breakthrough came from running Essentia's pre-trained **classifiers** on top
 ### 5. Added GPT Lyric Classification
 Sentence transformers (BGE-M3, E5) only separated songs by language, not content. GPT-5-mini with a carefully designed prompt extracts parallel emotional dimensions (valence, arousal, moods) plus lyric-unique features (explicit content, narrative style, theme).
 
-### 6. Result: 32-Dim Interpretable Vector
-The final architecture produces a 32-dimensional vector where:
+### 6. Result: 33-Dim Interpretable Vector
+The final architecture produces a 33-dimensional vector where:
 - Every dimension has a human-readable name
 - Clustering happens directly on these features (no PCA)
 - Results can be explained: "These songs cluster together because they're all high-energy, aggressive, electronic tracks with themes of struggle"
@@ -48,6 +48,20 @@ The final architecture produces a 32-dimensional vector where:
 **Solution:** Added two dimensions:
 - `acoustic_electronic`: Separates acoustic (jazz, classical) from electronic (synths, game music)
 - `timbre_brightness`: Distinguishes dark/mellow sounds from bright/crisp production
+
+### 8. Added Release Year Metadata (32 → 33 dims)
+**Problem discovered:** Clustering couldn't distinguish temporal patterns. A 1970s jazz track and a 2024 neo-jazz track would cluster together despite massive production style differences.
+
+**Solution:** Added `release_year` dimension (index 32) using decade bucket encoding:
+- **Decade buckets**: Maps 1950s=0.0, 1960s=0.14, ..., 2020s=1.0
+- **Why decade buckets?**: Production styles change by decade, not year-by-year. More interpretable and stable than linear year normalization.
+- **Default for missing/invalid dates**: 0.5 (centered "unknown", consistent with theme/language defaults)
+
+**Impact:** Expected to enable:
+- Era-aware clustering (vintage vs. modern production styles)
+- Temporal pattern discovery ("my 2020s music is experimental, my 80s music is pop")
+- Era-based playlist generation
+- Better separation of genre revivals (80s synthpop vs. 2020s synthwave)
 
 ---
 
@@ -66,9 +80,9 @@ Feature Extraction:
   ├─ Audio: Essentia classifiers (16 dims)
   ├─ Key: Circular encoding (3 dims)
   ├─ Lyrics: GPT-5-mini (10 dims)
-  └─ Meta: theme, language, popularity (3 dims)
+  └─ Meta: theme, language, popularity, release_year (4 dims)
      ↓
-32-dim interpretable vector
+33-dim interpretable vector
      ↓
 StandardScaler normalization
      ↓
@@ -77,11 +91,11 @@ HAC clustering (5-7 clusters)
 UMAP 3D visualization
 ```
 
-### The 32-Dimensional Interpretable Vector
+### The 33-Dimensional Interpretable Vector
 
 Each dimension has explicit meaning and rationale:
 
-#### Audio Features (Dimensions 0-15)
+#### Audio Features (Dimensions 0-18)
 
 | Dim | Name | Source | Description |
 |-----|------|--------|-------------|
@@ -101,6 +115,9 @@ Each dimension has explicit meaning and rationale:
 | 13 | `genre_ladder` | Entropy of genre_probs | 0=pure genre, 1=genre fusion |
 | 14 | `acoustic_electronic` | mood_acoustic - mood_electronic | 0=electronic, 1=acoustic |
 | 15 | `timbre_brightness` | timbre classifier | 0=dark/mellow, 1=bright/crisp |
+| 16 | `key_sin` | Essentia RhythmExtractor | sin(2π × pitch/12) × 0.33 |
+| 17 | `key_cos` | Essentia RhythmExtractor | cos(2π × pitch/12) × 0.33 |
+| 18 | `key_scale` | Essentia RhythmExtractor | 0=minor, 0.33=major |
 
 *Voice gender is set to 0 for instrumental tracks (instrumentalness >= 0.5) since there's no voice to classify.
 
@@ -115,15 +132,8 @@ Added to solve jazz vs electronic game music clustering. Both are instrumental, 
 **Timbre Brightness Deep-Dive:**
 Captures the tonal quality of the production. Dark timbre (mellow jazz, ambient) vs bright timbre (crisp electronic, pop). Helps distinguish mellow rap from energetic party music.
 
-#### Key Features (Dimensions 16-18)
-
-| Dim | Name | Description |
-|-----|------|-------------|
-| 16 | `key_sin` | sin(2π × pitch/12) × 0.33 |
-| 17 | `key_cos` | cos(2π × pitch/12) × 0.33 |
-| 18 | `key_scale` | 0=minor, 0.33=major |
-
-**Why circular encoding?** Musical keys are cyclical (C is "close" to B, not far). Sin/cos encoding captures octave equivalence. The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence.
+**Key Encoding Deep-Dive:**
+Musical keys are cyclical (C is "close" to B, not far). Sin/cos encoding captures octave equivalence. The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence.
 
 #### Lyric Features (Dimensions 19-28) — Semantic Weighting Strategies
 
@@ -155,13 +165,14 @@ Captures the tonal quality of the production. Dark timbre (mellow jazz, ambient)
 | 27 | `lyric_vocabulary` | Local (TTR) | Presence → 0 | Type-token ratio (vocabulary richness) |
 | 28 | `lyric_repetition` | Local | Presence → 0 | 1 - (unique lines / total lines) |
 
-#### Theme, Language, Popularity (Dimensions 29-31)
+#### Metadata Features (Dimensions 29-32)
 
 | Dim | Name | Weighting | Description |
 |-----|------|-----------|-------------|
 | 29 | `theme` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
 | 30 | `language` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
 | 31 | `popularity` | None | Spotify popularity [0-100] → normalized |
+| 32 | `release_year` | None | Decade bucket encoding [0.0-1.0], 0=1950s, 1=2020s |
 
 **Theme Scale** (ordered by energy/positivity):
 ```
@@ -262,7 +273,7 @@ Matching Spotify metadata to downloaded filenames requires aggressive normalizat
 
 ### No PCA for Interpretable Mode
 
-Unlike MERT/E5 embeddings (which need PCA to ~50 components), the 32-dim interpretable vector clusters directly.
+Unlike MERT/E5 embeddings (which need PCA to ~50 components), the 33-dim interpretable vector clusters directly.
 
 **Only Preprocessing:** `StandardScaler` (zero mean, unit variance normalization)
 
@@ -296,7 +307,7 @@ Used in the Streamlit dashboard to experiment (e.g., weight moods 2x, reduce key
 
 ### UMAP for Visualization Only
 
-- **Clustering:** Done on standardized 32-dim vector
+- **Clustering:** Done on standardized 33-dim vector
 - **UMAP:** Only for 2D/3D visualization (NOT used for clustering decisions)
 - **Parameters:** n_neighbors=20, min_dist=0.2, cosine metric, 3 components
 
@@ -407,7 +418,7 @@ python export/create_playlists.py
 
 | File | Purpose |
 |------|---------|
-| `analysis/pipeline/interpretable_features.py` | 32-dim vector construction, instrumentalness weighting |
+| `analysis/pipeline/interpretable_features.py` | 33-dim vector construction, instrumentalness weighting |
 | `analysis/pipeline/audio_analysis.py` | Essentia classifier extraction, model loading |
 | `analysis/pipeline/lyric_features.py` | GPT lyric classification, prompt design |
 | `analysis/pipeline/clustering.py` | HAC clustering, UMAP visualization, feature preparation |
@@ -426,7 +437,7 @@ python export/create_playlists.py
 - **Separate caches:** Audio features vs lyric features in different pickle files
 
 ### Silhouette Score
-Computed on the standardized 32-dim features (clustering space), NOT on UMAP coordinates (visualization space).
+Computed on the standardized 33-dim features (clustering space), NOT on UMAP coordinates (visualization space).
 
 ### Edge Cases
 - **Instrumental tracks** (instrumentalness > 0.5): Voice gender → 0, lyric valence/arousal → 0.5 (neutral), moods/explicit/narrative/vocab/repetition → 0, theme/language → 0.5 (centered "none")

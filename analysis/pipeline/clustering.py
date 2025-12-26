@@ -61,10 +61,11 @@ EMBEDDING_DIM_NAMES = [
     "emb_lyric_narrative",        # 26: Narrative style
     "emb_lyric_vocabulary",       # 27: Vocabulary richness
     "emb_lyric_repetition",       # 28: Repetition score
-    # Theme, Language, Popularity (3 dims: indices 29-31)
+    # Theme, Language, Metadata (4 dims: indices 29-32)
     "emb_theme",                  # 29: Theme (ordinal scale)
     "emb_language",               # 30: Language (ordinal scale)
     "emb_popularity",             # 31: Popularity (normalized to [0,1])
+    "emb_release_year",           # 32: Release Year (decade buckets, 0=1950s, 1=2020s)
 ]
 
 
@@ -124,10 +125,10 @@ def prepare_features(
     audio_emb = np.vstack([f['embedding'] for f in audio_source])
     logger.info(f"Raw Audio embedding shape: {audio_emb.shape}")
 
-    # For interpretable mode (n_pca_components=None), slice the 32-dim vector by mode:
+    # For interpretable mode (n_pca_components=None), slice the 33-dim vector by mode:
     # - audio: dims 0-18 (16 audio + 3 key = 19 dims)
-    # - lyrics: dims 19-30 (10 lyric + 1 theme + 1 language = 12 dims)
-    # - combined: all 32 dims
+    # - lyrics: dims 19-32 (10 lyric + 1 theme + 1 language + 2 metadata = 14 dims)
+    # - combined: all 33 dims
     if n_pca_components is None:
         if mode == 'audio':
             # Audio features only: BPM, danceability, instrumentalness, valence, arousal,
@@ -136,12 +137,12 @@ def prepare_features(
             features = audio_emb[:, 0:19]
             logger.info(f"Using interpretable AUDIO features ({features.shape[1]} dims)")
         elif mode == 'lyrics':
-            # Lyric features only: lyric valence, arousal, moods (4), explicit, narrative,
-            # vocabulary, repetition, theme, language
-            features = audio_emb[:, 19:31]
-            logger.info(f"Using interpretable LYRIC features ({features.shape[1]} dims)")
+            # Lyric features + metadata: lyric valence, arousal, moods (4), explicit, narrative,
+            # vocabulary, repetition, theme, language, popularity, release year
+            features = audio_emb[:, 19:33]
+            logger.info(f"Using interpretable LYRIC+META features ({features.shape[1]} dims)")
         else:  # combined
-            # All 32 dims
+            # All 33 dims
             features = audio_emb
             logger.info(f"Using interpretable COMBINED features ({features.shape[1]} dims)")
 
@@ -643,11 +644,11 @@ def run_clustering_pipeline(
             'lyric_repetition': lyric_f.get('lyric_repetition', 0)
         })
 
-        # Add all 32 embedding dimensions if available (for interpretable mode)
+        # Add all embedding dimensions if available (for interpretable mode)
         # This allows inspection of exactly what values are used for clustering
         if 'embedding' in audio_f and audio_f['embedding'] is not None:
             emb = audio_f['embedding']
-            if len(emb) == 32:
+            if len(emb) == len(EMBEDDING_DIM_NAMES):
                 for dim_idx, dim_name in enumerate(EMBEDDING_DIM_NAMES):
                     df_data[-1][dim_name] = float(emb[dim_idx])
 

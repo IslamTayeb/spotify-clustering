@@ -21,14 +21,14 @@ from analysis.pipeline.clustering import run_clustering_pipeline
 logger = logging.getLogger(__name__)
 
 
-def load_popularity_data(saved_tracks_path: str = "spotify/saved_tracks.json") -> Dict[str, float]:
-    """Load popularity scores from saved_tracks.json.
+def load_metadata(saved_tracks_path: str = "spotify/saved_tracks.json") -> Dict[str, Dict[str, Any]]:
+    """Load metadata (popularity, release_year) from saved_tracks.json.
 
     Args:
         saved_tracks_path: Path to saved_tracks.json
 
     Returns:
-        Dict mapping track_id to popularity (0-100)
+        Dict mapping track_id to {'popularity': float, 'release_year': float}
     """
     path = Path(saved_tracks_path)
     if not path.exists():
@@ -38,12 +38,30 @@ def load_popularity_data(saved_tracks_path: str = "spotify/saved_tracks.json") -
     with open(path, "r") as f:
         tracks = json.load(f)
 
-    popularity_data = {
-        track["track_id"]: track.get("popularity", 0)
-        for track in tracks
-    }
-    logger.info(f"Loaded popularity data for {len(popularity_data)} tracks")
-    return popularity_data
+    def parse_release_year(release_date: str) -> float:
+        """Parse release_date and return decade bucket encoding [0.0-1.0]."""
+        if not release_date or release_date.startswith('0000'):
+            return 0.5  # Default: centered "unknown"
+
+        try:
+            year = int(release_date.split('-')[0])
+            year = max(1950, min(year, 2029))  # Cap to valid range
+            decade = (year // 10) * 10
+            return (decade - 1950) / (2020 - 1950)  # 1950s=0.0, 2020s=1.0
+        except (ValueError, IndexError):
+            logger.warning(f"Invalid release_date: {release_date}")
+            return 0.5
+
+    metadata = {}
+    for track in tracks:
+        track_id = track["track_id"]
+        metadata[track_id] = {
+            'popularity': track.get("popularity", 50),
+            'release_year': parse_release_year(track.get("release_date")),
+        }
+
+    logger.info(f"Loaded metadata for {len(metadata)} tracks")
+    return metadata
 
 
 def run_full_pipeline(
@@ -102,14 +120,14 @@ def run_full_pipeline(
             fresh=fresh
         )
 
-        # Load popularity data from Spotify metadata
-        popularity_data = load_popularity_data()
+        # Load metadata (popularity + release_year) from Spotify metadata
+        metadata = load_metadata()
 
         # Build interpretable features (uses shared module!)
         audio_embeddings_for_clustering = build_interpretable_features(
-            audio_features, lyric_features_for_interp, popularity_data=popularity_data
+            audio_features, lyric_features_for_interp, metadata=metadata
         )
-        print(f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs (30 dims)")
+        print(f"  ✓ Constructed interpretable vectors for {len(audio_embeddings_for_clustering)} songs (33 dims)")
 
     else:  # backend == "essentia"
         logger.info("Using Essentia embeddings for clustering (default)")

@@ -36,25 +36,33 @@ logger = logging.getLogger(__name__)
 def build_interpretable_features(
     audio_features: List[Dict[str, Any]],
     lyric_features: List[Dict[str, Any]],
-    popularity_data: Optional[Dict[str, float]] = None
+    metadata: Optional[Dict[str, Dict[str, Any]]] = None,
+    popularity_data: Optional[Dict[str, float]] = None  # Backward compatibility
 ) -> List[Dict[str, Any]]:
-    """Construct 32-dimensional interpretable feature vectors.
+    """Construct 33-dimensional interpretable feature vectors.
 
     Args:
         audio_features: List of audio feature dicts (must have 'track_id' key)
         lyric_features: List of lyric feature dicts (must have 'track_id' key)
-        popularity_data: Optional dict mapping track_id to popularity (0-100)
+        metadata: Optional dict mapping track_id to {'popularity': float, 'release_year': float}
+        popularity_data: DEPRECATED - use metadata instead (kept for backward compatibility)
 
     Returns:
-        audio_features with new 'embedding' key containing 32-dim np.array
+        audio_features with new 'embedding' key containing 33-dim np.array
 
     Note:
         Modifies audio_features in-place by adding 'embedding' key.
         Lyric features weighted by (1 - instrumentalness) to prevent
         instrumental songs from being clustered by default lyric values.
         Popularity normalized from Spotify's 0-100 scale to [0,1].
+        Release year encoded as decade buckets (0.0=1950s, 1.0=2020s).
     """
-    logger.info("Building interpretable feature vectors (32 dimensions)")
+    logger.info("Building interpretable feature vectors (33 dimensions)")
+
+    # Backward compatibility: convert old popularity_data to metadata format
+    if metadata is None and popularity_data is not None:
+        metadata = {tid: {'popularity': pop, 'release_year': 0.5}
+                   for tid, pop in popularity_data.items()}
 
     # Create lyric lookup by track_id
     lyric_by_id = {f["track_id"]: f for f in lyric_features}
@@ -76,8 +84,8 @@ def build_interpretable_features(
     min_ar, max_ar = get_range(arousals, 1, 9)
 
     # Normalize popularity (0-100 from Spotify) to [0, 1]
-    if popularity_data:
-        popularities = [popularity_data.get(t["track_id"], 0) for t in audio_features]
+    if metadata:
+        popularities = [metadata.get(t["track_id"], {}).get('popularity', 50) for t in audio_features]
         min_pop, max_pop = get_range(popularities, 0, 100)
         logger.info(f"Normalization ranges - BPM: [{min_bpm:.1f}, {max_bpm:.1f}], "
                     f"Valence: [{min_val:.1f}, {max_val:.1f}], "
@@ -327,8 +335,8 @@ def build_interpretable_features(
         # =====================================================================
         # POPULARITY (1 dimension, index 31) - Normalized Spotify popularity score
         # =====================================================================
-        if popularity_data:
-            raw_pop = popularity_data.get(track_id, 50)  # Default to 50 if missing
+        if metadata:
+            raw_pop = metadata.get(track_id, {}).get('popularity', 50)  # Default to 50 if missing
         else:
             raw_pop = 50  # Default popularity
         norm_pop = (
@@ -339,10 +347,18 @@ def build_interpretable_features(
         norm_pop = max(0.0, min(1.0, norm_pop))
 
         # =====================================================================
-        # COMBINE ALL FEATURES (32 dimensions total)
+        # RELEASE YEAR (1 dimension, index 32) - Decade bucket encoding
+        # =====================================================================
+        if metadata:
+            release_year = metadata.get(track_id, {}).get('release_year', 0.5)
+        else:
+            release_year = 0.5  # Default: centered "unknown"
+
+        # =====================================================================
+        # COMBINE ALL FEATURES (33 dimensions total)
         # =====================================================================
         embedding = np.array(
-            audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val, norm_pop],
+            audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val, norm_pop, release_year],
             dtype=np.float32,
         )
 
@@ -365,7 +381,7 @@ def apply_feature_weights(
     groups during clustering (e.g., weight moods more heavily than genre).
 
     Args:
-        audio_features: List with 'embedding' key containing 32-dim vectors
+        audio_features: List with 'embedding' key containing 33-dim vectors
         weights: Dict with keys:
             - 'core_audio': Weight for BPM, danceability, etc. (indices 0-6)
             - 'mood': Weight for audio moods (indices 7-11)
@@ -375,7 +391,7 @@ def apply_feature_weights(
             - 'lyric_content': Weight for content features (indices 25-28)
             - 'theme': Weight for theme (index 29)
             - 'language': Weight for language (index 30)
-            - 'popularity': Weight for popularity (index 31)
+            - 'metadata': Weight for metadata (popularity + release year) (indices 31-32)
 
     Returns:
         audio_features with modified 'embedding' (in-place modification)
@@ -395,7 +411,7 @@ def apply_feature_weights(
         'lyric_content': (25, 29), # Explicit, narrative, vocabulary, repetition
         'theme': (29, 30),         # Theme dimension
         'language': (30, 31),      # Language dimension
-        'popularity': (31, 32),    # Popularity dimension
+        'metadata': (31, 33),      # Popularity + Release Year
     }
 
     for track in audio_features:

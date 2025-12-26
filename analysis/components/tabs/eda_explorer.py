@@ -1248,6 +1248,50 @@ def render_eda_explorer(df: pd.DataFrame):
             # Get embedding columns for hover display
             emb_cols = [col for col in df.columns if col.startswith("emb_")]
 
+            # Helper function to format embedding features in 2 columns
+            def format_embedding_table(row, emb_cols):
+                """Format embedding features in 2 columns using | separator."""
+                if not emb_cols:
+                    return ""
+
+                valid_embs = [(col, row[col]) for col in emb_cols
+                             if col in row and pd.notna(row[col])]
+
+                if not valid_embs:
+                    return ""
+
+                text = "<br><b>Embedding Vector:</b><br>"
+
+                # Split into 2 columns
+                mid = (len(valid_embs) + 1) // 2
+                left_cols = valid_embs[:mid]
+                right_cols = valid_embs[mid:]
+
+                # Build rows with pipe separator for clear 2-column layout
+                for i in range(max(len(left_cols), len(right_cols))):
+                    left_text = ""
+                    right_text = ""
+
+                    # Left column
+                    if i < len(left_cols):
+                        col_name, col_val = left_cols[i]
+                        display_name = col_name.replace("emb_", "")
+                        left_text = f"{display_name}: {col_val:.3f}"
+
+                    # Right column
+                    if i < len(right_cols):
+                        col_name, col_val = right_cols[i]
+                        display_name = col_name.replace("emb_", "")
+                        right_text = f"{display_name}: {col_val:.3f}"
+
+                    # Join with pipe separator
+                    if right_text:  # Has right column
+                        text += f"{left_text} │ {right_text}<br>"
+                    elif left_text:  # Only left column
+                        text += f"{left_text}<br>"
+
+                return text
+
             if show_subclusters and subcluster_data is not None:
                 # Subcluster view: highlight parent cluster subclusters, dim others
                 parent_cluster = subcluster_data['parent_cluster']
@@ -1285,12 +1329,8 @@ def render_eda_explorer(df: pd.DataFrame):
                                 if "bpm" in row:
                                     text += f"BPM: {row['bpm']:.0f}<br>"
 
-                                if emb_cols:
-                                    text += "<br><b>Embedding Vector:</b><br>"
-                                    for emb_col in emb_cols:
-                                        if emb_col in row and pd.notna(row[emb_col]):
-                                            display_name = emb_col.replace("emb_", "")
-                                            text += f"{display_name}: {row[emb_col]:.3f}<br>"
+                                # Add embedding vector as 2-column table
+                                text += format_embedding_table(row, emb_cols)
 
                                 hover_texts.append(text)
 
@@ -1350,14 +1390,8 @@ def render_eda_explorer(df: pd.DataFrame):
                         if "bpm" in row:
                             text += f"BPM: {row['bpm']:.0f}<br>"
 
-                        # Add full embedding vector
-                        if emb_cols:
-                            text += "<br><b>Embedding Vector:</b><br>"
-                            for emb_col in emb_cols:
-                                if emb_col in row and pd.notna(row[emb_col]):
-                                    # Clean up column name for display (remove emb_ prefix)
-                                    display_name = emb_col.replace("emb_", "")
-                                    text += f"{display_name}: {row[emb_col]:.3f}<br>"
+                        # Add embedding vector as 2-column table
+                        text += format_embedding_table(row, emb_cols)
 
                         hover_texts.append(text)
 
