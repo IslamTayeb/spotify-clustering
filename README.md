@@ -1,6 +1,6 @@
 # Spotify Music Taste Clustering
 
-A Python pipeline for analyzing and clustering your Spotify library using interpretable audio features and GPT-powered lyric classification. The hallmark of this project is a **30-dimensional interpretable feature vector** that enables meaningful music clustering with explainable results.
+A Python pipeline for analyzing and clustering your Spotify library using interpretable audio features and GPT-powered lyric classification. The hallmark of this project is a **32-dimensional interpretable feature vector** that enables meaningful music clustering with explainable results.
 
 ## Why This Project Exists
 
@@ -10,7 +10,7 @@ A Python pipeline for analyzing and clustering your Spotify library using interp
 - I wanted deeper analysis of patterns in my own listening habits
 
 **The Solution:**
-Local audio analysis using Essentia's pre-trained classifiers combined with GPT-powered lyric classification, producing a 30-dimensional interpretable vector where every dimension has human-readable meaning.
+Local audio analysis using Essentia's pre-trained classifiers combined with GPT-powered lyric classification, producing a 32-dimensional interpretable vector where every dimension has human-readable meaning.
 
 **The Key Insight:**
 Interpretable features beat raw embeddings for meaningful music clustering. You can explain *why* songs cluster together (genre, mood, energy) rather than having opaque similarity scores.
@@ -36,11 +36,18 @@ The breakthrough came from running Essentia's pre-trained **classifiers** on top
 ### 5. Added GPT Lyric Classification
 Sentence transformers (BGE-M3, E5) only separated songs by language, not content. GPT-5-mini with a carefully designed prompt extracts parallel emotional dimensions (valence, arousal, moods) plus lyric-unique features (explicit content, narrative style, theme).
 
-### 6. Result: 30-Dim Interpretable Vector
-The final architecture produces a 30-dimensional vector where:
+### 6. Result: 32-Dim Interpretable Vector
+The final architecture produces a 32-dimensional vector where:
 - Every dimension has a human-readable name
 - Clustering happens directly on these features (no PCA)
 - Results can be explained: "These songs cluster together because they're all high-energy, aggressive, electronic tracks with themes of struggle"
+
+### 7. Added Acoustic/Electronic + Timbre (30 → 32 dims)
+**Problem discovered:** Jazz and osu/electronic game music were clustering together—both are instrumental, but the model couldn't distinguish acoustic instruments from synthesizers.
+
+**Solution:** Added two dimensions:
+- `acoustic_electronic`: Separates acoustic (jazz, classical) from electronic (synths, game music)
+- `timbre_brightness`: Distinguishes dark/mellow sounds from bright/crisp production
 
 ---
 
@@ -56,12 +63,12 @@ Download MP3s (spotdl/yt-dlp) → songs/data/
 Fetch lyrics (Genius API) → lyrics/data/
      ↓
 Feature Extraction:
-  ├─ Audio: Essentia classifiers (14 dims)
+  ├─ Audio: Essentia classifiers (16 dims)
   ├─ Key: Circular encoding (3 dims)
   ├─ Lyrics: GPT-5-mini (10 dims)
   └─ Meta: theme, language, popularity (3 dims)
      ↓
-30-dim interpretable vector
+32-dim interpretable vector
      ↓
 StandardScaler normalization
      ↓
@@ -70,11 +77,11 @@ HAC clustering (5-7 clusters)
 UMAP 3D visualization
 ```
 
-### The 30-Dimensional Interpretable Vector
+### The 32-Dimensional Interpretable Vector
 
 Each dimension has explicit meaning and rationale:
 
-#### Audio Features (Dimensions 0-13)
+#### Audio Features (Dimensions 0-15)
 
 | Dim | Name | Source | Description |
 |-----|------|--------|-------------|
@@ -92,6 +99,8 @@ Each dimension has explicit meaning and rationale:
 | 11 | `mood_party` | mood_party classifier | Upbeat/celebratory presence |
 | 12 | `voice_gender` | gender classifier | 0=female, 1=male, 0=instrumental* |
 | 13 | `genre_ladder` | Entropy of genre_probs | 0=pure genre, 1=genre fusion |
+| 14 | `acoustic_electronic` | mood_acoustic - mood_electronic | 0=electronic, 1=acoustic |
+| 15 | `timbre_brightness` | timbre classifier | 0=dark/mellow, 1=bright/crisp |
 
 *Voice gender is set to 0 for instrumental tracks (instrumentalness >= 0.5) since there's no voice to classify.
 
@@ -100,17 +109,23 @@ The genre_ladder measures how "categorizable" a song is, computed from the entro
 - Low entropy (→0) = Song clearly belongs to one genre (artist working WITHIN a tradition)
 - High entropy (→1) = Song crosses many genres (artist CROSSING boundaries)
 
-#### Key Features (Dimensions 14-16)
+**Acoustic/Electronic Deep-Dive:**
+Added to solve jazz vs electronic game music clustering. Both are instrumental, but one uses acoustic instruments (saxophone, piano) and one uses synthesizers. Computed as `(mood_acoustic - mood_electronic + 1) / 2` to get [0,1] scale.
+
+**Timbre Brightness Deep-Dive:**
+Captures the tonal quality of the production. Dark timbre (mellow jazz, ambient) vs bright timbre (crisp electronic, pop). Helps distinguish mellow rap from energetic party music.
+
+#### Key Features (Dimensions 16-18)
 
 | Dim | Name | Description |
 |-----|------|-------------|
-| 14 | `key_sin` | sin(2π × pitch/12) × 0.33 |
-| 15 | `key_cos` | cos(2π × pitch/12) × 0.33 |
-| 16 | `key_scale` | 0=minor, 0.33=major |
+| 16 | `key_sin` | sin(2π × pitch/12) × 0.33 |
+| 17 | `key_cos` | cos(2π × pitch/12) × 0.33 |
+| 18 | `key_scale` | 0=minor, 0.33=major |
 
 **Why circular encoding?** Musical keys are cyclical (C is "close" to B, not far). Sin/cos encoding captures octave equivalence. The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence.
 
-#### Lyric Features (Dimensions 17-26) — Semantic Weighting Strategies
+#### Lyric Features (Dimensions 19-28) — Semantic Weighting Strategies
 
 **Critical Design Decision:** Lyric features use three different weighting strategies based on their semantic type:
 
@@ -129,24 +144,24 @@ The genre_ladder measures how "categorizable" a song is, computed from the entro
 
 | Dim | Name | Source | Weighting | Description |
 |-----|------|--------|-----------|-------------|
-| 17 | `lyric_valence` | GPT | Bipolar → 0.5 | Emotional tone of lyrics |
-| 18 | `lyric_arousal` | GPT | Bipolar → 0.5 | Energy level of lyric content |
-| 19 | `lyric_mood_happy` | GPT | Presence → 0 | Joy/celebration in lyrics |
-| 20 | `lyric_mood_sad` | GPT | Presence → 0 | Grief/melancholy in lyrics |
-| 21 | `lyric_mood_aggressive` | GPT | Presence → 0 | Anger/confrontation in lyrics |
-| 22 | `lyric_mood_relaxed` | GPT | Presence → 0 | Peace/calm in lyrics |
-| 23 | `lyric_explicit` | GPT | Presence → 0 | Holistic explicit content score |
-| 24 | `lyric_narrative` | GPT | Presence → 0 | 0=pure vibes → 1=specific story |
-| 25 | `lyric_vocabulary` | Local (TTR) | Presence → 0 | Type-token ratio (vocabulary richness) |
-| 26 | `lyric_repetition` | Local | Presence → 0 | 1 - (unique lines / total lines) |
+| 19 | `lyric_valence` | GPT | Bipolar → 0.5 | Emotional tone of lyrics |
+| 20 | `lyric_arousal` | GPT | Bipolar → 0.5 | Energy level of lyric content |
+| 21 | `lyric_mood_happy` | GPT | Presence → 0 | Joy/celebration in lyrics |
+| 22 | `lyric_mood_sad` | GPT | Presence → 0 | Grief/melancholy in lyrics |
+| 23 | `lyric_mood_aggressive` | GPT | Presence → 0 | Anger/confrontation in lyrics |
+| 24 | `lyric_mood_relaxed` | GPT | Presence → 0 | Peace/calm in lyrics |
+| 25 | `lyric_explicit` | GPT | Presence → 0 | Holistic explicit content score |
+| 26 | `lyric_narrative` | GPT | Presence → 0 | 0=pure vibes → 1=specific story |
+| 27 | `lyric_vocabulary` | Local (TTR) | Presence → 0 | Type-token ratio (vocabulary richness) |
+| 28 | `lyric_repetition` | Local | Presence → 0 | 1 - (unique lines / total lines) |
 
-#### Theme, Language, Popularity (Dimensions 27-29)
+#### Theme, Language, Popularity (Dimensions 29-31)
 
 | Dim | Name | Weighting | Description |
 |-----|------|-----------|-------------|
-| 27 | `theme` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
-| 28 | `language` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
-| 29 | `popularity` | None | Spotify popularity [0-100] → normalized |
+| 29 | `theme` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
+| 30 | `language` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
+| 31 | `popularity` | None | Spotify popularity [0-100] → normalized |
 
 **Theme Scale** (ordered by energy/positivity):
 ```
@@ -209,8 +224,8 @@ multilingual/unknown/none=0.5 (centered)
 - `approachability_regression` - Mainstream vs niche (continuous)
 - `engagement_regression` - Active vs background listening (continuous)
 - `gender` - Voice male/female
-- `timbre` - Bright vs dark (extracted but not used in 30-dim)
-- `mood_acoustic` - Acoustic vs electronic (extracted but not used in 30-dim)
+- `timbre` - Bright vs dark (used in dim 15: timbre_brightness)
+- `mood_acoustic` - Acoustic vs electronic (used in dim 14: acoustic_electronic)
 - `mtg_jamendo_moodtheme` - 56 mood/theme classes (extracted for reference)
 - `mtg_jamendo_instrument` - 40 instrument classes (extracted for reference)
 - `moods_mirex` - 5 MIREX mood clusters (extracted for reference)
@@ -247,7 +262,7 @@ Matching Spotify metadata to downloaded filenames requires aggressive normalizat
 
 ### No PCA for Interpretable Mode
 
-Unlike MERT/E5 embeddings (which need PCA to ~50 components), the 30-dim interpretable vector clusters directly.
+Unlike MERT/E5 embeddings (which need PCA to ~50 components), the 32-dim interpretable vector clusters directly.
 
 **Only Preprocessing:** `StandardScaler` (zero mean, unit variance normalization)
 
@@ -261,13 +276,13 @@ Unlike MERT/E5 embeddings (which need PCA to ~50 components), the 30-dim interpr
 |-------|------------|----------|
 | `core_audio` | 0-6 | BPM, danceability, instrumentalness, valence, arousal, engagement, approachability |
 | `mood` | 7-11 | 5 mood dimensions |
-| `genre` | 12-13 | Voice gender, genre ladder |
-| `key` | 14-16 | Circular key encoding |
-| `lyric_emotion` | 17-22 | Lyric valence/arousal + 4 moods |
-| `lyric_content` | 23-26 | Explicit, narrative, vocabulary, repetition |
-| `theme` | 27 | Theme ordinal |
-| `language` | 28 | Language ordinal |
-| `popularity` | 29 | Spotify popularity |
+| `genre` | 12-15 | Voice gender, genre ladder, acoustic/electronic, timbre brightness |
+| `key` | 16-18 | Circular key encoding |
+| `lyric_emotion` | 19-24 | Lyric valence/arousal + 4 moods |
+| `lyric_content` | 25-28 | Explicit, narrative, vocabulary, repetition |
+| `theme` | 29 | Theme ordinal |
+| `language` | 30 | Language ordinal |
+| `popularity` | 31 | Spotify popularity |
 
 Used in the Streamlit dashboard to experiment (e.g., weight moods 2x, reduce key influence to 0.5x).
 
@@ -281,7 +296,7 @@ Used in the Streamlit dashboard to experiment (e.g., weight moods 2x, reduce key
 
 ### UMAP for Visualization Only
 
-- **Clustering:** Done on standardized 30-dim vector
+- **Clustering:** Done on standardized 32-dim vector
 - **UMAP:** Only for 2D/3D visualization (NOT used for clustering decisions)
 - **Parameters:** n_neighbors=20, min_dist=0.2, cosine metric, 3 components
 
@@ -392,7 +407,7 @@ python export/create_playlists.py
 
 | File | Purpose |
 |------|---------|
-| `analysis/pipeline/interpretable_features.py` | 30-dim vector construction, instrumentalness weighting |
+| `analysis/pipeline/interpretable_features.py` | 32-dim vector construction, instrumentalness weighting |
 | `analysis/pipeline/audio_analysis.py` | Essentia classifier extraction, model loading |
 | `analysis/pipeline/lyric_features.py` | GPT lyric classification, prompt design |
 | `analysis/pipeline/clustering.py` | HAC clustering, UMAP visualization, feature preparation |
@@ -411,7 +426,7 @@ python export/create_playlists.py
 - **Separate caches:** Audio features vs lyric features in different pickle files
 
 ### Silhouette Score
-Computed on the standardized 30-dim features (clustering space), NOT on UMAP coordinates (visualization space).
+Computed on the standardized 32-dim features (clustering space), NOT on UMAP coordinates (visualization space).
 
 ### Edge Cases
 - **Instrumental tracks** (instrumentalness > 0.5): Voice gender → 0, lyric valence/arousal → 0.5 (neutral), moods/explicit/narrative/vocab/repetition → 0, theme/language → 0.5 (centered "none")

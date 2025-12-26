@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Interpretable feature construction for music analysis.
 
-This module provides the single source of truth for constructing 30-dimensional
+This module provides the single source of truth for constructing 32-dimensional
 interpretable feature vectors from audio and lyric features. Used by both the
 CLI (analysis/run_analysis.py) and Streamlit dashboard (interactive_interpretability.py).
 
-Vector Structure (30 dimensions):
-- Audio features (14 dims): BPM, danceability, instrumentalness, valence, arousal,
-                           engagement, approachability, moods (5), voice gender, genre ladder
+Vector Structure (32 dimensions):
+- Audio features (16 dims): BPM, danceability, instrumentalness, valence, arousal,
+                           engagement, approachability, moods (5), voice gender, genre ladder,
+                           acoustic/electronic (NEW), timbre brightness (NEW)
 - Key features (3 dims): Circular encoding (sin/cos) of pitch + major/minor scale (weighted 0.33)
 - Lyric features (10 dims): valence, arousal, moods (4), explicit, narrative, vocabulary, repetition
 - Theme (1 dim): Semantic scale from introspective → energetic/positive
@@ -37,7 +38,7 @@ def build_interpretable_features(
     lyric_features: List[Dict[str, Any]],
     popularity_data: Optional[Dict[str, float]] = None
 ) -> List[Dict[str, Any]]:
-    """Construct 30-dimensional interpretable feature vectors.
+    """Construct 32-dimensional interpretable feature vectors.
 
     Args:
         audio_features: List of audio feature dicts (must have 'track_id' key)
@@ -45,7 +46,7 @@ def build_interpretable_features(
         popularity_data: Optional dict mapping track_id to popularity (0-100)
 
     Returns:
-        audio_features with new 'embedding' key containing 30-dim np.array
+        audio_features with new 'embedding' key containing 32-dim np.array
 
     Note:
         Modifies audio_features in-place by adding 'embedding' key.
@@ -53,7 +54,7 @@ def build_interpretable_features(
         instrumental songs from being clustered by default lyric values.
         Popularity normalized from Spotify's 0-100 scale to [0,1].
     """
-    logger.info("Building interpretable feature vectors (30 dimensions)")
+    logger.info("Building interpretable feature vectors (32 dimensions)")
 
     # Create lyric lookup by track_id
     lyric_by_id = {f["track_id"]: f for f in lyric_features}
@@ -187,8 +188,16 @@ def build_interpretable_features(
         norm_ar = max(0.0, min(1.0, norm_ar))
 
         # =====================================================================
-        # AUDIO FEATURES (14 dimensions)
+        # AUDIO FEATURES (16 dimensions)
         # =====================================================================
+        # NEW: Acoustic vs Electronic (0=electronic, 1=acoustic)
+        mood_acoustic = require_float("mood_acoustic")
+        mood_electronic = require_float("mood_electronic")
+        acoustic_electronic = (mood_acoustic - mood_electronic + 1) / 2  # Rescale [-1,1] to [0,1]
+
+        # NEW: Timbre brightness (0=dark, 1=bright)
+        timbre_brightness = require_float("timbre_bright")
+
         audio_scalars = [
             norm_bpm,                               # 0: BPM (normalized)
             require_float("danceability"),          # 1: Danceability
@@ -204,10 +213,12 @@ def build_interpretable_features(
             require_float("mood_party"),            # 11: Mood - Party
             require_float("voice_gender_male"),     # 12: Voice Gender (0=female, 1=male)
             require_float("genre_ladder"),          # 13: Genre Ladder (0=pure, 1=fusion)
+            acoustic_electronic,                    # 14: Acoustic/Electronic (0=electronic, 1=acoustic)
+            timbre_brightness,                      # 15: Timbre Brightness (0=dark, 1=bright)
         ]
 
         # =====================================================================
-        # KEY FEATURES (3 dimensions) - Circular encoding
+        # KEY FEATURES (3 dimensions, indices 16-18) - Circular encoding
         # =====================================================================
         key_vec = [0.0, 0.0, 0.0]
         key_str = track.get("key", "")
@@ -238,7 +249,7 @@ def build_interpretable_features(
                 key_vec = [sin_val, cos_val, scale_val]
 
         # =====================================================================
-        # LYRIC FEATURES (10 dimensions)
+        # LYRIC FEATURES (10 dimensions, indices 19-28)
         # Three weighting strategies based on semantic type:
         # - Bipolar (valence, arousal): interpolate toward 0.5 (neutral)
         # - Presence/absence: scale toward 0 (absent)
@@ -259,20 +270,20 @@ def build_interpretable_features(
         # Rationale: These are "happy vs non_happy" classifiers. An instrumental
         # track is definitively non_happy, non_sad, non_explicit, etc.
         lyric_scalars = [
-            lyric_valence,                                                    # 17: Lyric Valence
-            lyric_arousal,                                                    # 18: Lyric Arousal
-            get_lyric_float("lyric_mood_happy", 0.0) * lyric_weight,          # 19: Lyric Mood - Happy
-            get_lyric_float("lyric_mood_sad", 0.0) * lyric_weight,            # 20: Lyric Mood - Sad
-            get_lyric_float("lyric_mood_aggressive", 0.0) * lyric_weight,     # 21: Lyric Mood - Aggressive
-            get_lyric_float("lyric_mood_relaxed", 0.0) * lyric_weight,        # 22: Lyric Mood - Relaxed
-            get_lyric_float("lyric_explicit", 0.0) * lyric_weight,            # 23: Explicit content
-            get_lyric_float("lyric_narrative", 0.0) * lyric_weight,           # 24: Narrative style
-            get_lyric_float("lyric_vocabulary_richness", 0.0) * lyric_weight, # 25: Vocabulary richness
-            get_lyric_float("lyric_repetition", 0.0) * lyric_weight,          # 26: Repetition score
+            lyric_valence,                                                    # 19: Lyric Valence
+            lyric_arousal,                                                    # 20: Lyric Arousal
+            get_lyric_float("lyric_mood_happy", 0.0) * lyric_weight,          # 21: Lyric Mood - Happy
+            get_lyric_float("lyric_mood_sad", 0.0) * lyric_weight,            # 22: Lyric Mood - Sad
+            get_lyric_float("lyric_mood_aggressive", 0.0) * lyric_weight,     # 23: Lyric Mood - Aggressive
+            get_lyric_float("lyric_mood_relaxed", 0.0) * lyric_weight,        # 24: Lyric Mood - Relaxed
+            get_lyric_float("lyric_explicit", 0.0) * lyric_weight,            # 25: Explicit content
+            get_lyric_float("lyric_narrative", 0.0) * lyric_weight,           # 26: Narrative style
+            get_lyric_float("lyric_vocabulary_richness", 0.0) * lyric_weight, # 27: Vocabulary richness
+            get_lyric_float("lyric_repetition", 0.0) * lyric_weight,          # 28: Repetition score
         ]
 
         # =====================================================================
-        # THEME (1 dimension) - Categorical with hard threshold
+        # THEME (1 dimension, index 29) - Categorical with hard threshold
         # Rationale: Themes are categorical, not continuous. A track at
         # instrumentalness=0.9 doesn't have "10% Japanese"—it either has
         # meaningful lyrics with a theme or it doesn't.
@@ -291,10 +302,10 @@ def build_interpretable_features(
         if instrumentalness_val > 0.5:
             theme_val = 0.5  # Centered "none" for instrumental tracks
         else:
-            theme_val = THEME_SCALE[theme]  # 27: Theme
+            theme_val = THEME_SCALE[theme]  # 29: Theme
 
         # =====================================================================
-        # LANGUAGE (1 dimension) - Categorical with hard threshold
+        # LANGUAGE (1 dimension, index 30) - Categorical with hard threshold
         # Same rationale as theme: categorical, not continuous.
         # =====================================================================
         lang = lyric.get("lyric_language")
@@ -311,10 +322,10 @@ def build_interpretable_features(
         if instrumentalness_val > 0.5:
             lang_val = 0.5  # Centered "none" for instrumental tracks
         else:
-            lang_val = LANGUAGE_SCALE[lang]  # 28: Language
+            lang_val = LANGUAGE_SCALE[lang]  # 30: Language
 
         # =====================================================================
-        # POPULARITY (1 dimension) - Normalized Spotify popularity score
+        # POPULARITY (1 dimension, index 31) - Normalized Spotify popularity score
         # =====================================================================
         if popularity_data:
             raw_pop = popularity_data.get(track_id, 50)  # Default to 50 if missing
@@ -328,7 +339,7 @@ def build_interpretable_features(
         norm_pop = max(0.0, min(1.0, norm_pop))
 
         # =====================================================================
-        # COMBINE ALL FEATURES (30 dimensions total)
+        # COMBINE ALL FEATURES (32 dimensions total)
         # =====================================================================
         embedding = np.array(
             audio_scalars + key_vec + lyric_scalars + [theme_val, lang_val, norm_pop],
@@ -354,17 +365,17 @@ def apply_feature_weights(
     groups during clustering (e.g., weight moods more heavily than genre).
 
     Args:
-        audio_features: List with 'embedding' key containing 30-dim vectors
+        audio_features: List with 'embedding' key containing 32-dim vectors
         weights: Dict with keys:
             - 'core_audio': Weight for BPM, danceability, etc. (indices 0-6)
             - 'mood': Weight for audio moods (indices 7-11)
-            - 'genre': Weight for voice gender + genre ladder (indices 12-13)
-            - 'key': Weight for key features (indices 14-16)
-            - 'lyric_emotion': Weight for lyric emotions (indices 17-22)
-            - 'lyric_content': Weight for content features (indices 23-26)
-            - 'theme': Weight for theme (index 27)
-            - 'language': Weight for language (index 28)
-            - 'popularity': Weight for popularity (index 29)
+            - 'genre': Weight for voice gender, genre ladder, acoustic/electronic, timbre (indices 12-15)
+            - 'key': Weight for key features (indices 16-18)
+            - 'lyric_emotion': Weight for lyric emotions (indices 19-24)
+            - 'lyric_content': Weight for content features (indices 25-28)
+            - 'theme': Weight for theme (index 29)
+            - 'language': Weight for language (index 30)
+            - 'popularity': Weight for popularity (index 31)
 
     Returns:
         audio_features with modified 'embedding' (in-place modification)
@@ -378,13 +389,13 @@ def apply_feature_weights(
     index_ranges = {
         'core_audio': (0, 7),      # BPM through approachability
         'mood': (7, 12),           # 5 mood dimensions
-        'genre': (12, 14),         # Voice gender + genre ladder
-        'key': (14, 17),           # 3 key dimensions
-        'lyric_emotion': (17, 23), # Lyric valence/arousal + 4 moods
-        'lyric_content': (23, 27), # Explicit, narrative, vocabulary, repetition
-        'theme': (27, 28),         # Theme dimension
-        'language': (28, 29),      # Language dimension
-        'popularity': (29, 30),    # Popularity dimension
+        'genre': (12, 16),         # Voice gender + genre ladder + acoustic/electronic + timbre
+        'key': (16, 19),           # 3 key dimensions
+        'lyric_emotion': (19, 25), # Lyric valence/arousal + 4 moods
+        'lyric_content': (25, 29), # Explicit, narrative, vocabulary, repetition
+        'theme': (29, 30),         # Theme dimension
+        'language': (30, 31),      # Language dimension
+        'popularity': (31, 32),    # Popularity dimension
     }
 
     for track in audio_features:

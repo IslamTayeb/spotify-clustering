@@ -26,10 +26,10 @@ from sklearn.preprocessing import StandardScaler
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Names for all 30 embedding dimensions (used for clustering)
+# Names for all 32 embedding dimensions (used for clustering)
 # These match the structure in interpretable_features.py
 EMBEDDING_DIM_NAMES = [
-    # Audio features (14 dims: indices 0-13)
+    # Audio features (16 dims: indices 0-15)
     "emb_bpm",                    # 0: BPM (normalized to [0,1])
     "emb_danceability",           # 1: Danceability
     "emb_instrumentalness",       # 2: Instrumentalness
@@ -43,26 +43,28 @@ EMBEDDING_DIM_NAMES = [
     "emb_mood_relaxed",           # 10: Mood - Relaxed
     "emb_mood_party",             # 11: Mood - Party
     "emb_voice_gender",           # 12: Voice Gender (0=female, 1=male)
-    "emb_genre_ladder",           # 13: Genre Ladder (0=acoustic, 1=electronic)
-    # Key features (3 dims: indices 14-16)
-    "emb_key_sin",                # 14: Key pitch (sin component)
-    "emb_key_cos",                # 15: Key pitch (cos component)
-    "emb_key_scale",              # 16: Key scale (0=minor, 0.33=major)
-    # Lyric features (10 dims: indices 17-26) - weighted by (1-instrumentalness)
-    "emb_lyric_valence",          # 17: Lyric valence
-    "emb_lyric_arousal",          # 18: Lyric arousal
-    "emb_lyric_mood_happy",       # 19: Lyric mood - Happy
-    "emb_lyric_mood_sad",         # 20: Lyric mood - Sad
-    "emb_lyric_mood_aggressive",  # 21: Lyric mood - Aggressive
-    "emb_lyric_mood_relaxed",     # 22: Lyric mood - Relaxed
-    "emb_lyric_explicit",         # 23: Explicit content
-    "emb_lyric_narrative",        # 24: Narrative style
-    "emb_lyric_vocabulary",       # 25: Vocabulary richness
-    "emb_lyric_repetition",       # 26: Repetition score
-    # Theme, Language, Popularity (3 dims: indices 27-29)
-    "emb_theme",                  # 27: Theme (ordinal scale)
-    "emb_language",               # 28: Language (ordinal scale)
-    "emb_popularity",             # 29: Popularity (normalized to [0,1])
+    "emb_genre_ladder",           # 13: Genre Ladder (0=pure genre, 1=genre fusion)
+    "emb_acoustic_electronic",    # 14: Acoustic/Electronic (0=electronic, 1=acoustic) - NEW
+    "emb_timbre_brightness",      # 15: Timbre Brightness (0=dark, 1=bright) - NEW
+    # Key features (3 dims: indices 16-18)
+    "emb_key_sin",                # 16: Key pitch (sin component)
+    "emb_key_cos",                # 17: Key pitch (cos component)
+    "emb_key_scale",              # 18: Key scale (0=minor, 0.33=major)
+    # Lyric features (10 dims: indices 19-28) - weighted by (1-instrumentalness)
+    "emb_lyric_valence",          # 19: Lyric valence
+    "emb_lyric_arousal",          # 20: Lyric arousal
+    "emb_lyric_mood_happy",       # 21: Lyric mood - Happy
+    "emb_lyric_mood_sad",         # 22: Lyric mood - Sad
+    "emb_lyric_mood_aggressive",  # 23: Lyric mood - Aggressive
+    "emb_lyric_mood_relaxed",     # 24: Lyric mood - Relaxed
+    "emb_lyric_explicit",         # 25: Explicit content
+    "emb_lyric_narrative",        # 26: Narrative style
+    "emb_lyric_vocabulary",       # 27: Vocabulary richness
+    "emb_lyric_repetition",       # 28: Repetition score
+    # Theme, Language, Popularity (3 dims: indices 29-31)
+    "emb_theme",                  # 29: Theme (ordinal scale)
+    "emb_language",               # 30: Language (ordinal scale)
+    "emb_popularity",             # 31: Popularity (normalized to [0,1])
 ]
 
 
@@ -122,23 +124,24 @@ def prepare_features(
     audio_emb = np.vstack([f['embedding'] for f in audio_source])
     logger.info(f"Raw Audio embedding shape: {audio_emb.shape}")
 
-    # For interpretable mode (n_pca_components=None), slice the 30-dim vector by mode:
-    # - audio: dims 0-16 (14 audio + 3 key = 17 dims)
-    # - lyrics: dims 17-28 (10 lyric + 1 theme + 1 language = 12 dims)
-    # - combined: all 30 dims
+    # For interpretable mode (n_pca_components=None), slice the 32-dim vector by mode:
+    # - audio: dims 0-18 (16 audio + 3 key = 19 dims)
+    # - lyrics: dims 19-30 (10 lyric + 1 theme + 1 language = 12 dims)
+    # - combined: all 32 dims
     if n_pca_components is None:
         if mode == 'audio':
             # Audio features only: BPM, danceability, instrumentalness, valence, arousal,
-            # engagement, approachability, moods (5), voice gender, genre ladder, key (3)
-            features = audio_emb[:, 0:17]
+            # engagement, approachability, moods (5), voice gender, genre ladder,
+            # acoustic/electronic, timbre brightness, key (3)
+            features = audio_emb[:, 0:19]
             logger.info(f"Using interpretable AUDIO features ({features.shape[1]} dims)")
         elif mode == 'lyrics':
             # Lyric features only: lyric valence, arousal, moods (4), explicit, narrative,
             # vocabulary, repetition, theme, language
-            features = audio_emb[:, 17:29]
+            features = audio_emb[:, 19:31]
             logger.info(f"Using interpretable LYRIC features ({features.shape[1]} dims)")
         else:  # combined
-            # All 30 dims
+            # All 32 dims
             features = audio_emb
             logger.info(f"Using interpretable COMBINED features ({features.shape[1]} dims)")
 
@@ -640,11 +643,11 @@ def run_clustering_pipeline(
             'lyric_repetition': lyric_f.get('lyric_repetition', 0)
         })
 
-        # Add all 30 embedding dimensions if available (for interpretable mode)
+        # Add all 32 embedding dimensions if available (for interpretable mode)
         # This allows inspection of exactly what values are used for clustering
         if 'embedding' in audio_f and audio_f['embedding'] is not None:
             emb = audio_f['embedding']
-            if len(emb) == 30:
+            if len(emb) == 32:
                 for dim_idx, dim_name in enumerate(EMBEDDING_DIM_NAMES):
                     df_data[-1][dim_name] = float(emb[dim_idx])
 
