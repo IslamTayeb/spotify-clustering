@@ -1,44 +1,45 @@
-"""Clustering Pipeline - Re-exports from clustering/ module.
+"""Clustering Pipeline.
 
-This file is kept for backward compatibility.
-Implementation has been split into analysis/pipeline/clustering/ module.
+Re-exports main functions for backward compatibility.
 """
 
-# Re-export everything from new module location
-from analysis.pipeline.clustering import (
-    run_clustering_pipeline,
+from .main import run_clustering_pipeline
+from .features import (
     apply_subcluster_weights,
     extract_embedding_features,
     load_temporal_metadata,
     prepare_features,
-    run_hac,
-    run_birch,
-    run_spectral,
-    run_kmeans,
-    run_dbscan,
-    analyze_cluster,
+)
+from .algorithms import run_hac, run_birch, run_spectral, run_kmeans, run_dbscan
+from .analysis import analyze_cluster
+from .subclustering import (
     run_subcluster_pipeline,
     find_optimal_subclusters,
     auto_tune_subcluster_weights,
-    EMBEDDING_DIM_NAMES,
-    FEATURE_WEIGHT_INDICES,
 )
+from .constants import EMBEDDING_DIM_NAMES, FEATURE_WEIGHT_INDICES
 
 __all__ = [
+    # Main pipeline
     "run_clustering_pipeline",
+    # Features
     "apply_subcluster_weights",
     "extract_embedding_features",
     "load_temporal_metadata",
     "prepare_features",
+    # Algorithms
     "run_hac",
     "run_birch",
     "run_spectral",
     "run_kmeans",
     "run_dbscan",
+    # Analysis
     "analyze_cluster",
+    # Sub-clustering
     "run_subcluster_pipeline",
     "find_optimal_subclusters",
     "auto_tune_subcluster_weights",
+    # Constants
     "EMBEDDING_DIM_NAMES",
     "FEATURE_WEIGHT_INDICES",
 ]
