@@ -269,7 +269,7 @@ def main():
 
             # Sub-Clustering Controls (available when pca_features exist in session state)
             if "pca_features" in st.session_state:
-                parent_cluster, n_subclusters, algo, linkage = subcluster_controls.render_subcluster_controls(df)
+                parent_cluster, n_subclusters, algo, linkage, eps, min_samples = subcluster_controls.render_subcluster_controls(df)
 
                 if parent_cluster is not None:
                     if subcluster_controls.render_subcluster_button():
@@ -281,6 +281,8 @@ def main():
                                 n_subclusters=n_subclusters,
                                 algorithm=algo,
                                 linkage=linkage,
+                                eps=eps,
+                                min_samples=min_samples,
                             )
                             st.session_state["subcluster_data"] = subcluster_data
                             st.rerun()

@@ -1,0 +1,52 @@
+# Streamlit Configuration - Music Cluster Interpretability Dashboard
+# Professional Light Theme with Spotify Branding
+
+[theme]
+# Base theme
+base = "light"
+
+# Primary color - Spotify green
+# Used for: buttons, sliders, active tabs, checkboxes, links, progress bars
+primaryColor = "#1DB954"
+
+# Background colors
+# Main area: pure white for clean, professional appearance
+backgroundColor = "#FFFFFF"
+
+# Sidebar, metric cards, code blocks: warm off-white for subtle differentiation
+secondaryBackgroundColor = "#F8F9FA"
+
+# Text color - dark charcoal for high contrast without harshness
+# WCAG AAA compliant (16.1:1 contrast ratio on white)
+textColor = "#0E1117"
+
+# Font family - system font stack for optimal rendering and zero loading time
+font = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+
+
+[client]
+# Show detailed error messages for debugging
+showErrorDetails = true
+
+# Minimal toolbar for cleaner interface
+toolbarMode = "minimal"
+
+
+[runner]
+# Enable fast reruns for better performance
+fastReruns = true
+
+# Allow flexible session state handling
+enforceSerializableSessionState = false
+
+
+[browser]
+# Disable usage statistics collection
+gatherUsageStats = false
+
+
+[server]
+# Security and performance settings
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200

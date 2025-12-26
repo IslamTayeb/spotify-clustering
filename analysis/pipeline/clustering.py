@@ -18,7 +18,7 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 import umap
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch
+from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch, KMeans, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
@@ -730,6 +730,8 @@ def run_subcluster_pipeline(
     linkage: str = 'ward',
     umap_n_neighbors: int = 15,
     umap_min_dist: float = 0.1,
+    eps: float = 0.5,
+    min_samples: int = 5,
 ) -> Dict:
     """
     Re-cluster songs within a single parent cluster.
@@ -742,10 +744,12 @@ def run_subcluster_pipeline(
         pca_features: Full PCA features array (aligned with df rows)
         parent_cluster: Which cluster ID to sub-cluster
         n_subclusters: Number of sub-clusters to create (2-10)
-        algorithm: Clustering algorithm ('hac', 'birch', 'spectral')
+        algorithm: Clustering algorithm ('hac', 'birch', 'spectral', 'k-means', 'dbscan')
         linkage: HAC linkage method ('ward', 'complete', 'average')
         umap_n_neighbors: UMAP n_neighbors parameter
         umap_min_dist: UMAP min_dist parameter
+        eps: DBSCAN epsilon parameter (only used if algorithm='dbscan')
+        min_samples: DBSCAN min_samples parameter (only used if algorithm='dbscan')
 
     Returns:
         Dict with:
@@ -809,6 +813,20 @@ def run_subcluster_pipeline(
             n_neighbors=actual_n_neighbors,
             assign_labels='kmeans',
             random_state=42
+        )
+    elif algorithm == 'k-means':
+        logger.info(f"Running K-Means (n_clusters={n_subclusters})")
+        clusterer = KMeans(
+            n_clusters=n_subclusters,
+            init='k-means++',
+            n_init=10,
+            random_state=42
+        )
+    elif algorithm == 'dbscan':
+        logger.info(f"Running DBSCAN (eps={eps}, min_samples={min_samples})")
+        clusterer = DBSCAN(
+            eps=eps,
+            min_samples=min_samples
         )
     else:
         logger.warning(f"Unknown algorithm '{algorithm}', defaulting to HAC")

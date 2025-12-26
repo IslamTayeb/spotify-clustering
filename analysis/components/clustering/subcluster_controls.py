@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 import pandas as pd
 
 
-def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, str, str]:
+def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, str, str, float, int]:
     """
     Render sub-clustering controls in the sidebar.
 
@@ -17,8 +17,8 @@ def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, st
         df: DataFrame with 'cluster' column from main clustering
 
     Returns:
-        Tuple of (parent_cluster, n_subclusters, algorithm, linkage)
-        Returns (None, 0, '', '') if no cluster is selected
+        Tuple of (parent_cluster, n_subclusters, algorithm, linkage, eps, min_samples)
+        Returns (None, 0, '', '', 0.5, 5) if no cluster is selected
     """
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔍 Sub-Clustering")
@@ -37,7 +37,7 @@ def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, st
 
     if parent_cluster is None:
         st.sidebar.info("Select a cluster above to enable sub-clustering")
-        return None, 0, '', ''
+        return None, 0, '', '', 0.5, 5
 
     # Show selected cluster info
     cluster_size = cluster_counts[parent_cluster]
@@ -57,7 +57,7 @@ def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, st
     # Algorithm selector
     algorithm = st.sidebar.selectbox(
         "Algorithm",
-        ["HAC", "Birch", "Spectral"],
+        ["HAC", "Birch", "Spectral", "K-Means", "DBSCAN"],
         index=0,
         help="HAC (Hierarchical) is recommended for interpretability",
         key="subcluster_algorithm",
@@ -74,7 +74,30 @@ def render_subcluster_controls(df: pd.DataFrame) -> Tuple[Optional[int], int, st
             key="subcluster_linkage",
         )
 
-    return parent_cluster, n_subclusters, algorithm.lower(), linkage
+    # DBSCAN parameters (only for DBSCAN)
+    eps = 0.5
+    min_samples = 5
+    if algorithm == "DBSCAN":
+        st.sidebar.caption("⚠️ DBSCAN may produce outliers (label -1)")
+        eps = st.sidebar.slider(
+            "Epsilon (eps)",
+            min_value=0.1,
+            max_value=5.0,
+            value=0.5,
+            step=0.1,
+            help="Maximum distance between samples in a neighborhood",
+            key="subcluster_eps",
+        )
+        min_samples = st.sidebar.slider(
+            "Min Samples",
+            min_value=2,
+            max_value=20,
+            value=5,
+            help="Minimum samples in a neighborhood for a core point",
+            key="subcluster_min_samples",
+        )
+
+    return parent_cluster, n_subclusters, algorithm.lower(), linkage, eps, min_samples
 
 
 def render_subcluster_button() -> bool:
