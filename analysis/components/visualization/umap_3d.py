@@ -9,6 +9,11 @@ import plotly.graph_objects as go
 import pandas as pd
 from typing import Optional
 
+from analysis.components.visualization.color_palette import (
+    get_cluster_color,
+    OUTLIER_COLOR,
+)
+
 
 def compute_umap_embedding(
     features: np.ndarray,
@@ -99,12 +104,12 @@ def create_umap_3d_plot(
 
         if label == -1:
             name = f"Outliers ({len(cluster_points)})"
-            color_val = "lightgrey"
+            color_val = OUTLIER_COLOR  # Consistent light gray
             size = 3
             opacity = 0.3
         else:
             name = f"Cluster {label} ({len(cluster_points)})"
-            color_val = label
+            color_val = get_cluster_color(label)  # Consistent color from palette
             size = 4
             opacity = 0.8
 
@@ -120,8 +125,7 @@ def create_umap_3d_plot(
                 name=name,
                 marker=dict(
                     size=size,
-                    color=color_val,
-                    colorscale="Viridis",
+                    color=color_val,  # Direct hex color (no colorscale needed)
                     opacity=opacity,
                 ),
                 text=hover_texts,

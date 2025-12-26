@@ -34,7 +34,7 @@ from analysis.components.visualization import umap_3d
 from analysis.components.widgets import feature_selectors, cluster_inspector
 from analysis.components.export import spotify_export
 from analysis.components.tabs import simplified_tabs
-from analysis.pipeline.clustering import run_subcluster_pipeline
+from analysis.pipeline.clustering import run_subcluster_pipeline, find_optimal_subclusters, auto_tune_subcluster_weights
 
 # Page configuration
 st.set_page_config(
@@ -44,25 +44,83 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS
+# Custom CSS - Compact design with tighter padding and less rounded corners
 st.markdown(
     """
 <style>
+    /* Main header - keep existing but tighter spacing */
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
         color: #1DB954;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;  /* Was 1rem */
     }
+
+    /* Compact metric cards */
     .metric-card {
         background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        padding: 0.5rem;        /* Was 1rem */
+        border-radius: 0.25rem; /* Was 0.5rem */
         border-left: 4px solid #1DB954;
+        margin-bottom: 0.5rem;
     }
+
+    /* Tab spacing - keep but slightly tighter */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
+        gap: 1.5rem;  /* Was 2rem */
+    }
+
+    /* Compact buttons */
+    .stButton button {
+        padding: 0.375rem 0.75rem;  /* Tighter than default */
+        border-radius: 0.25rem;      /* Less rounded */
+    }
+
+    /* Compact inputs and selects */
+    .stSelectbox, .stMultiSelect, .stTextInput {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Compact sliders */
+    .stSlider {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    /* Reduce container padding */
+    .block-container {
+        padding-top: 2rem;    /* Was 3rem default */
+        padding-bottom: 1rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    /* Compact expanders */
+    .streamlit-expanderHeader {
+        border-radius: 0.25rem;
+        padding: 0.5rem;
+    }
+
+    /* Compact dataframes */
+    .stDataFrame {
+        border-radius: 0.25rem;
+    }
+
+    /* Less rounded plotly charts */
+    .js-plotly-plot {
+        border-radius: 0.25rem;
+    }
+
+    /* Compact metrics */
+    div[data-testid="metric-container"] {
+        padding: 0.5rem;
+    }
+
+    /* Tighter sidebar */
+    section[data-testid="stSidebar"] > div {
+        padding-top: 2rem;
+        padding-bottom: 1rem;
     }
 </style>
 """,
@@ -81,7 +139,7 @@ def main():
     **Unified Analysis Interface** - Dynamic clustering with interpretable features
 
     - 🎯 **5 Clustering Algorithms**: HAC, Birch, Spectral, K-Means, DBSCAN
-    - 🎨 **3 Feature Backends**: Essentia, MERT, Interpretable (29-dim)
+    - 🎨 **3 Feature Backends**: Essentia, MERT, Interpretable
     - 📊 **Real-time Metrics**: Silhouette score, outlier detection
     - 🗂️ **Interactive Tables**: Browse and filter tracks by cluster
     - 📤 **Spotify Export**: Create playlists from clustering results
@@ -168,7 +226,7 @@ def main():
             feature_weights = None
             if "Interpretable" in backend:
                 st.sidebar.caption(
-                    "Note: Using interpretable features (30 dims) - normalized audio, lyric, and popularity features"
+                    "Note: Using interpretable features - normalized audio, lyric, and metadata features"
                 )
 
                 # Render weight sliders
@@ -272,6 +330,9 @@ def main():
                 parent_cluster, n_subclusters, algo, linkage, eps, min_samples = subcluster_controls.render_subcluster_controls(df)
 
                 if parent_cluster is not None:
+                    # Render feature weights for sub-clustering
+                    subcluster_weights = feature_selectors.render_subcluster_feature_weights()
+
                     if subcluster_controls.render_subcluster_button():
                         with st.spinner(f"Sub-clustering Cluster {parent_cluster}..."):
                             subcluster_data = run_subcluster_pipeline(
@@ -283,19 +344,59 @@ def main():
                                 linkage=linkage,
                                 eps=eps,
                                 min_samples=min_samples,
+                                feature_weights=subcluster_weights,
                             )
                             st.session_state["subcluster_data"] = subcluster_data
+                            st.rerun()
+
+                    if subcluster_controls.render_find_optimal_k_button():
+                        with st.spinner(f"Finding optimal k for Cluster {parent_cluster}..."):
+                            optimal_k_data = find_optimal_subclusters(
+                                df=df,
+                                pca_features=st.session_state["pca_features"],
+                                parent_cluster=parent_cluster,
+                                max_k=10,
+                                algorithm=algo,
+                                linkage_method=linkage,
+                                feature_weights=subcluster_weights,
+                            )
+                            st.session_state["optimal_k_data"] = optimal_k_data
+                            st.rerun()
+
+                    if subcluster_controls.render_auto_tune_weights_button():
+                        with st.spinner(f"Auto-tuning weights for Cluster {parent_cluster} (testing 9 presets)..."):
+                            auto_tune_data = auto_tune_subcluster_weights(
+                                df=df,
+                                pca_features=st.session_state["pca_features"],
+                                parent_cluster=parent_cluster,
+                                max_k=10,
+                                algorithm=algo,
+                                linkage_method=linkage,
+                            )
+                            st.session_state["auto_tune_data"] = auto_tune_data
                             st.rerun()
 
                     if subcluster_controls.render_clear_subcluster_button():
                         if "subcluster_data" in st.session_state:
                             del st.session_state["subcluster_data"]
-                            st.rerun()
+                        if "optimal_k_data" in st.session_state:
+                            del st.session_state["optimal_k_data"]
+                        if "auto_tune_data" in st.session_state:
+                            del st.session_state["auto_tune_data"]
+                        st.rerun()
 
     # Main Content
     if df is None:
         st.info("👈 Select a data source or run dynamic clustering to begin.")
         st.stop()
+
+    # Auto-tune results (displayed above tabs when available)
+    if "auto_tune_data" in st.session_state:
+        subcluster_results.render_auto_tune_results(st.session_state["auto_tune_data"])
+
+    # Optimal k analysis results (displayed above tabs when available)
+    if "optimal_k_data" in st.session_state:
+        subcluster_results.render_optimal_k_results(st.session_state["optimal_k_data"])
 
     # Sub-cluster results (displayed above tabs when available)
     if "subcluster_data" in st.session_state:

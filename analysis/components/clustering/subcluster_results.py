@@ -4,6 +4,7 @@ This module renders the results of sub-clustering, including:
 - Metrics summary
 - 3D UMAP visualization colored by sub-cluster
 - Track tables grouped by sub-cluster
+- Optimal k analysis visualization
 """
 
 import streamlit as st
@@ -12,6 +13,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from typing import Dict
+
+from analysis.components.visualization.color_palette import CLUSTER_COLORS, SPOTIFY_GREEN
 
 
 def render_subcluster_results(subcluster_data: Dict) -> None:
@@ -72,7 +75,7 @@ def _create_subcluster_3d_plot(
         Plotly Figure object
     """
     fig = go.Figure()
-    colors = px.colors.qualitative.Plotly
+    colors = CLUSTER_COLORS
 
     for i, subcluster_id in enumerate(sorted(df['subcluster'].unique())):
         mask = df['subcluster'] == subcluster_id
@@ -205,3 +208,345 @@ def _render_subcluster_tracks(df: pd.DataFrame) -> None:
                     display_df[col] = display_df[col].round(2)
 
             st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+
+def render_optimal_k_results(optimal_k_data: Dict) -> None:
+    """
+    Display optimal k analysis results with multiple quality metrics.
+
+    Args:
+        optimal_k_data: Dictionary returned by find_optimal_subclusters()
+    """
+    parent_cluster = optimal_k_data['parent_cluster']
+    k_values = optimal_k_data['k_values']
+    silhouette_scores = optimal_k_data['silhouette_scores']
+    calinski_harabasz_scores = optimal_k_data.get('calinski_harabasz_scores', [])
+    davies_bouldin_scores = optimal_k_data.get('davies_bouldin_scores', [])
+    optimal_k = optimal_k_data['optimal_k']
+    optimal_score = optimal_k_data['optimal_score']
+    cluster_size = optimal_k_data['cluster_size']
+
+    st.markdown("---")
+    st.subheader(f"📊 Optimal k Analysis for Cluster {parent_cluster}")
+
+    if not k_values:
+        st.warning(f"Cluster {parent_cluster} is too small for sub-clustering ({cluster_size} songs)")
+        return
+
+    # Metrics row
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Cluster Size", f"{cluster_size} songs")
+    with col2:
+        st.metric("Optimal k", optimal_k, help="Number of sub-clusters with highest silhouette score")
+    with col3:
+        st.metric("Best Silhouette", f"{optimal_score:.3f}", help="Higher is better (max 1.0)")
+
+    # Metric selection for visualization
+    metric_option = st.radio(
+        "Select metric to visualize",
+        ["Silhouette Score", "Calinski-Harabasz Index", "Davies-Bouldin Index", "All Metrics"],
+        horizontal=True,
+        help="Silhouette: higher is better | CH: higher is better | DB: lower is better",
+    )
+
+    # Create plot based on selection
+    fig = go.Figure()
+
+    if metric_option in ["Silhouette Score", "All Metrics"]:
+        fig.add_trace(go.Scatter(
+            x=k_values,
+            y=silhouette_scores,
+            mode='lines+markers',
+            name='Silhouette',
+            line=dict(color=SPOTIFY_GREEN, width=3),
+            marker=dict(size=10),
+            hovertemplate='k=%{x}<br>Silhouette=%{y:.3f}<extra></extra>',
+            yaxis='y1' if metric_option == "All Metrics" else None,
+        ))
+
+    if metric_option == "Calinski-Harabasz Index" and calinski_harabasz_scores:
+        # Normalize CH scores for display
+        fig.add_trace(go.Scatter(
+            x=k_values,
+            y=calinski_harabasz_scores,
+            mode='lines+markers',
+            name='Calinski-Harabasz',
+            line=dict(color='#FF6B6B', width=3),
+            marker=dict(size=10),
+            hovertemplate='k=%{x}<br>CH=%{y:.1f}<extra></extra>',
+        ))
+
+    if metric_option == "Davies-Bouldin Index" and davies_bouldin_scores:
+        fig.add_trace(go.Scatter(
+            x=k_values,
+            y=davies_bouldin_scores,
+            mode='lines+markers',
+            name='Davies-Bouldin',
+            line=dict(color='#4ECDC4', width=3),
+            marker=dict(size=10),
+            hovertemplate='k=%{x}<br>DB=%{y:.3f}<extra></extra>',
+        ))
+
+    if metric_option == "All Metrics" and calinski_harabasz_scores:
+        # Normalize all metrics to 0-1 for comparison
+        sil_norm = np.array(silhouette_scores)
+        ch_norm = np.array(calinski_harabasz_scores)
+        db_norm = np.array(davies_bouldin_scores)
+
+        # Normalize
+        if ch_norm.max() > ch_norm.min():
+            ch_norm = (ch_norm - ch_norm.min()) / (ch_norm.max() - ch_norm.min())
+        if db_norm.max() > db_norm.min():
+            # Invert DB since lower is better
+            db_norm = 1 - (db_norm - db_norm.min()) / (db_norm.max() - db_norm.min())
+
+        fig.add_trace(go.Scatter(
+            x=k_values,
+            y=ch_norm,
+            mode='lines+markers',
+            name='CH (normalized)',
+            line=dict(color='#FF6B6B', width=2, dash='dash'),
+            marker=dict(size=8),
+            hovertemplate='k=%{x}<br>CH (norm)=%{y:.3f}<extra></extra>',
+        ))
+        fig.add_trace(go.Scatter(
+            x=k_values,
+            y=db_norm,
+            mode='lines+markers',
+            name='DB (inverted, normalized)',
+            line=dict(color='#4ECDC4', width=2, dash='dot'),
+            marker=dict(size=8),
+            hovertemplate='k=%{x}<br>DB (inv norm)=%{y:.3f}<extra></extra>',
+        ))
+
+    # Highlight optimal point (based on silhouette)
+    if metric_option in ["Silhouette Score", "All Metrics"]:
+        fig.add_trace(go.Scatter(
+            x=[optimal_k],
+            y=[optimal_score],
+            mode='markers',
+            name=f'Optimal (k={optimal_k})',
+            marker=dict(
+                size=20,
+                color='red',
+                symbol='star',
+                line=dict(width=2, color='white'),
+            ),
+            hovertemplate=f'<b>OPTIMAL</b><br>k={optimal_k}<br>Silhouette={optimal_score:.3f}<extra></extra>',
+        ))
+
+        # Add reference line at optimal
+        fig.add_vline(
+            x=optimal_k,
+            line_dash="dash",
+            line_color="red",
+            opacity=0.5,
+            annotation_text=f"Optimal k={optimal_k}",
+            annotation_position="top",
+        )
+
+    # Set y-axis title based on metric
+    if metric_option == "Silhouette Score":
+        yaxis_title = "Silhouette Score (higher = better)"
+    elif metric_option == "Calinski-Harabasz Index":
+        yaxis_title = "Calinski-Harabasz Index (higher = better)"
+    elif metric_option == "Davies-Bouldin Index":
+        yaxis_title = "Davies-Bouldin Index (lower = better)"
+    else:
+        yaxis_title = "Score (normalized)"
+
+    fig.update_layout(
+        title=f"Clustering Quality vs k (Cluster {parent_cluster})",
+        xaxis_title="Number of Sub-Clusters (k)",
+        yaxis_title=yaxis_title,
+        height=400,
+        showlegend=True,
+        legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
+        xaxis=dict(tickmode='linear', tick0=2, dtick=1),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Interpretation
+    st.markdown("#### 💡 Interpretation")
+
+    if optimal_score >= 0.5:
+        quality = "strong"
+    elif optimal_score >= 0.25:
+        quality = "moderate"
+    else:
+        quality = "weak"
+
+    st.markdown(
+        f"The optimal number of sub-clusters is **k={optimal_k}** with a "
+        f"**{quality}** silhouette score of **{optimal_score:.3f}**."
+    )
+
+    # Show metric guide
+    with st.expander("📖 Metric Guide"):
+        st.markdown("""
+**Silhouette Score** (primary metric, higher is better)
+- Measures how similar points are to their own cluster vs other clusters
+- Range: -1 to 1 (>0.5 = good, >0.7 = strong)
+
+**Calinski-Harabasz Index** (higher is better)
+- Ratio of between-cluster to within-cluster variance
+- No fixed range; compare relative values across k
+
+**Davies-Bouldin Index** (lower is better)
+- Average similarity between clusters
+- Lower values indicate better separation
+        """)
+
+    # Show all scores in a table
+    with st.expander("📋 All Scores by k"):
+        scores_data = {
+            'k': k_values,
+            'Silhouette': [f"{s:.4f}" for s in silhouette_scores],
+        }
+        if calinski_harabasz_scores:
+            scores_data['Calinski-Harabasz'] = [f"{s:.1f}" for s in calinski_harabasz_scores]
+        if davies_bouldin_scores:
+            scores_data['Davies-Bouldin'] = [f"{s:.4f}" for s in davies_bouldin_scores]
+        scores_data['Optimal'] = ['⭐' if k == optimal_k else '' for k in k_values]
+
+        scores_df = pd.DataFrame(scores_data)
+        st.dataframe(scores_df, use_container_width=True, hide_index=True)
+
+    # Show applied feature weights
+    feature_weights = optimal_k_data.get('feature_weights')
+    if feature_weights:
+        with st.expander("🎛️ Applied Feature Weights"):
+            weight_cols = st.columns(3)
+            weight_items = list(feature_weights.items())
+            for i, (name, weight) in enumerate(weight_items):
+                col_idx = i % 3
+                with weight_cols[col_idx]:
+                    # Show weight with visual indicator
+                    if weight > 1.0:
+                        indicator = "🔼"
+                    elif weight < 1.0:
+                        indicator = "🔽"
+                    else:
+                        indicator = "➖"
+                    st.write(f"{indicator} **{name}**: {weight:.1f}x")
+
+
+def render_auto_tune_results(auto_tune_data: Dict) -> None:
+    """
+    Display auto-tune weight results with comparison of all presets.
+
+    Args:
+        auto_tune_data: Dictionary returned by auto_tune_subcluster_weights()
+    """
+    parent_cluster = auto_tune_data['parent_cluster']
+    best_preset = auto_tune_data['best_preset']
+    best_weights = auto_tune_data['best_weights']
+    best_k = auto_tune_data['best_k']
+    best_score = auto_tune_data['best_score']
+    all_results = auto_tune_data['all_results']
+
+    st.markdown("---")
+    st.subheader(f"🎯 Auto-Tune Results for Cluster {parent_cluster}")
+
+    # Winner announcement
+    st.success(
+        f"**Best Configuration:** {best_preset} preset with **k={best_k}** sub-clusters "
+        f"(silhouette score: **{best_score:.3f}**)"
+    )
+
+    # Metrics row
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Best Preset", best_preset)
+    with col2:
+        st.metric("Optimal k", best_k)
+    with col3:
+        st.metric("Best Silhouette", f"{best_score:.3f}")
+
+    # Comparison chart
+    st.markdown("### 📊 Preset Comparison")
+
+    # Prepare data for chart
+    valid_results = [r for r in all_results if r.get('optimal_score', 0) > 0]
+    if valid_results:
+        # Sort by score descending
+        valid_results_sorted = sorted(valid_results, key=lambda x: x['optimal_score'], reverse=True)
+
+        presets = [r['preset'] for r in valid_results_sorted]
+        scores = [r['optimal_score'] for r in valid_results_sorted]
+        optimal_ks = [r['optimal_k'] for r in valid_results_sorted]
+
+        # Create bar chart
+        import plotly.graph_objects as go
+
+        colors = [SPOTIFY_GREEN if p == best_preset else 'rgba(100, 100, 100, 0.6)' for p in presets]
+
+        fig = go.Figure(data=[
+            go.Bar(
+                x=presets,
+                y=scores,
+                marker_color=colors,
+                text=[f"k={k}<br>{s:.3f}" for k, s in zip(optimal_ks, scores)],
+                textposition='outside',
+                hovertemplate='<b>%{x}</b><br>Score: %{y:.3f}<br>k=%{customdata}<extra></extra>',
+                customdata=optimal_ks,
+            )
+        ])
+
+        fig.update_layout(
+            title="Silhouette Score by Weight Preset",
+            xaxis_title="Preset",
+            yaxis_title="Best Silhouette Score",
+            height=400,
+            showlegend=False,
+            xaxis_tickangle=-45,
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Detailed results table
+    with st.expander("📋 Detailed Results"):
+        table_data = []
+        for r in sorted(all_results, key=lambda x: x.get('optimal_score', 0), reverse=True):
+            row = {
+                'Preset': r['preset'],
+                'Best k': r.get('optimal_k', 'N/A'),
+                'Silhouette': f"{r.get('optimal_score', 0):.4f}",
+                'Winner': '🏆' if r['preset'] == best_preset else '',
+            }
+            table_data.append(row)
+
+        results_df = pd.DataFrame(table_data)
+        st.dataframe(results_df, use_container_width=True, hide_index=True)
+
+    # Best weights breakdown
+    st.markdown("### 🎛️ Best Weight Configuration")
+    st.caption(f"Use these weights with the '{best_preset}' preset for optimal results")
+
+    if best_weights:
+        weight_cols = st.columns(3)
+        weight_items = list(best_weights.items())
+        for i, (name, weight) in enumerate(weight_items):
+            col_idx = i % 3
+            with weight_cols[col_idx]:
+                if weight > 1.0:
+                    indicator = "🔼"
+                    color = "green"
+                elif weight < 1.0:
+                    indicator = "🔽"
+                    color = "red"
+                else:
+                    indicator = "➖"
+                    color = "gray"
+                st.write(f"{indicator} **{name}**: {weight:.1f}x")
+
+    # Apply button hint
+    st.info(
+        "💡 **To apply these weights:**\n"
+        "1. Expand '🎛️ Sub-Cluster Feature Weights' in the sidebar\n"
+        "2. Manually adjust sliders to match the values above\n"
+        f"3. Set 'Number of sub-clusters' to **{best_k}**\n"
+        "4. Click '🔍 Run Sub-Clustering'"
+    )

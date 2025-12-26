@@ -5,7 +5,10 @@ This module provides an interactive table for browsing and filtering tracks by c
 
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from typing import Optional, Dict, Any
+
+from analysis.components.visualization.color_palette import MOOD_COLORS
 
 
 def render_cluster_filter(df: pd.DataFrame) -> Optional[int]:
@@ -148,8 +151,28 @@ def render_track_details(track: Dict[str, Any]) -> None:
         "Party": track.get("mood_party", 0),
     }
 
-    mood_df = pd.DataFrame([mood_data])
-    st.bar_chart(mood_df.T, use_container_width=True)
+    mood_colors = [
+        MOOD_COLORS["happy"],
+        MOOD_COLORS["sad"],
+        MOOD_COLORS["aggressive"],
+        MOOD_COLORS["relaxed"],
+        MOOD_COLORS["party"],
+    ]
+
+    fig = go.Figure(data=[
+        go.Bar(
+            x=list(mood_data.keys()),
+            y=list(mood_data.values()),
+            marker_color=mood_colors,
+        )
+    ])
+    fig.update_layout(
+        height=250,
+        margin=dict(l=20, r=20, t=20, b=20),
+        yaxis=dict(range=[0, 1]),
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
     # Lyric features if available
     if track.get("lyric_theme") and track.get("lyric_theme") != "other":

@@ -18,9 +18,11 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 import umap
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import pdist
 from sklearn.cluster import AgglomerativeClustering, SpectralClustering, Birch, KMeans, DBSCAN
 from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -67,6 +69,73 @@ EMBEDDING_DIM_NAMES = [
     "emb_popularity",             # 31: Popularity (normalized to [0,1])
     "emb_release_year",           # 32: Release Year (decade buckets, 0=1950s, 1=2020s)
 ]
+
+
+# Index ranges for feature weighting (matches EMBEDDING_DIM_NAMES)
+FEATURE_WEIGHT_INDICES = {
+    'core_audio': (0, 7),      # BPM through approachability (indices 0-6)
+    'mood': (7, 12),           # 5 mood dimensions (indices 7-11)
+    'genre': (12, 16),         # Voice gender, genre ladder, acoustic/electronic, timbre (indices 12-15)
+    'key': (16, 19),           # 3 key dimensions (indices 16-18)
+    'lyric_emotion': (19, 25), # Lyric valence/arousal + 4 moods (indices 19-24)
+    'lyric_content': (25, 29), # Explicit, narrative, vocabulary, repetition (indices 25-28)
+    'theme': (29, 30),         # Theme dimension (index 29)
+    'language': (30, 31),      # Language dimension (index 30)
+    'metadata': (31, 33),      # Popularity + Release Year (indices 31-32)
+}
+
+
+def apply_subcluster_weights(
+    features: np.ndarray,
+    weights: Dict[str, float]
+) -> np.ndarray:
+    """Apply feature weights to embedding features for sub-clustering.
+
+    Args:
+        features: Array of shape (n_samples, n_features) - typically 33 embedding dims
+        weights: Dictionary mapping feature group names to weight values (0.0-2.0)
+
+    Returns:
+        Weighted features array of the same shape
+    """
+    if weights is None:
+        return features
+
+    weighted = features.copy()
+    n_dims = weighted.shape[1]
+
+    for group, (start, end) in FEATURE_WEIGHT_INDICES.items():
+        if group in weights and start < n_dims:
+            actual_end = min(end, n_dims)
+            weighted[:, start:actual_end] *= weights[group]
+
+    return weighted
+
+
+def extract_embedding_features(df: pd.DataFrame, parent_cluster: int) -> np.ndarray:
+    """Extract embedding features from DataFrame for a specific cluster.
+
+    Args:
+        df: DataFrame with emb_* columns
+        parent_cluster: Cluster ID to filter
+
+    Returns:
+        Array of embedding features for the specified cluster
+    """
+    # Get embedding columns
+    emb_cols = [col for col in df.columns if col.startswith('emb_')]
+
+    if not emb_cols:
+        raise ValueError("No embedding columns (emb_*) found in DataFrame")
+
+    # Filter to parent cluster
+    cluster_mask = df['cluster'].values == parent_cluster
+    subset_df = df[cluster_mask]
+
+    # Extract features as numpy array
+    features = subset_df[emb_cols].values.astype(np.float64)
+
+    return features, cluster_mask
 
 
 def load_temporal_metadata(saved_tracks_path: str = 'spotify/saved_tracks.json') -> Dict:
@@ -732,6 +801,7 @@ def run_subcluster_pipeline(
     umap_min_dist: float = 0.1,
     eps: float = 0.5,
     min_samples: int = 5,
+    feature_weights: Optional[Dict[str, float]] = None,
 ) -> Dict:
     """
     Re-cluster songs within a single parent cluster.
@@ -750,6 +820,7 @@ def run_subcluster_pipeline(
         umap_min_dist: UMAP min_dist parameter
         eps: DBSCAN epsilon parameter (only used if algorithm='dbscan')
         min_samples: DBSCAN min_samples parameter (only used if algorithm='dbscan')
+        feature_weights: Optional dict of feature group weights for sub-clustering
 
     Returns:
         Dict with:
@@ -760,14 +831,34 @@ def run_subcluster_pipeline(
         - 'n_subclusters': Actual number of sub-clusters created
         - 'silhouette_score': Quality metric for the sub-clustering
         - 'pca_features_subset': PCA features for the subset (for potential further sub-clustering)
+        - 'feature_weights': The weights used (for reference)
     """
     logger.info(f"Sub-clustering Cluster {parent_cluster} into {n_subclusters} sub-clusters")
     logger.info(f"Algorithm: {algorithm}, Linkage: {linkage}")
+    if feature_weights:
+        logger.info(f"Feature weights: {feature_weights}")
 
     # Step 1: Filter to parent cluster
     cluster_mask = df['cluster'].values == parent_cluster
     subset_df = df[cluster_mask].copy()
-    subset_pca = pca_features[cluster_mask]
+
+    # Use embedding features with weights if provided, otherwise use pca_features
+    if feature_weights:
+        # Extract embedding features from DataFrame
+        emb_cols = [col for col in df.columns if col.startswith('emb_')]
+        if emb_cols:
+            subset_features = subset_df[emb_cols].values.astype(np.float64)
+            # Apply weights
+            subset_features = apply_subcluster_weights(subset_features, feature_weights)
+            # Standardize after weighting
+            scaler = StandardScaler()
+            subset_pca = scaler.fit_transform(subset_features)
+            logger.info(f"Using weighted embedding features ({len(emb_cols)} dims)")
+        else:
+            logger.warning("No embedding columns found, falling back to pca_features")
+            subset_pca = pca_features[cluster_mask]
+    else:
+        subset_pca = pca_features[cluster_mask]
 
     n_songs = len(subset_df)
     logger.info(f"Parent cluster {parent_cluster} contains {n_songs} songs")
@@ -878,6 +969,309 @@ def run_subcluster_pipeline(
         'n_subclusters': actual_n_subclusters,
         'silhouette_score': float(sil_score),
         'pca_features_subset': subset_pca,
+        'feature_weights': feature_weights,
+    }
+
+
+def find_optimal_subclusters(
+    df: pd.DataFrame,
+    pca_features: np.ndarray,
+    parent_cluster: int,
+    max_k: int = 10,
+    algorithm: str = 'hac',
+    linkage_method: str = 'ward',
+    feature_weights: Optional[Dict[str, float]] = None,
+) -> Dict:
+    """
+    Find the optimal number of sub-clusters using multiple quality metrics.
+
+    For HAC, computes linkage matrix once and efficiently cuts at different levels.
+    Returns silhouette, Calinski-Harabasz, and Davies-Bouldin scores for comprehensive analysis.
+
+    Args:
+        df: Full DataFrame with 'cluster' column from main clustering
+        pca_features: Full PCA features array (aligned with df rows)
+        parent_cluster: Which cluster ID to analyze
+        max_k: Maximum number of sub-clusters to try (default 10)
+        algorithm: Clustering algorithm ('hac', 'birch', 'spectral', 'k-means')
+        linkage_method: HAC linkage method ('ward', 'complete', 'average')
+        feature_weights: Optional dict of feature group weights for sub-clustering
+
+    Returns:
+        Dict with:
+        - 'k_values': List of k values tested
+        - 'silhouette_scores': List of silhouette scores for each k
+        - 'calinski_harabasz_scores': List of CH scores for each k (higher = better)
+        - 'davies_bouldin_scores': List of DB scores for each k (lower = better)
+        - 'optimal_k': The k with highest silhouette score
+        - 'optimal_score': The highest silhouette score
+        - 'parent_cluster': The parent cluster ID
+        - 'cluster_size': Number of songs in the cluster
+        - 'feature_weights': The weights used (for reference)
+    """
+    logger.info(f"Finding optimal sub-clusters for Cluster {parent_cluster}")
+    logger.info(f"Algorithm: {algorithm}, Linkage: {linkage_method}, Max k: {max_k}")
+    if feature_weights:
+        logger.info(f"Feature weights: {feature_weights}")
+
+    # Filter to parent cluster
+    cluster_mask = df['cluster'].values == parent_cluster
+    subset_df = df[cluster_mask]
+
+    # Use embedding features with weights if provided, otherwise use pca_features
+    if feature_weights:
+        emb_cols = [col for col in df.columns if col.startswith('emb_')]
+        if emb_cols:
+            subset_features = subset_df[emb_cols].values.astype(np.float64)
+            # Apply weights
+            subset_features = apply_subcluster_weights(subset_features, feature_weights)
+            # Standardize after weighting
+            scaler = StandardScaler()
+            subset_pca = scaler.fit_transform(subset_features)
+            logger.info(f"Using weighted embedding features ({len(emb_cols)} dims)")
+        else:
+            logger.warning("No embedding columns found, falling back to pca_features")
+            subset_pca = pca_features[cluster_mask]
+    else:
+        subset_pca = pca_features[cluster_mask]
+
+    n_songs = subset_pca.shape[0]
+
+    logger.info(f"Cluster {parent_cluster} contains {n_songs} songs")
+
+    # Determine actual max_k based on cluster size
+    actual_max_k = min(max_k, n_songs - 1, 10)
+    if actual_max_k < 2:
+        logger.warning(f"Cluster too small for sub-clustering (n={n_songs})")
+        return {
+            'k_values': [],
+            'silhouette_scores': [],
+            'calinski_harabasz_scores': [],
+            'davies_bouldin_scores': [],
+            'optimal_k': 1,
+            'optimal_score': 0.0,
+            'parent_cluster': parent_cluster,
+            'cluster_size': n_songs,
+        }
+
+    k_values = list(range(2, actual_max_k + 1))
+    silhouette_scores = []
+    calinski_harabasz_scores = []
+    davies_bouldin_scores = []
+
+    # For HAC: compute linkage matrix once, then cut at different levels (much faster)
+    if algorithm == 'hac':
+        logger.info("Computing HAC linkage matrix (one-time computation)...")
+        # Compute pairwise distances and linkage matrix once
+        Z = linkage(subset_pca, method=linkage_method)
+
+        for k in k_values:
+            # Cut dendrogram at level that gives k clusters
+            labels = fcluster(Z, k, criterion='maxclust') - 1  # Convert to 0-indexed
+
+            # Calculate metrics
+            if len(set(labels)) > 1:
+                sil = silhouette_score(subset_pca, labels)
+                ch = calinski_harabasz_score(subset_pca, labels)
+                db = davies_bouldin_score(subset_pca, labels)
+            else:
+                sil, ch, db = 0.0, 0.0, float('inf')
+
+            silhouette_scores.append(float(sil))
+            calinski_harabasz_scores.append(float(ch))
+            davies_bouldin_scores.append(float(db))
+            logger.info(f"  k={k}: silhouette={sil:.3f}, CH={ch:.1f}, DB={db:.3f}")
+    else:
+        # For other algorithms, run clustering for each k
+        for k in k_values:
+            if algorithm == 'birch':
+                clusterer = Birch(n_clusters=k)
+            elif algorithm == 'spectral':
+                clusterer = SpectralClustering(
+                    n_clusters=k, affinity='nearest_neighbors', random_state=42
+                )
+            elif algorithm == 'k-means':
+                clusterer = KMeans(n_clusters=k, random_state=42, n_init=10)
+            else:
+                clusterer = AgglomerativeClustering(n_clusters=k, linkage='ward')
+
+            labels = clusterer.fit_predict(subset_pca)
+
+            # Calculate metrics
+            if len(set(labels)) > 1:
+                sil = silhouette_score(subset_pca, labels)
+                ch = calinski_harabasz_score(subset_pca, labels)
+                db = davies_bouldin_score(subset_pca, labels)
+            else:
+                sil, ch, db = 0.0, 0.0, float('inf')
+
+            silhouette_scores.append(float(sil))
+            calinski_harabasz_scores.append(float(ch))
+            davies_bouldin_scores.append(float(db))
+            logger.info(f"  k={k}: silhouette={sil:.3f}, CH={ch:.1f}, DB={db:.3f}")
+
+    # Find optimal k using silhouette as primary metric
+    if silhouette_scores:
+        optimal_idx = np.argmax(silhouette_scores)
+        optimal_k = k_values[optimal_idx]
+        optimal_score = silhouette_scores[optimal_idx]
+    else:
+        optimal_k = 2
+        optimal_score = 0.0
+
+    logger.info(f"Optimal k={optimal_k} with silhouette={optimal_score:.3f}")
+
+    return {
+        'k_values': k_values,
+        'silhouette_scores': silhouette_scores,
+        'calinski_harabasz_scores': calinski_harabasz_scores,
+        'davies_bouldin_scores': davies_bouldin_scores,
+        'optimal_k': optimal_k,
+        'optimal_score': optimal_score,
+        'parent_cluster': parent_cluster,
+        'cluster_size': n_songs,
+        'feature_weights': feature_weights,
+    }
+
+
+def auto_tune_subcluster_weights(
+    df: pd.DataFrame,
+    pca_features: np.ndarray,
+    parent_cluster: int,
+    max_k: int = 10,
+    algorithm: str = 'hac',
+    linkage_method: str = 'ward',
+) -> Dict:
+    """
+    Automatically find the best feature weights for sub-clustering.
+
+    Tests multiple weight presets and finds which combination yields
+    the highest silhouette score.
+
+    Args:
+        df: Full DataFrame with 'cluster' column from main clustering
+        pca_features: Full PCA features array (aligned with df rows)
+        parent_cluster: Which cluster ID to analyze
+        max_k: Maximum number of sub-clusters to try
+        algorithm: Clustering algorithm
+        linkage_method: HAC linkage method
+
+    Returns:
+        Dict with:
+        - 'best_preset': Name of the best weight preset
+        - 'best_weights': The best weight configuration
+        - 'best_k': Optimal k for the best weights
+        - 'best_score': Best silhouette score achieved
+        - 'all_results': List of results for all presets tested
+        - 'parent_cluster': The parent cluster ID
+    """
+    logger.info(f"Auto-tuning weights for Cluster {parent_cluster}")
+
+    # Define weight presets to test
+    weight_presets = {
+        'Balanced': {
+            'core_audio': 1.0, 'mood': 1.0, 'genre': 1.0, 'key': 1.0,
+            'lyric_emotion': 1.0, 'lyric_content': 1.0, 'theme': 1.0,
+            'language': 1.0, 'metadata': 1.0
+        },
+        'Audio Focus': {
+            'core_audio': 1.5, 'mood': 1.5, 'genre': 1.2, 'key': 0.8,
+            'lyric_emotion': 0.3, 'lyric_content': 0.3, 'theme': 0.3,
+            'language': 0.3, 'metadata': 0.5
+        },
+        'Lyric Focus': {
+            'core_audio': 0.5, 'mood': 0.5, 'genre': 0.5, 'key': 0.3,
+            'lyric_emotion': 1.5, 'lyric_content': 1.5, 'theme': 1.5,
+            'language': 1.0, 'metadata': 0.5
+        },
+        'Mood & Emotion': {
+            'core_audio': 0.8, 'mood': 2.0, 'genre': 0.5, 'key': 0.3,
+            'lyric_emotion': 2.0, 'lyric_content': 0.5, 'theme': 1.0,
+            'language': 0.3, 'metadata': 0.3
+        },
+        'Genre & Style': {
+            'core_audio': 1.0, 'mood': 0.8, 'genre': 2.0, 'key': 0.5,
+            'lyric_emotion': 0.5, 'lyric_content': 0.5, 'theme': 1.5,
+            'language': 0.8, 'metadata': 0.5
+        },
+        'Energy & Tempo': {
+            'core_audio': 2.0, 'mood': 1.2, 'genre': 0.5, 'key': 0.3,
+            'lyric_emotion': 0.8, 'lyric_content': 0.3, 'theme': 0.5,
+            'language': 0.3, 'metadata': 0.3
+        },
+        'Theme & Content': {
+            'core_audio': 0.5, 'mood': 0.8, 'genre': 0.8, 'key': 0.3,
+            'lyric_emotion': 1.0, 'lyric_content': 1.5, 'theme': 2.0,
+            'language': 1.0, 'metadata': 0.5
+        },
+        'No Lyrics': {
+            'core_audio': 1.5, 'mood': 1.5, 'genre': 1.5, 'key': 1.0,
+            'lyric_emotion': 0.0, 'lyric_content': 0.0, 'theme': 0.0,
+            'language': 0.0, 'metadata': 1.0
+        },
+        'Audio + Metadata': {
+            'core_audio': 1.2, 'mood': 1.0, 'genre': 1.0, 'key': 0.5,
+            'lyric_emotion': 0.5, 'lyric_content': 0.3, 'theme': 0.5,
+            'language': 0.5, 'metadata': 2.0
+        },
+    }
+
+    all_results = []
+    best_score = -1
+    best_preset = None
+    best_weights = None
+    best_k = 2
+
+    for preset_name, weights in weight_presets.items():
+        logger.info(f"Testing preset: {preset_name}")
+
+        try:
+            result = find_optimal_subclusters(
+                df=df,
+                pca_features=pca_features,
+                parent_cluster=parent_cluster,
+                max_k=max_k,
+                algorithm=algorithm,
+                linkage_method=linkage_method,
+                feature_weights=weights,
+            )
+
+            preset_result = {
+                'preset': preset_name,
+                'weights': weights,
+                'optimal_k': result['optimal_k'],
+                'optimal_score': result['optimal_score'],
+                'all_k_scores': list(zip(result['k_values'], result['silhouette_scores'])),
+            }
+            all_results.append(preset_result)
+
+            if result['optimal_score'] > best_score:
+                best_score = result['optimal_score']
+                best_preset = preset_name
+                best_weights = weights
+                best_k = result['optimal_k']
+
+            logger.info(f"  {preset_name}: k={result['optimal_k']}, score={result['optimal_score']:.3f}")
+
+        except Exception as e:
+            logger.warning(f"Failed to test preset {preset_name}: {e}")
+            all_results.append({
+                'preset': preset_name,
+                'weights': weights,
+                'optimal_k': None,
+                'optimal_score': 0.0,
+                'error': str(e),
+            })
+
+    logger.info(f"Best preset: {best_preset} with k={best_k}, score={best_score:.3f}")
+
+    return {
+        'best_preset': best_preset,
+        'best_weights': best_weights,
+        'best_k': best_k,
+        'best_score': best_score,
+        'all_results': all_results,
+        'parent_cluster': parent_cluster,
     }
 
 

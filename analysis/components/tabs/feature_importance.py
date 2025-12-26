@@ -17,6 +17,7 @@ from analysis.interpretability.feature_importance import (
     get_top_features,
     get_feature_interpretation,
 )
+from analysis.components.visualization.color_palette import get_cluster_color
 
 
 @st.cache_data
@@ -218,12 +219,16 @@ def render_feature_importance(df: pd.DataFrame):
         for cluster_id in cluster_ids:
             cluster_values = df[df["cluster"] == cluster_id][selected_feature].dropna()
 
+            cluster_color = get_cluster_color(cluster_id)
             fig.add_trace(
                 go.Violin(
                     y=cluster_values,
                     name=f"Cluster {cluster_id}",
                     box_visible=True,
                     meanline_visible=True,
+                    line_color=cluster_color,
+                    fillcolor=cluster_color,
+                    opacity=0.6,
                 )
             )
 

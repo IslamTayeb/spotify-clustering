@@ -15,6 +15,197 @@ import plotly.express as px
 from typing import Dict
 from scipy import stats
 
+from analysis.components.visualization.color_palette import CLUSTER_COLORS
+
+
+def compute_subcluster_defining_features(
+    df: pd.DataFrame, n_top: int = 3
+) -> dict[int, list[tuple[str, float, str]]]:
+    """Compute the top defining features for each subcluster.
+
+    For each subcluster, finds the features where it deviates most from
+    the overall parent cluster mean (using standardized z-scores).
+
+    Args:
+        df: DataFrame with 'subcluster' column and emb_* feature columns
+        n_top: Number of top features to return per subcluster
+
+    Returns:
+        Dict mapping subcluster_id -> list of (feature_name, z_score, direction)
+        where direction is "high" or "low" relative to parent cluster mean
+    """
+    # Get embedding feature columns
+    emb_cols = [col for col in df.columns if col.startswith("emb_")]
+    if not emb_cols:
+        return {}
+
+    # Compute overall mean and std for each feature
+    overall_means = df[emb_cols].mean()
+    overall_stds = df[emb_cols].std()
+
+    # Avoid division by zero
+    overall_stds = overall_stds.replace(0, 1)
+
+    results = {}
+    for sc_id in sorted(df["subcluster"].unique()):
+        sc_df = df[df["subcluster"] == sc_id]
+        sc_means = sc_df[emb_cols].mean()
+
+        # Compute z-scores (how many stds away from overall mean)
+        z_scores = (sc_means - overall_means) / overall_stds
+
+        # Get top features by absolute z-score
+        top_features = []
+        for feature in z_scores.abs().nlargest(n_top).index:
+            z = z_scores[feature]
+            direction = "high" if z > 0 else "low"
+            # Clean up feature name (remove emb_ prefix)
+            display_name = feature.replace("emb_", "")
+            top_features.append((display_name, z, direction))
+
+        results[sc_id] = top_features
+
+    return results
+
+
+def compute_dissimilarity_matrix(
+    df: pd.DataFrame,
+    subcluster_ids: list,
+    method: str = "centroid"
+) -> pd.DataFrame:
+    """
+    Compute pairwise dissimilarity matrix between subclusters.
+
+    Args:
+        df: DataFrame with subcluster assignments and feature columns
+        subcluster_ids: List of subcluster IDs to include
+        method: "centroid" (Euclidean between centroids) or "effect_size" (avg absolute Cohen's d)
+
+    Returns:
+        DataFrame with dissimilarity values (symmetric matrix)
+    """
+    # Get numeric feature columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    exclude_cols = ['cluster', 'subcluster', 'umap_x', 'umap_y', 'umap_z', 'track_id']
+    feature_cols = [c for c in numeric_cols if c not in exclude_cols]
+
+    n = len(subcluster_ids)
+    matrix = np.zeros((n, n))
+
+    if method == "centroid":
+        # Compute centroids for each subcluster
+        centroids = {}
+        for sc_id in subcluster_ids:
+            sc_df = df[df['subcluster'] == sc_id][feature_cols]
+            centroids[sc_id] = sc_df.mean().values
+
+        # Compute pairwise Euclidean distances
+        for i, sc_a in enumerate(subcluster_ids):
+            for j, sc_b in enumerate(subcluster_ids):
+                if i == j:
+                    matrix[i, j] = 0.0
+                else:
+                    dist = np.linalg.norm(centroids[sc_a] - centroids[sc_b])
+                    matrix[i, j] = dist
+
+    elif method == "effect_size":
+        # Use average absolute Cohen's d across all features
+        for i, sc_a in enumerate(subcluster_ids):
+            for j, sc_b in enumerate(subcluster_ids):
+                if i == j:
+                    matrix[i, j] = 0.0
+                elif j > i:
+                    # Compute average absolute effect size
+                    comparison = compare_two_subclusters(df, sc_a, sc_b)
+                    if len(comparison) > 0:
+                        avg_effect = comparison['effect_size'].abs().mean()
+                        matrix[i, j] = avg_effect
+                        matrix[j, i] = avg_effect
+                    else:
+                        matrix[i, j] = 0.0
+                        matrix[j, i] = 0.0
+
+    # Create DataFrame with labels
+    labels = [f"SC {sc_id}" for sc_id in subcluster_ids]
+    return pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+def render_dissimilarity_matrix(
+    df: pd.DataFrame,
+    subcluster_ids: list,
+) -> None:
+    """
+    Render dissimilarity matrix heatmap for subclusters.
+
+    Args:
+        df: DataFrame with subcluster assignments
+        subcluster_ids: List of subcluster IDs to compare
+    """
+    st.markdown("### 🔲 Dissimilarity Matrix")
+    st.caption("Pairwise distances between sub-cluster centroids in feature space")
+
+    method = st.radio(
+        "Distance metric",
+        options=["centroid", "effect_size"],
+        format_func=lambda x: "Centroid Distance" if x == "centroid" else "Avg Effect Size",
+        horizontal=True,
+        key="dissimilarity_method",
+    )
+
+    with st.spinner("Computing dissimilarity matrix..."):
+        dissim_matrix = compute_dissimilarity_matrix(df, subcluster_ids, method=method)
+
+    # Create heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=dissim_matrix.values,
+        x=dissim_matrix.columns,
+        y=dissim_matrix.index,
+        colorscale="Viridis",
+        text=np.round(dissim_matrix.values, 2),
+        texttemplate="%{text}",
+        textfont={"size": 12},
+        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>Distance: %{z:.3f}<extra></extra>",
+    ))
+
+    fig.update_layout(
+        height=400,
+        xaxis_title="Sub-cluster",
+        yaxis_title="Sub-cluster",
+        yaxis=dict(autorange="reversed"),  # Match matrix orientation
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Show interpretation
+    if method == "centroid":
+        st.caption("💡 Higher values = more dissimilar sub-clusters (Euclidean distance in standardized feature space)")
+    else:
+        st.caption("💡 Higher values = more statistically different sub-clusters (average |Cohen's d| across features)")
+
+    # Identify most/least similar pairs
+    n = len(subcluster_ids)
+    if n >= 2:
+        # Extract upper triangle (excluding diagonal)
+        pairs = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                pairs.append((
+                    subcluster_ids[i],
+                    subcluster_ids[j],
+                    dissim_matrix.iloc[i, j]
+                ))
+
+        if pairs:
+            pairs_sorted = sorted(pairs, key=lambda x: x[2])
+            most_similar = pairs_sorted[0]
+            most_different = pairs_sorted[-1]
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.success(f"**Most similar:** Sub-cluster {most_similar[0]} & {most_similar[1]} (dist: {most_similar[2]:.2f})")
+            with col2:
+                st.error(f"**Most different:** Sub-cluster {most_different[0]} & {most_different[1]} (dist: {most_different[2]:.2f})")
+
 
 def compute_cohens_d(group1: np.ndarray, group2: np.ndarray) -> float:
     """Compute Cohen's d effect size between two groups."""
@@ -145,6 +336,42 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
     overview_df = pd.DataFrame(overview_data)
     st.dataframe(overview_df, use_container_width=True, hide_index=True)
 
+    # Defining Characteristics
+    st.markdown("---")
+    st.subheader("🎯 Top 3 Defining Characteristics")
+    st.caption(
+        "Features where each sub-cluster deviates most from the parent cluster average "
+        "(z-score = standard deviations from mean)"
+    )
+
+    defining_features = compute_subcluster_defining_features(df, n_top=3)
+
+    if defining_features:
+        # Create columns for selected subclusters
+        n_cols = min(len(selected_subclusters), 4)
+        cols = st.columns(n_cols)
+
+        for idx, sc_id in enumerate(selected_subclusters):
+            col_idx = idx % n_cols
+            features = defining_features.get(sc_id, [])
+
+            with cols[col_idx]:
+                st.markdown(f"**Sub-cluster {sc_id}**")
+                if features:
+                    for feature_name, z_score, direction in features:
+                        arrow = "↑" if direction == "high" else "↓"
+                        st.markdown(
+                            f"- {arrow} **{feature_name}** ({z_score:+.2f}σ)"
+                        )
+                else:
+                    st.caption("No features found")
+    else:
+        st.info("No embedding features (emb_*) found for characteristic analysis")
+
+    # Dissimilarity Matrix
+    st.markdown("---")
+    render_dissimilarity_matrix(df, selected_subclusters)
+
     # Pairwise Statistical Comparisons
     st.markdown("---")
     st.subheader("📈 Pairwise Statistical Comparisons")
@@ -255,7 +482,7 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
 
         # Create radar plot
         fig = go.Figure()
-        colors = px.colors.qualitative.Plotly
+        colors = CLUSTER_COLORS
 
         for i, sc_id in enumerate(selected_subclusters):
             sc_means = normalized_df[normalized_df["subcluster"] == sc_id][radar_features].mean()

@@ -19,6 +19,7 @@ import plotly.express as px
 from analysis.interpretability.cluster_comparison import (
     compute_cluster_similarity_matrix,
 )
+from analysis.components.visualization.color_palette import CLUSTER_COLORS, get_cluster_color
 
 
 def render_overview(df: pd.DataFrame):
@@ -54,13 +55,16 @@ def render_overview(df: pd.DataFrame):
     st.subheader("📏 Cluster Size Distribution")
 
     cluster_sizes = df["cluster"].value_counts().sort_index()
+    bar_colors = [get_cluster_color(idx) for idx in cluster_sizes.index]
 
     fig = px.bar(
         x=cluster_sizes.index,
         y=cluster_sizes.values,
         labels={"x": "Cluster", "y": "Number of Songs"},
         title="Songs per Cluster",
+        color_discrete_sequence=bar_colors,
     )
+    fig.update_traces(marker_color=bar_colors)
     fig.update_layout(height=400, showlegend=False)
     fig.update_xaxes(type="category")
     st.plotly_chart(fig, use_container_width=True)
@@ -204,7 +208,7 @@ def render_overview(df: pd.DataFrame):
         fig = go.Figure()
 
         cluster_ids = sorted(df["cluster"].unique())
-        colors = px.colors.qualitative.Plotly
+        colors = CLUSTER_COLORS
 
         for i, cluster_id in enumerate(cluster_ids):
             cluster_df = df[df["cluster"] == cluster_id]

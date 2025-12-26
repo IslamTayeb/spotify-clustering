@@ -22,6 +22,7 @@ from analysis.interpretability.lyric_themes import (
     compute_lyric_complexity,
     extract_common_phrases,
 )
+from analysis.components.visualization.color_palette import SPOTIFY_GREEN
 
 
 @st.cache_data
@@ -144,6 +145,7 @@ def render_lyric_themes(df: pd.DataFrame):
                         y="Word",
                         orientation="h",
                         title="Top 20 Keywords",
+                        color_discrete_sequence=[SPOTIFY_GREEN],
                     )
                     fig.update_layout(height=500)
                     st.plotly_chart(fig, use_container_width=True)
@@ -261,6 +263,7 @@ def render_lyric_themes(df: pd.DataFrame):
                     x=[s["compound_score"] for s in sentiments],
                     nbinsx=20,
                     name="Sentiment Distribution",
+                    marker_color=SPOTIFY_GREEN,
                 )
             )
 

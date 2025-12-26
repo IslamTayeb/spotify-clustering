@@ -115,6 +115,36 @@ def render_subcluster_button() -> bool:
     )
 
 
+def render_find_optimal_k_button() -> bool:
+    """
+    Render the button to find optimal number of sub-clusters.
+
+    Returns:
+        True if button was clicked
+    """
+    return st.sidebar.button(
+        "📊 Find Optimal k",
+        use_container_width=True,
+        help="Analyze silhouette scores for k=2 to 10 to find the best number of sub-clusters",
+        key="find_optimal_k_btn",
+    )
+
+
+def render_auto_tune_weights_button() -> bool:
+    """
+    Render the button to auto-tune feature weights.
+
+    Returns:
+        True if button was clicked
+    """
+    return st.sidebar.button(
+        "🎯 Auto-Tune Weights",
+        use_container_width=True,
+        help="Test 9 weight presets to find the best combination for this cluster",
+        key="auto_tune_weights_btn",
+    )
+
+
 def render_clear_subcluster_button() -> bool:
     """
     Render button to clear sub-clustering results.

@@ -16,6 +16,10 @@ from analysis.interpretability.cluster_comparison import (
     compare_two_clusters,
     compute_cluster_similarity_matrix,
 )
+from analysis.components.visualization.color_palette import (
+    get_cluster_color,
+    CLUSTER_COLORS,
+)
 
 
 def render_cluster_comparison(df: pd.DataFrame):
@@ -217,7 +221,7 @@ def render_cluster_comparison(df: pd.DataFrame):
         # Create radar plot with all selected clusters
         fig = go.Figure()
 
-        colors = px.colors.qualitative.Plotly
+        colors = CLUSTER_COLORS
 
         for i, cluster_id in enumerate(selected_clusters):
             cluster_means = normalized_df[normalized_df["cluster"] == cluster_id][
@@ -270,9 +274,7 @@ def render_cluster_comparison(df: pd.DataFrame):
                     orientation="h",
                     labels={"x": "Count", "y": "Genre"},
                     color_discrete_sequence=[
-                        px.colors.qualitative.Plotly[
-                            i % len(px.colors.qualitative.Plotly)
-                        ]
+                        get_cluster_color(i)
                     ],
                 )
                 fig.update_layout(height=400, showlegend=False)

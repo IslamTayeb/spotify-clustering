@@ -67,7 +67,7 @@ def render_audio_feature_weights() -> Dict[str, float]:
         2.0,
         1.0,
         0.1,
-        help="0=acoustic, 1=electronic",
+        help="0=pure genre, 1=genre fusion (entropy-based)",
     )
 
     weights["key"] = st.sidebar.slider(
@@ -146,7 +146,7 @@ def render_pca_controls(mode: str, interpretable_mode: bool = False) -> Dict[str
 
     Args:
         mode: Feature mode (audio/lyrics/combined)
-        interpretable_mode: If True, PCA is skipped by default (30-dim vector)
+        interpretable_mode: If True, PCA is skipped (interpretable vector is already low-dim)
 
     Returns:
         Dictionary with PCA configuration
@@ -154,12 +154,12 @@ def render_pca_controls(mode: str, interpretable_mode: bool = False) -> Dict[str
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Feature Preparation")
 
-    # For interpretable mode, always skip PCA (30-dim vector is already interpretable)
+    # For interpretable mode, always skip PCA (already low-dimensional and interpretable)
     if interpretable_mode:
-        st.sidebar.info("ℹ️ PCA skipped for interpretable 30-dim vector")
+        st.sidebar.info("ℹ️ PCA skipped for interpretable features")
         return {
             "skip_pca": True,
-            "n_pca_components": 30,  # Placeholder, will be ignored
+            "n_pca_components": None,  # Not used
         }
 
     # Skip PCA checkbox (only shown for non-interpretable backends)
@@ -189,6 +189,134 @@ def render_pca_controls(mode: str, interpretable_mode: bool = False) -> Dict[str
         "skip_pca": skip_pca,
         "n_pca_components": n_pca_components,
     }
+
+
+def render_subcluster_feature_weights() -> Dict[str, float]:
+    """Render feature weight sliders for sub-clustering.
+
+    These weights are applied independently of main clustering weights,
+    allowing different emphasis when drilling into a specific cluster.
+
+    Returns:
+        Dictionary of feature weights for sub-clustering
+    """
+    with st.sidebar.expander("🎛️ Sub-Cluster Feature Weights", expanded=False):
+        st.caption("Adjust feature importance for sub-clustering")
+
+        weights = {}
+
+        weights["core_audio"] = st.slider(
+            "🎵 Core Audio",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="BPM, danceability, instrumentalness, valence, arousal, engagement, approachability",
+            key="sc_weight_core_audio",
+        )
+
+        weights["mood"] = st.slider(
+            "😊 Audio Moods",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="happy, sad, aggressive, relaxed, party",
+            key="sc_weight_mood",
+        )
+
+        weights["genre"] = st.slider(
+            "🎸 Genre/Timbre",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Voice gender, genre ladder, acoustic/electronic, timbre",
+            key="sc_weight_genre",
+        )
+
+        weights["key"] = st.slider(
+            "🎹 Key",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Musical key (sin, cos, scale)",
+            key="sc_weight_key",
+        )
+
+        weights["lyric_emotion"] = st.slider(
+            "💭 Lyric Emotions",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Lyric valence, arousal, moods",
+            key="sc_weight_lyric_emotion",
+        )
+
+        weights["lyric_content"] = st.slider(
+            "🔞 Lyric Content",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Explicit, narrative, vocabulary, repetition",
+            key="sc_weight_lyric_content",
+        )
+
+        weights["theme"] = st.slider(
+            "🏷️ Theme",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Theme categories",
+            key="sc_weight_theme",
+        )
+
+        weights["language"] = st.slider(
+            "🌍 Language",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Language of lyrics",
+            key="sc_weight_language",
+        )
+
+        weights["metadata"] = st.slider(
+            "📊 Metadata",
+            0.0,
+            2.0,
+            1.0,
+            0.1,
+            help="Popularity + Release Year",
+            key="sc_weight_metadata",
+        )
+
+        # Quick presets
+        st.markdown("---")
+        st.caption("Quick Presets")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Audio Focus", key="sc_preset_audio", use_container_width=True):
+                st.session_state["sc_weight_core_audio"] = 1.5
+                st.session_state["sc_weight_mood"] = 1.5
+                st.session_state["sc_weight_genre"] = 1.0
+                st.session_state["sc_weight_lyric_emotion"] = 0.3
+                st.session_state["sc_weight_lyric_content"] = 0.3
+                st.rerun()
+        with col2:
+            if st.button("Lyric Focus", key="sc_preset_lyric", use_container_width=True):
+                st.session_state["sc_weight_core_audio"] = 0.5
+                st.session_state["sc_weight_mood"] = 0.5
+                st.session_state["sc_weight_lyric_emotion"] = 1.5
+                st.session_state["sc_weight_lyric_content"] = 1.5
+                st.session_state["sc_weight_theme"] = 1.5
+                st.rerun()
+
+    return weights
 
 
 def render_umap_controls() -> Dict[str, any]:
