@@ -616,6 +616,7 @@ def run_clustering_pipeline(
             'mtg_jamendo_probs': audio_f.get('mtg_jamendo_probs', []),
 
             'bpm': audio_f['bpm'],
+            'genre_ladder': audio_f.get('genre_ladder', 0.5),
             'key': audio_f['key'],
             'danceability': audio_f['danceability'],
             'instrumentalness': audio_f['instrumentalness'],

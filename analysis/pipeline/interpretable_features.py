@@ -14,8 +14,10 @@ Vector Structure (30 dimensions):
 - Language (1 dim): Ordinal encoding
 - Popularity (1 dim): Spotify popularity score normalized to [0, 1]
 
-CRITICAL: All lyric-related features are weighted by (1 - instrumentalness) to ensure
-that instrumental songs are NOT clustered based on non-existent lyric content.
+CRITICAL: Lyric-related features use different weighting strategies based on semantics:
+- Bipolar scales (valence, arousal): interpolate toward 0.5 (neutral)
+- Presence/absence (moods, explicit, etc.): scale toward 0 (absent)
+- Categorical (theme, language): hard threshold at instrumentalness > 0.5 → centered "none"
 """
 
 import json
@@ -237,15 +239,28 @@ def build_interpretable_features(
 
         # =====================================================================
         # LYRIC FEATURES (10 dimensions)
-        # CRITICAL: Weighted by (1 - instrumentalness) to prevent instrumental
-        #           songs from being clustered by default lyric values
+        # Three weighting strategies based on semantic type:
+        # - Bipolar (valence, arousal): interpolate toward 0.5 (neutral)
+        # - Presence/absence: scale toward 0 (absent)
+        # - Categorical (theme, language): hard threshold (handled below)
         # =====================================================================
         instrumentalness_val = require_float("instrumentalness")
         lyric_weight = 1.0 - instrumentalness_val  # Key weighting factor!
 
+        # BIPOLAR SCALES: interpolate toward 0.5 (neutral)
+        # Rationale: These are negative↔positive scales. An instrumental track
+        # isn't "lyrically negative"—it's lyrically absent, which should be neutral.
+        lyric_valence_raw = get_lyric_float("lyric_valence", 0.5)
+        lyric_arousal_raw = get_lyric_float("lyric_arousal", 0.5)
+        lyric_valence = 0.5 + (lyric_valence_raw - 0.5) * lyric_weight
+        lyric_arousal = 0.5 + (lyric_arousal_raw - 0.5) * lyric_weight
+
+        # PRESENCE/ABSENCE: scale toward 0 (absent)
+        # Rationale: These are "happy vs non_happy" classifiers. An instrumental
+        # track is definitively non_happy, non_sad, non_explicit, etc.
         lyric_scalars = [
-            get_lyric_float("lyric_valence", 0.5) * lyric_weight,             # 17: Lyric Valence
-            get_lyric_float("lyric_arousal", 0.5) * lyric_weight,             # 18: Lyric Arousal
+            lyric_valence,                                                    # 17: Lyric Valence
+            lyric_arousal,                                                    # 18: Lyric Arousal
             get_lyric_float("lyric_mood_happy", 0.0) * lyric_weight,          # 19: Lyric Mood - Happy
             get_lyric_float("lyric_mood_sad", 0.0) * lyric_weight,            # 20: Lyric Mood - Sad
             get_lyric_float("lyric_mood_aggressive", 0.0) * lyric_weight,     # 21: Lyric Mood - Aggressive
@@ -257,7 +272,10 @@ def build_interpretable_features(
         ]
 
         # =====================================================================
-        # THEME (1 dimension) - Semantic scale, weighted by lyric_weight
+        # THEME (1 dimension) - Categorical with hard threshold
+        # Rationale: Themes are categorical, not continuous. A track at
+        # instrumentalness=0.9 doesn't have "10% Japanese"—it either has
+        # meaningful lyrics with a theme or it doesn't.
         # =====================================================================
         theme = lyric.get("lyric_theme")
         if theme is None:
@@ -269,10 +287,15 @@ def build_interpretable_features(
         if theme not in THEME_SCALE:
             logger.warning(f"Unknown theme '{theme}' for track '{track_name}' ({track_id}), using 'other'")
             theme = "other"
-        theme_val = THEME_SCALE[theme] * lyric_weight  # 27: Theme
+        # CATEGORICAL: hard threshold with centered "none"
+        if instrumentalness_val > 0.5:
+            theme_val = 0.5  # Centered "none" for instrumental tracks
+        else:
+            theme_val = THEME_SCALE[theme]  # 27: Theme
 
         # =====================================================================
-        # LANGUAGE (1 dimension) - Ordinal encoding, weighted by lyric_weight
+        # LANGUAGE (1 dimension) - Categorical with hard threshold
+        # Same rationale as theme: categorical, not continuous.
         # =====================================================================
         lang = lyric.get("lyric_language")
         if lang is None:
@@ -284,7 +307,11 @@ def build_interpretable_features(
         if lang not in LANGUAGE_SCALE:
             logger.warning(f"Unknown language '{lang}' for track '{track_name}' ({track_id}), using 'unknown'")
             lang = "unknown"
-        lang_val = LANGUAGE_SCALE[lang] * lyric_weight  # 28: Language
+        # CATEGORICAL: hard threshold with centered "none"
+        if instrumentalness_val > 0.5:
+            lang_val = 0.5  # Centered "none" for instrumental tracks
+        else:
+            lang_val = LANGUAGE_SCALE[lang]  # 28: Language
 
         # =====================================================================
         # POPULARITY (1 dimension) - Normalized Spotify popularity score

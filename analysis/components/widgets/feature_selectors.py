@@ -141,11 +141,12 @@ def render_lyric_feature_weights() -> Dict[str, float]:
     return weights
 
 
-def render_pca_controls(mode: str) -> Dict[str, any]:
+def render_pca_controls(mode: str, interpretable_mode: bool = False) -> Dict[str, any]:
     """Render PCA control widgets.
 
     Args:
         mode: Feature mode (audio/lyrics/combined)
+        interpretable_mode: If True, PCA is skipped by default (30-dim vector)
 
     Returns:
         Dictionary with PCA configuration
@@ -153,7 +154,15 @@ def render_pca_controls(mode: str) -> Dict[str, any]:
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Feature Preparation")
 
-    # Skip PCA checkbox
+    # For interpretable mode, always skip PCA (30-dim vector is already interpretable)
+    if interpretable_mode:
+        st.sidebar.info("ℹ️ PCA skipped for interpretable 30-dim vector")
+        return {
+            "skip_pca": True,
+            "n_pca_components": 30,  # Placeholder, will be ignored
+        }
+
+    # Skip PCA checkbox (only shown for non-interpretable backends)
     skip_pca = st.sidebar.checkbox(
         "Skip PCA (Use Raw Features)",
         value=False,

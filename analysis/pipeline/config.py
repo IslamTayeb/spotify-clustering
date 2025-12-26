@@ -57,7 +57,7 @@ THEME_SCALE: Dict[str, float] = {
     "heartbreak": 0.3,
     "struggle": 0.2,
     "other": 0.1,
-    "none": 0.0,
+    "none": 0.5,  # Centered for instrumental tracks (equidistant from all categories)
 }
 
 # Language scale for interpretable lyric features
@@ -92,10 +92,10 @@ LANGUAGE_SCALE: Dict[str, float] = {
     "vietnamese": 0.20,
     # African
     "luganda": 0.10,
-    # Other/Unknown
-    "multilingual": 0.0,
-    "unknown": 0.0,
-    "none": 0.0,
+    # Other/Unknown - centered for instrumental tracks (equidistant from all categories)
+    "multilingual": 0.5,
+    "unknown": 0.5,
+    "none": 0.5,
 }
 
 

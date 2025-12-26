@@ -1229,6 +1229,17 @@ def render_eda_explorer(df: pd.DataFrame):
         st.subheader("3D UMAP Visualization of Clusters")
 
         if "umap_x" in df.columns and "umap_y" in df.columns and "umap_z" in df.columns:
+            # Check for subcluster data
+            subcluster_data = st.session_state.get("subcluster_data")
+            show_subclusters = False
+
+            if subcluster_data is not None:
+                show_subclusters = st.checkbox(
+                    f"🔍 Show Sub-Clusters of Cluster {subcluster_data['parent_cluster']}",
+                    value=True,
+                    help="Color parent cluster by subcluster, dim other clusters"
+                )
+
             fig = go.Figure()
 
             unique_clusters = sorted(df["cluster"].unique())
@@ -1237,44 +1248,133 @@ def render_eda_explorer(df: pd.DataFrame):
             # Get embedding columns for hover display
             emb_cols = [col for col in df.columns if col.startswith("emb_")]
 
-            for i, cluster_id in enumerate(unique_clusters):
-                cluster_df = df[df["cluster"] == cluster_id]
+            if show_subclusters and subcluster_data is not None:
+                # Subcluster view: highlight parent cluster subclusters, dim others
+                parent_cluster = subcluster_data['parent_cluster']
+                subcluster_df = subcluster_data['subcluster_df']
 
-                hover_texts = []
-                for _, row in cluster_df.iterrows():
-                    text = (
-                        f"<b>{row['track_name']}</b><br>"
-                        f"Artist: {row['artist']}<br>"
-                        f"Cluster: {row['cluster']}<br>"
+                for i, cluster_id in enumerate(unique_clusters):
+                    cluster_df = df[df["cluster"] == cluster_id]
+
+                    if cluster_id == parent_cluster:
+                        # Plot each subcluster with distinct colors
+                        subcluster_ids = sorted(subcluster_df['subcluster'].unique())
+                        for j, sc_id in enumerate(subcluster_ids):
+                            sc_mask = subcluster_df['subcluster'] == sc_id
+                            sc_tracks = subcluster_df[sc_mask]
+
+                            # Find matching rows in main df by track_id
+                            track_ids = sc_tracks['track_id'].values
+                            main_mask = cluster_df['track_id'].isin(track_ids)
+                            sc_cluster_df = cluster_df[main_mask]
+
+                            if len(sc_cluster_df) == 0:
+                                continue
+
+                            # Build hover texts with subcluster info
+                            hover_texts = []
+                            for _, row in sc_cluster_df.iterrows():
+                                text = (
+                                    f"<b>{row['track_name']}</b><br>"
+                                    f"Artist: {row['artist']}<br>"
+                                    f"Cluster: {row['cluster']}<br>"
+                                    f"<b>Sub-cluster: {sc_id}</b><br>"
+                                )
+                                if "top_genre" in row:
+                                    text += f"Genre: {row['top_genre']}<br>"
+                                if "bpm" in row:
+                                    text += f"BPM: {row['bpm']:.0f}<br>"
+
+                                if emb_cols:
+                                    text += "<br><b>Embedding Vector:</b><br>"
+                                    for emb_col in emb_cols:
+                                        if emb_col in row and pd.notna(row[emb_col]):
+                                            display_name = emb_col.replace("emb_", "")
+                                            text += f"{display_name}: {row[emb_col]:.3f}<br>"
+
+                                hover_texts.append(text)
+
+                            fig.add_trace(
+                                go.Scatter3d(
+                                    x=sc_cluster_df["umap_x"],
+                                    y=sc_cluster_df["umap_y"],
+                                    z=sc_cluster_df["umap_z"],
+                                    mode="markers",
+                                    name=f"Sub-cluster {sc_id} ({len(sc_cluster_df)})",
+                                    marker=dict(size=5, color=colors[j % len(colors)], opacity=0.9),
+                                    text=hover_texts,
+                                    hovertemplate="%{text}<extra></extra>",
+                                )
+                            )
+                    else:
+                        # Gray out non-parent clusters
+                        hover_texts = []
+                        for _, row in cluster_df.iterrows():
+                            text = (
+                                f"<b>{row['track_name']}</b><br>"
+                                f"Artist: {row['artist']}<br>"
+                                f"Cluster: {row['cluster']}<br>"
+                            )
+                            if "top_genre" in row:
+                                text += f"Genre: {row['top_genre']}<br>"
+                            hover_texts.append(text)
+
+                        fig.add_trace(
+                            go.Scatter3d(
+                                x=cluster_df["umap_x"],
+                                y=cluster_df["umap_y"],
+                                z=cluster_df["umap_z"],
+                                mode="markers",
+                                name=f"Cluster {cluster_id} ({len(cluster_df)})",
+                                marker=dict(size=3, color='rgba(128,128,128,0.3)', opacity=0.3),
+                                text=hover_texts,
+                                hovertemplate="%{text}<extra></extra>",
+                            )
+                        )
+
+                plot_title = f"3D Sub-Clusters of Cluster {parent_cluster} (UMAP)"
+            else:
+                # Standard view: all clusters with full colors
+                for i, cluster_id in enumerate(unique_clusters):
+                    cluster_df = df[df["cluster"] == cluster_id]
+
+                    hover_texts = []
+                    for _, row in cluster_df.iterrows():
+                        text = (
+                            f"<b>{row['track_name']}</b><br>"
+                            f"Artist: {row['artist']}<br>"
+                            f"Cluster: {row['cluster']}<br>"
+                        )
+                        if "top_genre" in row:
+                            text += f"Genre: {row['top_genre']}<br>"
+                        if "bpm" in row:
+                            text += f"BPM: {row['bpm']:.0f}<br>"
+
+                        # Add full embedding vector
+                        if emb_cols:
+                            text += "<br><b>Embedding Vector:</b><br>"
+                            for emb_col in emb_cols:
+                                if emb_col in row and pd.notna(row[emb_col]):
+                                    # Clean up column name for display (remove emb_ prefix)
+                                    display_name = emb_col.replace("emb_", "")
+                                    text += f"{display_name}: {row[emb_col]:.3f}<br>"
+
+                        hover_texts.append(text)
+
+                    fig.add_trace(
+                        go.Scatter3d(
+                            x=cluster_df["umap_x"],
+                            y=cluster_df["umap_y"],
+                            z=cluster_df["umap_z"],
+                            mode="markers",
+                            name=f"Cluster {cluster_id} ({len(cluster_df)})",
+                            marker=dict(size=4, color=colors[i % len(colors)], opacity=0.8),
+                            text=hover_texts,
+                            hovertemplate="%{text}<extra></extra>",
+                        )
                     )
-                    if "top_genre" in row:
-                        text += f"Genre: {row['top_genre']}<br>"
-                    if "bpm" in row:
-                        text += f"BPM: {row['bpm']:.0f}<br>"
 
-                    # Add full embedding vector
-                    if emb_cols:
-                        text += "<br><b>Embedding Vector:</b><br>"
-                        for emb_col in emb_cols:
-                            if emb_col in row and pd.notna(row[emb_col]):
-                                # Clean up column name for display (remove emb_ prefix)
-                                display_name = emb_col.replace("emb_", "")
-                                text += f"{display_name}: {row[emb_col]:.3f}<br>"
-
-                    hover_texts.append(text)
-
-                fig.add_trace(
-                    go.Scatter3d(
-                        x=cluster_df["umap_x"],
-                        y=cluster_df["umap_y"],
-                        z=cluster_df["umap_z"],
-                        mode="markers",
-                        name=f"Cluster {cluster_id} ({len(cluster_df)})",
-                        marker=dict(size=4, color=colors[i % len(colors)], opacity=0.8),
-                        text=hover_texts,
-                        hovertemplate="%{text}<extra></extra>",
-                    )
-                )
+                plot_title = "3D Cluster Visualization (UMAP)"
 
             fig.update_layout(
                 height=700,
@@ -1283,7 +1383,7 @@ def render_eda_explorer(df: pd.DataFrame):
                     yaxis=dict(visible=False),
                     zaxis=dict(visible=False),
                 ),
-                title="3D Cluster Visualization (UMAP)",
+                title=plot_title,
                 showlegend=True,
             )
 

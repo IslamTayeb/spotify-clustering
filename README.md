@@ -110,43 +110,49 @@ The genre_ladder measures how "categorizable" a song is, computed from the entro
 
 **Why circular encoding?** Musical keys are cyclical (C is "close" to B, not far). Sin/cos encoding captures octave equivalence. The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence.
 
-#### Lyric Features (Dimensions 17-26) — The Instrumentalness Weighting
+#### Lyric Features (Dimensions 17-26) — Semantic Weighting Strategies
 
-**Critical Design Decision:** All lyric features are weighted by `(1 - instrumentalness)`.
+**Critical Design Decision:** Lyric features use three different weighting strategies based on their semantic type:
 
-**Rationale:** Songs exist on a spectrum, not a binary vocal/instrumental divide. A track with 70% instrumentalness should have its lyric features reduced proportionally, not zeroed out entirely.
+**1. Bipolar Scales (valence, arousal):** `0.5 + (raw - 0.5) * (1 - instrumentalness)`
+- Pulls toward 0.5 (neutral), not 0
+- Rationale: These are negative↔positive scales. An instrumental track isn't "lyrically negative"—it's lyrically absent, which should be neutral.
 
-**Effect:**
-- Fully instrumental tracks (instrumentalness=1.0): lyric dims → 0
-- Fully vocal tracks (instrumentalness=0.0): lyric dims at full value
-- Mixed tracks: proportional weighting
+**2. Presence/Absence (moods, explicit, narrative, vocabulary, repetition):** `raw * (1 - instrumentalness)`
+- Pulls toward 0 (absent)
+- Rationale: These classifiers output "happy vs non_happy", etc. An instrumental track is definitively non_happy, non_sad, non_explicit, etc.
 
-| Dim | Name | Source | Description |
-|-----|------|--------|-------------|
-| 17 | `lyric_valence` | GPT | Emotional tone of lyrics |
-| 18 | `lyric_arousal` | GPT | Energy level of lyric content |
-| 19 | `lyric_mood_happy` | GPT | Joy/celebration in lyrics |
-| 20 | `lyric_mood_sad` | GPT | Grief/melancholy in lyrics |
-| 21 | `lyric_mood_aggressive` | GPT | Anger/confrontation in lyrics |
-| 22 | `lyric_mood_relaxed` | GPT | Peace/calm in lyrics |
-| 23 | `lyric_explicit` | GPT | Holistic explicit content score |
-| 24 | `lyric_narrative` | GPT | 0=pure vibes → 1=specific story |
-| 25 | `lyric_vocabulary` | Local (TTR) | Type-token ratio (vocabulary richness) |
-| 26 | `lyric_repetition` | Local | 1 - (unique lines / total lines) |
+**3. Categorical (theme, language):** Hard threshold at `instrumentalness > 0.5`
+- If instrumental: use 0.5 (centered "none")
+- If vocal: use ordinal scale value
+- Rationale: Themes are categorical, not continuous. A track at instrumentalness=0.9 doesn't have "10% Japanese"—it either has meaningful lyrics or it doesn't.
+
+| Dim | Name | Source | Weighting | Description |
+|-----|------|--------|-----------|-------------|
+| 17 | `lyric_valence` | GPT | Bipolar → 0.5 | Emotional tone of lyrics |
+| 18 | `lyric_arousal` | GPT | Bipolar → 0.5 | Energy level of lyric content |
+| 19 | `lyric_mood_happy` | GPT | Presence → 0 | Joy/celebration in lyrics |
+| 20 | `lyric_mood_sad` | GPT | Presence → 0 | Grief/melancholy in lyrics |
+| 21 | `lyric_mood_aggressive` | GPT | Presence → 0 | Anger/confrontation in lyrics |
+| 22 | `lyric_mood_relaxed` | GPT | Presence → 0 | Peace/calm in lyrics |
+| 23 | `lyric_explicit` | GPT | Presence → 0 | Holistic explicit content score |
+| 24 | `lyric_narrative` | GPT | Presence → 0 | 0=pure vibes → 1=specific story |
+| 25 | `lyric_vocabulary` | Local (TTR) | Presence → 0 | Type-token ratio (vocabulary richness) |
+| 26 | `lyric_repetition` | Local | Presence → 0 | 1 - (unique lines / total lines) |
 
 #### Theme, Language, Popularity (Dimensions 27-29)
 
-| Dim | Name | Description |
-|-----|------|-------------|
-| 27 | `theme` | Ordinal scale (see below) × lyric_weight |
-| 28 | `language` | Ordinal scale (see below) × lyric_weight |
-| 29 | `popularity` | Spotify popularity [0-100] → normalized |
+| Dim | Name | Weighting | Description |
+|-----|------|-----------|-------------|
+| 27 | `theme` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
+| 28 | `language` | Categorical → 0.5 | Hard threshold at instrumentalness > 0.5 |
+| 29 | `popularity` | None | Spotify popularity [0-100] → normalized |
 
 **Theme Scale** (ordered by energy/positivity):
 ```
 party=1.0, flex=0.9, love=0.8, social=0.7, spirituality=0.6,
 introspection=0.5, street=0.4, heartbreak=0.3, struggle=0.2,
-other=0.1, none=0.0
+other=0.1, none=0.5 (centered)
 ```
 
 **Language Scale** (grouped by musical tradition similarity):
@@ -159,10 +165,10 @@ Middle Eastern (Arabic/Hebrew/Turkish)=0.40
 South Asian (Punjabi)=0.30
 East Asian (Korean/Japanese/Chinese/Vietnamese)=0.20
 African (Luganda)=0.10
-multilingual/unknown/none=0.0
+multilingual/unknown/none=0.5 (centered)
 ```
 
-**Note:** Theme and language are ALSO weighted by `(1-instrumentalness)` since they're lyric-derived.
+**Note:** Theme and language use a hard threshold: if `instrumentalness > 0.5`, use 0.5 (centered "none"). This ensures "none" is equidistant from all categories rather than being at an arbitrary edge of the ordinal scale.
 
 ---
 
@@ -408,7 +414,7 @@ python export/create_playlists.py
 Computed on the standardized 30-dim features (clustering space), NOT on UMAP coordinates (visualization space).
 
 ### Edge Cases
-- **Instrumental tracks:** Voice gender → 0, lyric features → 0 (via weighting)
+- **Instrumental tracks** (instrumentalness > 0.5): Voice gender → 0, lyric valence/arousal → 0.5 (neutral), moods/explicit/narrative/vocab/repetition → 0, theme/language → 0.5 (centered "none")
 - **Missing lyrics:** Lyric features default to neutral (0.5 for valence/arousal, 0 for moods)
 - **Very short lyrics:** Still analyzed, but narrative score will be low
 

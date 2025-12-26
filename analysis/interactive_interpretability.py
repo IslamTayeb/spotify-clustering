@@ -29,7 +29,7 @@ import pandas as pd
 # Import component modules
 from analysis.components.data import loaders, feature_prep, dataframe_builder
 from analysis.components.clustering import algorithms, controls, metrics
-from analysis.components.clustering import subcluster_controls, subcluster_results
+from analysis.components.clustering import subcluster_controls, subcluster_results, subcluster_comparison
 from analysis.components.visualization import umap_3d
 from analysis.components.widgets import feature_selectors, cluster_inspector
 from analysis.components.export import spotify_export
@@ -138,6 +138,12 @@ def main():
                     mode = st.selectbox("Clustering mode", ["combined", "audio", "lyrics"])
                     df = all_data[mode]["dataframe"].copy()
 
+                    # Store pca_features in session state for subclustering support
+                    if "pca_features" in all_data[mode]:
+                        st.session_state["pca_features"] = all_data[mode]["pca_features"]
+                        st.session_state["static_df"] = df
+                        st.session_state["static_mode"] = mode
+
                 except Exception as e:
                     st.error(f"Error loading data: {e}")
 
@@ -183,8 +189,10 @@ def main():
             # Mode Selection
             mode = st.sidebar.selectbox("Feature Mode", ["combined", "audio", "lyrics"])
 
-            # PCA Controls
-            pca_config = feature_selectors.render_pca_controls(mode)
+            # PCA Controls (auto-skip for interpretable mode)
+            pca_config = feature_selectors.render_pca_controls(
+                mode, interpretable_mode=("Interpretable" in backend)
+            )
 
             # Clustering Controls
             st.sidebar.markdown("---")
@@ -259,7 +267,7 @@ def main():
             # Export Controls
             spotify_export.render_export_controls(df, mode)
 
-            # Sub-Clustering Controls (only in Dynamic Tuning mode when pca_features available)
+            # Sub-Clustering Controls (available when pca_features exist in session state)
             if "pca_features" in st.session_state:
                 parent_cluster, n_subclusters, algo, linkage = subcluster_controls.render_subcluster_controls(df)
 
@@ -290,6 +298,10 @@ def main():
     # Sub-cluster results (displayed above tabs when available)
     if "subcluster_data" in st.session_state:
         subcluster_results.render_subcluster_results(st.session_state["subcluster_data"])
+
+        # Sub-cluster comparison
+        with st.expander("⚖️ Compare Sub-Clusters", expanded=False):
+            subcluster_comparison.render_subcluster_comparison(st.session_state["subcluster_data"])
 
         # Export sub-clusters option
         with st.expander("🎧 Export Sub-Clusters to Spotify"):
