@@ -30,11 +30,15 @@ import pandas as pd
 from analysis.components.data import loaders, feature_prep, dataframe_builder
 from analysis.components.clustering import algorithms, controls, metrics
 from analysis.components.clustering import subcluster_controls, subcluster_results, subcluster_comparison
+from analysis.components.clustering import subcluster_browser
+from analysis.components.clustering.subcluster_persistence import save_subcluster
 from analysis.components.visualization import umap_3d
 from analysis.components.widgets import feature_selectors, cluster_inspector
 from analysis.components.export import spotify_export
 from analysis.components.tabs import simplified_tabs
 from analysis.pipeline.clustering import run_subcluster_pipeline, find_optimal_subclusters, auto_tune_subcluster_weights
+from datetime import datetime
+import os
 
 # Page configuration
 st.set_page_config(
@@ -325,6 +329,10 @@ def main():
             # Export Controls
             spotify_export.render_export_controls(df, mode)
 
+            # Saved Sub-Clusters Browser (available when pca_features exist in session state)
+            if "pca_features" in st.session_state:
+                subcluster_browser.render_subcluster_browser()
+
             # Sub-Clustering Controls (available when pca_features exist in session state)
             if "pca_features" in st.session_state:
                 parent_cluster, n_subclusters, algo, linkage, eps, min_samples = subcluster_controls.render_subcluster_controls(df)
@@ -375,6 +383,33 @@ def main():
                             )
                             st.session_state["auto_tune_data"] = auto_tune_data
                             st.rerun()
+
+                    # Save button (only show if subcluster_data exists)
+                    if "subcluster_data" in st.session_state:
+                        save_clicked, custom_name = subcluster_controls.render_save_subcluster_button(
+                            st.session_state["subcluster_data"]
+                        )
+
+                        if save_clicked:
+                            try:
+                                # Prepare data for saving
+                                data_to_save = st.session_state["subcluster_data"].copy()
+
+                                # Add metadata
+                                data_to_save['timestamp'] = datetime.now().isoformat()
+                                data_to_save['source_mode'] = st.session_state.get("mode", "combined")
+                                data_to_save['parent_analysis_file'] = "analysis/outputs/analysis_data.pkl"
+                                data_to_save['algorithm'] = algo
+                                data_to_save['linkage'] = linkage if algo == 'hac' else ""
+                                data_to_save['parent_cluster_size'] = len(df[df['cluster'] == parent_cluster])
+
+                                # Save to disk
+                                saved_path = save_subcluster(data_to_save, custom_name or None)
+
+                                st.sidebar.success(f"✅ Saved: {os.path.basename(saved_path)}")
+
+                            except Exception as e:
+                                st.sidebar.error(f"❌ Failed to save: {str(e)}")
 
                     if subcluster_controls.render_clear_subcluster_button():
                         if "subcluster_data" in st.session_state:

@@ -145,6 +145,43 @@ def render_auto_tune_weights_button() -> bool:
     )
 
 
+def render_save_subcluster_button(subcluster_data: dict) -> Tuple[bool, str]:
+    """
+    Render save button with optional custom name input.
+    Only shown when subcluster_data exists.
+
+    Args:
+        subcluster_data: Dictionary containing subcluster results
+
+    Returns:
+        Tuple of (button_clicked: bool, custom_name: str)
+    """
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 💾 Save Results")
+
+    # Text input for custom name
+    custom_name = st.sidebar.text_input(
+        "Label (optional)",
+        placeholder="e.g., mood-focus, genre-split",
+        help="Optional label to identify this subclustering later",
+        key="save_subcluster_name",
+    )
+
+    # Quality metrics caption
+    silhouette = subcluster_data.get('silhouette_score', 0)
+    n_clusters = subcluster_data.get('n_subclusters', 0)
+    st.sidebar.caption(f"Quality: {silhouette:.2f} | Clusters: {n_clusters}")
+
+    # Save button
+    save_clicked = st.sidebar.button(
+        "💾 Save Current Sub-Clustering",
+        use_container_width=True,
+        key="save_subcluster_btn",
+    )
+
+    return save_clicked, custom_name
+
+
 def render_clear_subcluster_button() -> bool:
     """
     Render button to clear sub-clustering results.
@@ -152,6 +189,7 @@ def render_clear_subcluster_button() -> bool:
     Returns:
         True if button was clicked
     """
+    st.sidebar.markdown("---")
     return st.sidebar.button(
         "🗑️ Clear Sub-Clusters",
         use_container_width=True,

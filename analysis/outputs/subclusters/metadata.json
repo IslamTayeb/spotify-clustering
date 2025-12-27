@@ -1,0 +1,15 @@
+{
+  "subclusters": [
+    {
+      "file_name": "parent_4_2025-12-28_00-25-57_Cluster-4-N2-KNN.pkl",
+      "parent_cluster": 4,
+      "n_subclusters": 2,
+      "silhouette_score": 0.12297418326547731,
+      "timestamp": "2025-12-28T00:25:57.549657",
+      "custom_name": "Cluster-4-N2-KNN",
+      "algorithm": "k-means",
+      "parent_cluster_size": 156,
+      "source_mode": "combined"
+    }
+  ]
+}
