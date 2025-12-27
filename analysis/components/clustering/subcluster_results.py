@@ -53,6 +53,10 @@ def render_subcluster_results(subcluster_data: Dict) -> None:
     st.markdown("### Sub-Cluster Statistics")
     _render_subcluster_stats(df)
 
+    # Top artists by sub-cluster
+    st.markdown("### 🎤 Top Artists by Sub-Cluster")
+    _render_subcluster_top_artists(df)
+
     # Track tables by sub-cluster
     st.markdown("### Tracks by Sub-Cluster")
     _render_subcluster_tracks(df)
@@ -177,6 +181,55 @@ def _render_subcluster_stats(df: pd.DataFrame) -> None:
 
     stats_df = pd.DataFrame(stats_data)
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+
+def _render_subcluster_top_artists(df: pd.DataFrame) -> None:
+    """
+    Render top artists for each sub-cluster with bar charts.
+
+    Args:
+        df: DataFrame with 'subcluster' column
+    """
+    if "artist" not in df.columns:
+        st.info("Artist data not available in dataset")
+        return
+
+    # Create columns for side-by-side display
+    subcluster_ids = sorted(df['subcluster'].unique())
+    num_cols = min(len(subcluster_ids), 3)
+    cols = st.columns(num_cols)
+
+    colors = CLUSTER_COLORS
+
+    for i, subcluster_id in enumerate(subcluster_ids):
+        subcluster_df = df[df['subcluster'] == subcluster_id]
+        col_idx = i % num_cols
+
+        with cols[col_idx]:
+            st.write(f"**Sub-cluster {subcluster_id} - Top 5 Artists**")
+
+            # Count songs per artist
+            artist_counts = subcluster_df["artist"].value_counts().head(5)
+
+            if len(artist_counts) > 0:
+                # Create bar chart
+                fig = px.bar(
+                    x=artist_counts.values,
+                    y=artist_counts.index,
+                    orientation="h",
+                    labels={"x": "Song Count", "y": "Artist"},
+                    color_discrete_sequence=[colors[i % len(colors)]],
+                )
+                fig.update_layout(height=300, showlegend=False)
+                st.plotly_chart(fig, use_container_width=True, key=f"subcluster_results_artist_chart_{subcluster_id}")
+
+                # Show percentage
+                total_songs = len(subcluster_df)
+                st.caption(
+                    f"Top: {artist_counts.index[0]} ({artist_counts.values[0]} songs, {artist_counts.values[0]/total_songs*100:.1f}%)"
+                )
+            else:
+                st.info("No artist data available for this sub-cluster")
 
 
 def _render_subcluster_tracks(df: pd.DataFrame) -> None:

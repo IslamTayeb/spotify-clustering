@@ -322,6 +322,47 @@ def render_cluster_comparison(df: pd.DataFrame):
                 f"🎵 {len(shared_genres)} genres appear in all selected clusters: {', '.join(list(shared_genres)[:10])}{('...' if len(shared_genres) > 10 else '')}"
             )
 
+    # Artist comparison
+    st.markdown("---")
+    st.subheader("🎤 Top Artists by Cluster")
+
+    if "artist" in df.columns:
+        # For each selected cluster, show top N artists
+        num_cols = min(len(selected_clusters), 3)
+        cols = st.columns(num_cols)
+
+        for i, cluster_id in enumerate(selected_clusters):
+            cluster_df = df[df["cluster"] == cluster_id]
+            col_idx = i % num_cols
+
+            with cols[col_idx]:
+                st.write(f"**Cluster {cluster_id} - Top 10 Artists**")
+
+                # Count songs per artist
+                artist_counts = cluster_df["artist"].value_counts().head(10)
+
+                if len(artist_counts) > 0:
+                    # Create bar chart
+                    fig = px.bar(
+                        x=artist_counts.values,
+                        y=artist_counts.index,
+                        orientation="h",
+                        labels={"x": "Song Count", "y": "Artist"},
+                        color_discrete_sequence=[get_cluster_color(i)],
+                    )
+                    fig.update_layout(height=400, showlegend=False)
+                    st.plotly_chart(fig, use_container_width=True, key=f"cluster_artist_chart_{cluster_id}")
+
+                    # Show percentage
+                    total_songs = len(cluster_df)
+                    st.caption(
+                        f"Top artist: {artist_counts.index[0]} ({artist_counts.values[0]} songs, {artist_counts.values[0]/total_songs*100:.1f}%)"
+                    )
+                else:
+                    st.info("No artist data available for this cluster")
+    else:
+        st.info("Artist data not available in dataset")
+
     # Sample songs from each cluster
     st.markdown("---")
     st.subheader("🎵 Sample Songs from Each Cluster")

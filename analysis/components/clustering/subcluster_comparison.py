@@ -534,6 +534,46 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
                 fig.update_layout(height=300, showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
 
+    # Artist comparison
+    st.markdown("---")
+    st.subheader("🎤 Top Artists by Sub-Cluster")
+
+    if "artist" in df.columns:
+        num_cols = min(len(selected_subclusters), 3)
+        cols = st.columns(num_cols)
+
+        for i, sc_id in enumerate(selected_subclusters):
+            sc_df = df[df["subcluster"] == sc_id]
+            col_idx = i % num_cols
+
+            with cols[col_idx]:
+                st.write(f"**Sub-cluster {sc_id} - Top 5 Artists**")
+
+                # Count songs per artist
+                artist_counts = sc_df["artist"].value_counts().head(5)
+
+                if len(artist_counts) > 0:
+                    # Create bar chart
+                    fig = px.bar(
+                        x=artist_counts.values,
+                        y=artist_counts.index,
+                        orientation="h",
+                        labels={"x": "Song Count", "y": "Artist"},
+                        color_discrete_sequence=[colors[i % len(colors)]],
+                    )
+                    fig.update_layout(height=300, showlegend=False)
+                    st.plotly_chart(fig, use_container_width=True, key=f"subcluster_comparison_artist_chart_{sc_id}")
+
+                    # Show percentage
+                    total_songs = len(sc_df)
+                    st.caption(
+                        f"Top: {artist_counts.index[0]} ({artist_counts.values[0]} songs, {artist_counts.values[0]/total_songs*100:.1f}%)"
+                    )
+                else:
+                    st.info("No artist data available for this sub-cluster")
+    else:
+        st.info("Artist data not available in dataset")
+
     # Sample songs
     st.markdown("---")
     st.subheader("🎵 Sample Songs from Each Sub-Cluster")
