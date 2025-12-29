@@ -1363,6 +1363,81 @@ def export_visualization_images(df: pd.DataFrame, output_dir: str, subclusters_d
 
 
 # ============================================================================
+# LLM BUNDLE EXPORT
+# ============================================================================
+
+def export_llm_bundle(output_dir: str) -> None:
+    """Concatenate Tier 1+2 files into a single llm_bundle.txt for easy LLM upload"""
+
+    # Tier 1: Essential context (~1K tokens)
+    tier1_files = [
+        "metadata.json",
+        "data/overview/cluster_sizes.csv",
+        "data/cluster_comparison/top_artists_per_cluster.csv",
+        "data/feature_importance/top_defining_features.csv",
+        "data/eda/temporal/cluster_evolution.csv",
+        "data/overview/mood_profiles.csv",
+        "data/eda/temporal/decade_distribution.csv",
+    ]
+
+    # Tier 2: Deep analysis (~4K tokens)
+    tier2_files = [
+        "data/overview/genre_distribution.csv",
+        "data/eda/genre_stats.csv",
+        "data/cluster_comparison/sample_songs_per_cluster.csv",
+        "data/feature_importance/feature_stats.csv",
+        "data/eda/temporal/genre_trends.csv",
+        "data/eda/language_stats.csv",
+        "data/eda/audio_extremes.csv",
+        "data/eda/temporal/temporal_metrics.json",
+    ]
+
+    # Add subcluster files dynamically
+    subclusters_dir = Path(f"{output_dir}/data/subclusters")
+    if subclusters_dir.exists():
+        for subdir in sorted(subclusters_dir.iterdir()):
+            if subdir.is_dir():
+                tier2_files.append(f"data/subclusters/{subdir.name}/top_defining_features.csv")
+                tier2_files.append(f"data/subclusters/{subdir.name}/subcluster_stats.csv")
+
+    # Concatenate with headers
+    bundle_content = []
+    bundle_content.append("=" * 80)
+    bundle_content.append("SPOTIFY CLUSTERING DATA EXPORT - LLM BUNDLE")
+    bundle_content.append("=" * 80)
+    bundle_content.append(f"Generated: {datetime.now().isoformat()}")
+    bundle_content.append(f"Total files: {len(tier1_files) + len(tier2_files)}")
+    bundle_content.append("")
+    bundle_content.append("This bundle contains Tier 1 (essential) + Tier 2 (deep analysis) files.")
+    bundle_content.append("Combine with your narrative notes for complete LLM context.")
+    bundle_content.append("")
+
+    files_included = 0
+    for filepath in tier1_files + tier2_files:
+        full_path = Path(f"{output_dir}/{filepath}")
+        if full_path.exists():
+            bundle_content.append(f"\n{'='*60}")
+            bundle_content.append(f"FILE: {filepath}")
+            bundle_content.append(f"{'='*60}")
+            bundle_content.append(full_path.read_text())
+            files_included += 1
+        else:
+            bundle_content.append(f"\n# MISSING: {filepath}")
+
+    # Write bundle
+    bundle_path = f"{output_dir}/llm_bundle.txt"
+    with open(bundle_path, 'w') as f:
+        f.write('\n'.join(bundle_content))
+
+    # Calculate size
+    bundle_size = os.path.getsize(bundle_path)
+    estimated_tokens = bundle_size // 4  # Rough estimate: 4 chars per token
+
+    print(f"  ✓ LLM bundle: {bundle_path}")
+    print(f"    {files_included} files, {bundle_size / 1024:.1f} KB, ~{estimated_tokens:,} tokens")
+
+
+# ============================================================================
 # MAIN FUNCTION
 # ============================================================================
 
@@ -1461,6 +1536,11 @@ Examples:
         )
     else:
         print("\n[8/8] Skipping image generation (--skip-images)")
+
+    # Generate LLM bundle (optional)
+    if args.llm_bundle:
+        print("\n[9/9] Creating LLM bundle...")
+        export_llm_bundle(args.output_dir)
 
     # Generate metadata
     duration = time.time() - start_time
