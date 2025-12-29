@@ -10,6 +10,17 @@
       "algorithm": "k-means",
       "parent_cluster_size": 156,
       "source_mode": "combined"
+    },
+    {
+      "file_name": "parent_0_2025-12-28_01-40-39_k-means.pkl",
+      "parent_cluster": 0,
+      "n_subclusters": 2,
+      "silhouette_score": 0.11422557819181997,
+      "timestamp": "2025-12-28T01:40:39.260175",
+      "custom_name": "",
+      "algorithm": "k-means",
+      "parent_cluster_size": 733,
+      "source_mode": "combined"
     }
   ]
 }

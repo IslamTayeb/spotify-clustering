@@ -425,27 +425,7 @@ def main():
         st.info("👈 Select a data source or run dynamic clustering to begin.")
         st.stop()
 
-    # Auto-tune results (displayed above tabs when available)
-    if "auto_tune_data" in st.session_state:
-        subcluster_results.render_auto_tune_results(st.session_state["auto_tune_data"])
-
-    # Optimal k analysis results (displayed above tabs when available)
-    if "optimal_k_data" in st.session_state:
-        subcluster_results.render_optimal_k_results(st.session_state["optimal_k_data"])
-
-    # Sub-cluster results (displayed above tabs when available)
-    if "subcluster_data" in st.session_state:
-        subcluster_results.render_subcluster_results(st.session_state["subcluster_data"])
-
-        # Sub-cluster comparison
-        with st.expander("⚖️ Compare Sub-Clusters", expanded=False):
-            subcluster_comparison.render_subcluster_comparison(st.session_state["subcluster_data"])
-
-        # Export sub-clusters option
-        with st.expander("🎧 Export Sub-Clusters to Spotify"):
-            spotify_export.render_subcluster_export(st.session_state["subcluster_data"])
-
-    # Tabs
+    # Tabs (always visible at the top)
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 EDA Explorer",
         "🎯 Feature Importance",
@@ -489,6 +469,27 @@ def main():
         # Display selected track details
         if selected_track:
             cluster_inspector.render_track_details(selected_track)
+
+    # Sub-cluster results section (displayed below tabs when available)
+    # Auto-tune results
+    if "auto_tune_data" in st.session_state:
+        subcluster_results.render_auto_tune_results(st.session_state["auto_tune_data"])
+
+    # Optimal k analysis results
+    if "optimal_k_data" in st.session_state:
+        subcluster_results.render_optimal_k_results(st.session_state["optimal_k_data"])
+
+    # Sub-cluster results
+    if "subcluster_data" in st.session_state:
+        subcluster_results.render_subcluster_results(st.session_state["subcluster_data"])
+
+        # Sub-cluster comparison
+        with st.expander("⚖️ Compare Sub-Clusters", expanded=False):
+            subcluster_comparison.render_subcluster_comparison(st.session_state["subcluster_data"])
+
+        # Export sub-clusters option
+        with st.expander("🎧 Export Sub-Clusters to Spotify"):
+            spotify_export.render_subcluster_export(st.session_state["subcluster_data"])
 
 
 if __name__ == "__main__":

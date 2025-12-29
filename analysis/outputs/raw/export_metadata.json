@@ -1,0 +1,15 @@
+{
+  "export_timestamp": "2025-12-29T03:05:32.916223",
+  "source_file": "analysis/outputs/analysis_data.pkl",
+  "clustering_mode": "combined",
+  "total_songs": 1253,
+  "num_clusters": 5,
+  "num_embedding_dimensions": 33,
+  "files_exported": {
+    "csv_json_files": 10,
+    "markdown_summary": "analysis/outputs/comprehensive_summary.md",
+    "total_csv_size_mb": 12.58,
+    "summary_size_kb": 19.8
+  },
+  "export_duration_seconds": 1.16
+}

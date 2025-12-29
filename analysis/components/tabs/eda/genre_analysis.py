@@ -105,55 +105,56 @@ def render_genre_analysis(df: pd.DataFrame):
 
 def render_genre_ladder_analysis(df: pd.DataFrame):
     """Render genre ladder analysis section."""
-    with st.expander("🎸 Genre Ladder Analysis", expanded=False):
+    with st.expander("🎸 Genre Purity Analysis", expanded=False):
         if "genre_ladder" not in df.columns:
             st.warning("Genre ladder information not available")
             return
 
-        st.subheader("Acoustic ↔ Electronic Distribution (Genre-Based)")
-        st.caption("Genre ladder captures stylistic intent (0=acoustic/traditional, 1=electronic/synthetic)")
+        st.subheader("Pure Genre ↔ Genre Fusion Distribution")
+        st.caption("Genre ladder measures genre entropy (0=pure single genre, 1=genre fusion/hybrid)")
 
         fig = px.histogram(
             df,
             x="genre_ladder",
             nbins=50,
-            title="Genre Ladder Distribution (0=Acoustic, 1=Electronic)",
+            title="Genre Ladder Distribution (0=Pure Genre, 1=Genre Fusion)",
             labels={"genre_ladder": "Genre Ladder Score", "count": "Number of Songs"},
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
-        fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Hybrid")
+        fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Mixed")
         st.plotly_chart(fig, use_container_width=True)
 
         col1, col2 = st.columns(2)
         with col1:
-            st.write("**Most Acoustic Songs (by Genre)**")
-            acoustic = df.nsmallest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
-            st.dataframe(acoustic, use_container_width=True, hide_index=True)
+            st.write("**Most Pure Genre Songs**")
+            pure = df.nsmallest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
+            st.dataframe(pure, use_container_width=True, hide_index=True)
 
         with col2:
-            st.write("**Most Electronic Songs (by Genre)**")
-            electronic = df.nlargest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
-            st.dataframe(electronic, use_container_width=True, hide_index=True)
+            st.write("**Most Genre-Fusion Songs**")
+            fusion = df.nlargest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
+            st.dataframe(fusion, use_container_width=True, hide_index=True)
 
-        # Compare with mood_acoustic/mood_electronic
-        if "mood_acoustic" in df.columns and "mood_electronic" in df.columns:
+        # Compare genre purity with actual acoustic/electronic production
+        if "acoustic_electronic" in df.columns:
             st.markdown("---")
-            st.subheader("Genre Ladder vs Audio Production Analysis")
+            st.subheader("Genre Purity vs Acoustic/Electronic Production")
+            st.caption("Does genre fusion correlate with acoustic or electronic production style?")
 
             fig = px.scatter(
                 df,
                 x="genre_ladder",
-                y="mood_electronic",
+                y="acoustic_electronic",
                 color="cluster",
                 hover_data=["track_name", "artist", "top_genre"],
                 labels={
-                    "genre_ladder": "Genre Ladder (0=Acoustic, 1=Electronic)",
-                    "mood_electronic": "Audio Electronic Score",
+                    "genre_ladder": "Genre Ladder (0=Pure, 1=Fusion)",
+                    "acoustic_electronic": "Production (0=Electronic, 1=Acoustic)",
                 },
-                title="Genre Taxonomy vs Audio Production",
+                title="Genre Purity vs Production Style",
                 color_continuous_scale="Viridis",
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            correlation = df["genre_ladder"].corr(df["mood_electronic"])
-            st.metric("Correlation", f"{correlation:.3f}")
+            correlation = df["genre_ladder"].corr(df["acoustic_electronic"])
+            st.metric("Genre Purity ↔ Acoustic Production Correlation", f"{correlation:.3f}")
