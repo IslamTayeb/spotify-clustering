@@ -1,0 +1,594 @@
+================================================================================
+SPOTIFY CLUSTERING DATA EXPORT - LLM BUNDLE
+================================================================================
+Generated: 2025-12-29T03:48:56.116510
+Total files: 19
+
+This bundle contains Tier 1 (essential) + Tier 2 (deep analysis) files.
+Combine with your narrative notes for complete LLM context.
+
+
+============================================================
+FILE: metadata.json
+============================================================
+{
+  "export_timestamp": "2025-12-29T03:30:15.438847",
+  "source_file": "analysis/outputs/analysis_data.pkl",
+  "clustering_mode": "combined",
+  "audio_backend": "interpretable",
+  "total_songs": 1253,
+  "num_clusters": 5,
+  "num_embedding_dimensions": 33,
+  "date_range": "2023-06-21 19:43:00+00:00 to 2025-12-17 21:41:16+00:00",
+  "subclusters_exported": [
+    "parent_4_2025-12-28_00-25-57_Cluster-4-N2-KNN",
+    "parent_0_2025-12-28_01-40-39_k-means"
+  ],
+  "files_exported": {
+    "data_files": 54,
+    "plot_images": 0,
+    "total_size_mb": 11.89
+  },
+  "feature_vector_info": {
+    "audio_dims": "0-15 (BPM, moods, genre, production, etc.)",
+    "key_dims": "16-18 (pitch sin/cos, major/minor)",
+    "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
+    "meta_dims": "29-32 (theme, language, popularity, release_year)"
+  },
+  "export_duration_seconds": 2.49
+}
+
+============================================================
+FILE: data/overview/cluster_sizes.csv
+============================================================
+cluster,size,percentage
+0,733,58.5
+1,226,18.04
+2,91,7.26
+3,47,3.75
+4,156,12.45
+
+
+============================================================
+FILE: data/cluster_comparison/top_artists_per_cluster.csv
+============================================================
+cluster,rank,artist,count,percentage
+0,1,Kanye West,24,3.27
+0,2,JPEGMAFIA,18,2.46
+0,3,Drake,13,1.77
+0,4,Kendrick Lamar,12,1.64
+0,5,"Tyler, The Creator",11,1.5
+0,6,Paris Texas,9,1.23
+0,7,Travis Scott,8,1.09
+0,8,Jack Harlow,7,0.95
+0,9,Lil Uzi Vert,7,0.95
+0,10,BROCKHAMPTON,7,0.95
+1,1,Kendrick Lamar,9,3.98
+1,2,Kanye West,9,3.98
+1,3,JID,4,1.77
+1,4,Drake,4,1.77
+1,5,ZUTOMAYO,4,1.77
+1,6,BROCKHAMPTON,3,1.33
+1,7,070 Shake,3,1.33
+1,8,Steve Lacy,3,1.33
+1,9,Denzel Curry,3,1.33
+1,10,"Tyler, The Creator",3,1.33
+2,1,Joe Hisaishi,8,8.79
+2,2,Uyama Hiroto,3,3.3
+2,3,SOIL & “PIMP” SESSIONS,3,3.3
+2,4,Toshifumi Hinata,2,2.2
+2,5,Erikson Jayanto,2,2.2
+2,6,Kenny Beats,2,2.2
+2,7,skywave,2,2.2
+2,8,Khruangbin,2,2.2
+2,9,Masayoshi Takanaka,2,2.2
+2,10,That Boy Franco,1,1.1
+3,1,VDYCD,4,8.51
+3,2,Seiryu,3,6.38
+3,3,Camellia,3,6.38
+3,4,sasakure.UK,2,4.26
+3,5,DJ972,1,2.13
+3,6,"Dustvoxx, Laur, Neokontrol",1,2.13
+3,7,"Ducky Chix, Bratt Sinclaire",1,2.13
+3,8,"ptasinski, RJ Pasin",1,2.13
+3,9,Aloboi,1,2.13
+3,10,Creepy Nuts,1,2.13
+4,1,JANNABI,9,5.77
+4,2,Kanye West,4,2.56
+4,3,Travis Scott,4,2.56
+4,4,"Ye, Kanye West",3,1.92
+4,5,Glass Animals,3,1.92
+4,6,Yumi Arai,3,1.92
+4,7,Marty Robbins,2,1.28
+4,8,Toco,2,1.28
+4,9,aupinard,2,1.28
+4,10,Lil Yachty,2,1.28
+
+
+============================================================
+FILE: data/feature_importance/top_defining_features.csv
+============================================================
+cluster,rank,feature,cohens_d,cluster_mean,global_mean,direction
+0,1,umap_y,-0.6801,0.9323,2.4542,lower
+0,2,emb_lyric_arousal,0.5983,0.74,0.6593,higher
+0,3,lyric_arousal,0.5563,0.7629,0.6786,higher
+0,4,emb_lyric_explicit,0.5311,0.6294,0.4553,higher
+0,5,emb_lyric_mood_aggressive,0.5046,0.5238,0.3712,higher
+1,1,emb_lyric_mood_sad,1.4006,0.5055,0.2038,higher
+1,2,lyric_mood_sad,1.3517,0.5927,0.2439,higher
+1,3,lyric_valence,-0.8253,0.4056,0.5591,lower
+1,4,emb_theme,-0.8114,0.4549,0.6571,lower
+1,5,emb_lyric_valence,-0.8108,0.422,0.5519,lower
+2,1,instrumentalness,2.6619,0.7996,0.1943,higher
+2,2,emb_instrumentalness,2.6619,0.7996,0.1943,higher
+2,3,emb_lyric_vocabulary,-2.1413,0.0288,0.367,lower
+2,4,umap_y,1.9555,6.8303,2.4542,higher
+2,5,lyric_vocabulary_richness,-1.7932,0.1102,0.4308,lower
+3,1,umap_x,-2.5504,7.1482,10.5969,lower
+3,2,instrumentalness,2.0212,0.6539,0.1943,higher
+3,3,emb_instrumentalness,2.0212,0.6539,0.1943,higher
+3,4,emb_lyric_vocabulary,-1.8882,0.0687,0.367,lower
+3,5,approachability_score,-1.8296,0.2613,0.5696,lower
+4,1,emb_acoustic_electronic,1.3807,0.472,0.1739,higher
+4,2,mood_sad,1.3123,0.5082,0.2453,higher
+4,3,emb_mood_sad,1.3123,0.5082,0.2453,higher
+4,4,mood_party,-1.2174,0.274,0.6054,lower
+4,5,emb_mood_party,-1.2174,0.274,0.6054,lower
+
+
+============================================================
+FILE: data/eda/temporal/cluster_evolution.csv
+============================================================
+period,cluster,count,percentage
+Q1,0,315,62.25
+Q1,1,108,21.34
+Q1,2,17,3.36
+Q1,3,6,1.19
+Q1,4,60,11.86
+Q2,0,55,45.45
+Q2,1,39,32.23
+Q2,2,1,0.83
+Q2,3,2,1.65
+Q2,4,24,19.83
+Q3,0,204,65.18
+Q3,1,36,11.5
+Q3,2,27,8.63
+Q3,3,8,2.56
+Q3,4,38,12.14
+Q4,0,159,50.8
+Q4,1,43,13.74
+Q4,2,46,14.7
+Q4,3,31,9.9
+Q4,4,34,10.86
+
+
+============================================================
+FILE: data/overview/mood_profiles.csv
+============================================================
+cluster,mood_happy,mood_sad,mood_aggressive,mood_relaxed,mood_party
+0,0.532,0.149,0.718,0.401,0.735
+1,0.525,0.284,0.821,0.544,0.524
+2,0.753,0.543,0.957,0.823,0.235
+3,0.747,0.111,0.563,0.353,0.797
+4,0.634,0.508,0.93,0.732,0.274
+
+
+============================================================
+FILE: data/eda/temporal/decade_distribution.csv
+============================================================
+decade,count,percentage
+1950,1,0.08
+1960,7,0.56
+1970,18,1.44
+1980,10,0.8
+1990,13,1.04
+2000,44,3.51
+2010,351,28.01
+2020,788,62.89
+
+
+============================================================
+FILE: data/overview/genre_distribution.csv
+============================================================
+cluster,genre,count,percentage
+0,Hip Hop---Trap,207,28.24
+0,Hip Hop---Cloud Rap,165,22.51
+0,Hip Hop---Gangsta,65,8.87
+0,Hip Hop---Grime,42,5.73
+0,Hip Hop---Conscious,30,4.09
+0,Electronic---House,21,2.86
+0,Hip Hop---Hardcore Hip-Hop,21,2.86
+0,Hip Hop---Boom Bap,16,2.18
+0,Latin---Reggaeton,14,1.91
+0,Rock---Alternative Rock,13,1.77
+1,Hip Hop---Cloud Rap,36,15.93
+1,Pop---J-pop,19,8.41
+1,Hip Hop---Trap,18,7.96
+1,Hip Hop---Conscious,17,7.52
+1,Hip Hop---Gangsta,15,6.64
+1,Electronic---House,11,4.87
+1,Hip Hop---Grime,11,4.87
+1,Rock---Alternative Rock,10,4.42
+1,Funk / Soul---Neo Soul,7,3.1
+1,Rock---Indie Rock,6,2.65
+2,Stage & Screen---Soundtrack,8,8.79
+2,Electronic---Ambient,6,6.59
+2,Electronic---Downtempo,6,6.59
+2,Classical---Contemporary,5,5.49
+2,Jazz---Jazz-Funk,4,4.4
+2,Electronic---Deep House,4,4.4
+2,Jazz---Contemporary Jazz,4,4.4
+2,Hip Hop---Jazzy Hip-Hop,3,3.3
+2,Jazz---Easy Listening,3,3.3
+2,Electronic---Future Jazz,3,3.3
+3,Electronic---Deep House,5,10.64
+3,Electronic---House,4,8.51
+3,Electronic---Chiptune,4,8.51
+3,Electronic---Hardcore,4,8.51
+3,Electronic---Experimental,3,6.38
+3,Electronic---Dubstep,3,6.38
+3,Electronic---Breakcore,3,6.38
+3,Electronic---Juke,2,4.26
+3,Electronic---Drum n Bass,2,4.26
+3,Electronic---Happy Hardcore,2,4.26
+4,Rock---Alternative Rock,17,10.9
+4,Hip Hop---Cloud Rap,10,6.41
+4,"Folk, World, & Country---Folk",9,5.77
+4,Electronic---House,9,5.77
+4,Electronic---Downtempo,8,5.13
+4,Rock---Pop Rock,8,5.13
+4,Rock---Indie Rock,7,4.49
+4,Electronic---Experimental,5,3.21
+4,Latin---Samba,5,3.21
+4,Funk / Soul---Neo Soul,5,3.21
+
+
+============================================================
+FILE: data/eda/genre_stats.csv
+============================================================
+genre,count,percentage
+Hip Hop---Trap,228,18.2
+Hip Hop---Cloud Rap,211,16.84
+Hip Hop---Gangsta,83,6.62
+Hip Hop---Grime,56,4.47
+Hip Hop---Conscious,48,3.83
+Electronic---House,47,3.75
+Rock---Alternative Rock,40,3.19
+Hip Hop---Hardcore Hip-Hop,25,2.0
+Hip Hop---Boom Bap,24,1.92
+Rock---Indie Rock,20,1.6
+Pop---J-pop,19,1.52
+Electronic---Downtempo,18,1.44
+Latin---Reggaeton,17,1.36
+Hip Hop---Horrorcore,16,1.28
+Funk / Soul---Neo Soul,15,1.2
+Pop---K-pop,14,1.12
+Electronic---Experimental,13,1.04
+Funk / Soul---Contemporary R&B,12,0.96
+Rock---Pop Rock,11,0.88
+"Folk, World, & Country---Folk",11,0.88
+Stage & Screen---Soundtrack,10,0.8
+Electronic---Electro,10,0.8
+Funk / Soul---Soul,10,0.8
+Hip Hop---Jazzy Hip-Hop,10,0.8
+Electronic---Deep House,10,0.8
+Rock---Punk,9,0.72
+Electronic---Drum n Bass,9,0.72
+Hip Hop---RnB/Swing,9,0.72
+Electronic---Grime,9,0.72
+Electronic---Ambient,8,0.64
+Funk / Soul---Funk,7,0.56
+Electronic---Synth-pop,7,0.56
+Hip Hop---Instrumental,7,0.56
+Classical---Contemporary,6,0.48
+Electronic---Dubstep,6,0.48
+Electronic---Hardcore,6,0.48
+Rock---Psychedelic Rock,6,0.48
+Hip Hop---Crunk,5,0.4
+Hip Hop---Bounce,5,0.4
+Electronic---Chiptune,5,0.4
+Latin---Samba,5,0.4
+Latin---MPB,5,0.4
+Funk / Soul---Disco,5,0.4
+Hip Hop---Ragga HipHop,4,0.32
+Jazz---Jazz-Funk,4,0.32
+Electronic---Juke,4,0.32
+Electronic---Tropical House,4,0.32
+Hip Hop---Pop Rap,4,0.32
+Electronic---Happy Hardcore,4,0.32
+Jazz---Contemporary Jazz,4,0.32
+Pop---City Pop,4,0.32
+Jazz---Bossa Nova,4,0.32
+Electronic---Vaporwave,3,0.24
+Jazz---Easy Listening,3,0.24
+Rock---Hard Rock,3,0.24
+Brass & Military---Brass Band,3,0.24
+Electronic---Future Jazz,3,0.24
+Electronic---Bassline,3,0.24
+Electronic---Breakcore,3,0.24
+Electronic---Disco Polo,3,0.24
+Rock---Heavy Metal,2,0.16
+Jazz---Ragtime,2,0.16
+Pop---Ballad,2,0.16
+Classical---Neo-Classical,2,0.16
+Rock---Acoustic,2,0.16
+Jazz---Afrobeat,2,0.16
+Electronic---Disco,2,0.16
+Funk / Soul---P.Funk,2,0.16
+Latin---Norteño,2,0.16
+Jazz---Post Bop,2,0.16
+Jazz---Big Band,2,0.16
+Pop---Kayōkyoku,2,0.16
+Rock---Prog Rock,2,0.16
+Electronic---Speedcore,2,0.16
+"Folk, World, & Country---Flamenco",2,0.16
+"Folk, World, & Country---African",2,0.16
+Jazz---Fusion,2,0.16
+Electronic---Dance-pop,2,0.16
+Rock---Blues Rock,2,0.16
+Jazz---Swing,2,0.16
+"Folk, World, & Country---Country",1,0.08
+Electronic---Psy-Trance,1,0.08
+Electronic---Latin,1,0.08
+Electronic---Eurobeat,1,0.08
+Electronic---Trip Hop,1,0.08
+Electronic---Donk,1,0.08
+Electronic---Hip Hop,1,0.08
+Reggae---Dancehall,1,0.08
+Hip Hop---DJ Battle Tool,1,0.08
+Electronic---Hi NRG,1,0.08
+Hip Hop---Trip Hop,1,0.08
+Classical---Baroque,1,0.08
+Classical---Neo-Romantic,1,0.08
+Jazz---Cool Jazz,1,0.08
+Reggae---Reggae,1,0.08
+Electronic---Trance,1,0.08
+Jazz---Dixieland,1,0.08
+"Folk, World, & Country---Indian Classical",1,0.08
+Brass & Military---Military,1,0.08
+Rock---Industrial,1,0.08
+Rock---Folk Metal,1,0.08
+Latin---Mariachi,1,0.08
+Non-Music---Spoken Word,1,0.08
+Rock---Dream Pop,1,0.08
+Jazz---Gypsy Jazz,1,0.08
+Reggae---Ragga,1,0.08
+Non-Music---Radioplay,1,0.08
+Electronic---UK Garage,1,0.08
+Hip Hop---Britcore,1,0.08
+Non-Music---Comedy,1,0.08
+Rock---Math Rock,1,0.08
+Electronic---Synthwave,1,0.08
+Jazz---Jazz-Rock,1,0.08
+Children's---Nursery Rhymes,1,0.08
+Hip Hop---G-Funk,1,0.08
+Pop---Indie Pop,1,0.08
+Latin---Bossanova,1,0.08
+Electronic---Schranz,1,0.08
+Rock---Folk Rock,1,0.08
+Funk / Soul---Psychedelic,1,0.08
+Pop---Vocal,1,0.08
+Electronic---Tech Trance,1,0.08
+Electronic---Halftime,1,0.08
+Electronic---Freestyle,1,0.08
+Funk / Soul---Afrobeat,1,0.08
+Electronic---Techno,1,0.08
+Electronic---Rhythmic Noise,1,0.08
+"Folk, World, & Country---Zouk",1,0.08
+Hip Hop---Turntablism,1,0.08
+"Folk, World, & Country---Raï",1,0.08
+Electronic---Industrial,1,0.08
+Rock---Rock & Roll,1,0.08
+Jazz---Hard Bop,1,0.08
+Electronic---Tribal,1,0.08
+Electronic---Euro House,1,0.08
+Electronic---Big Beat,1,0.08
+
+
+============================================================
+FILE: data/cluster_comparison/sample_songs_per_cluster.csv
+============================================================
+cluster,track_name,artist
+0,"Hip-Hop (feat. BigXthaPlug, Jay Jones)","Lil Wayne, BigXthaPlug, Jay Jones"
+0,Brand New 911,"Joey Bada$$, Westside Gunn"
+0,Freestyle,Lil Baby
+0,RICKY,Denzel Curry
+0,MASSA,"Tyler, The Creator"
+0,Big Dreams,Bakar
+0,Kickboxer,YoungBoy Never Broke Again
+0,On God,Kanye West
+0,PULL UP,Internet Girl
+0,The End (feat. BABYMETAL),"Lil Uzi Vert, BABYMETAL"
+1,She Looked Like Me!,Magdalena Bay
+1,PROM / KING,Saba
+1,Follow God,Kanye West
+1,Inn Ann,"Daboor, Shabjdeed, Al Nather"
+1,Hard Times,Paramore
+1,麻痺,yama
+1,Walkin - Cold Blooded Soul Version,Denzel Curry
+1,4:44,JAY-Z
+1,LA FAMA,"ROSALÍA, The Weeknd"
+1,Out of Time (feat. Bea Miller),"Zedd, Bea Miller"
+2,a bird's last look,skywave
+2,Bygone Days,Joe Hisaishi
+2,One Summer Day,Joe Hisaishi
+2,The Ecstasy of Gold - L'Estasi Dell'oro,"Ennio Morricone, Edda Dell'Orso"
+2,Vision Eyes (feat. Golden Boy),"Uyama Hiroto, Golden Boy"
+2,Fantastic Planet,SOIL & “PIMP” SESSIONS
+2,Serbian March,Joe Hisaishi
+2,Spacemountain,Uyama Hiroto
+2,Amazon,Gábor Szabó
+2,Trofeo de Bolos,Alfred Jazz Ensemble
+3,"L’Étoile d’Afrique, Pt. 2",VDYCD
+3,L'Étoile D'afrique - #18,VDYCD
+3,Śiva,"XI, BlackY"
+3,ΩΩPARTS,Camellia
+3,Cash Flow - Blazy Mix,Hydraa
+3,Unmask Me - Ashley Beedle Vocal Mix,"MAMA, Ashley Beedle"
+3,Les Trompettes D'afrique,VDYCD
+3,Lunaria,VDYCD
+3,Give Me More - Just Rawer,Aloboi
+3,Hustler Ambitions,Juice
+4,Dream On,Aerosmith
+4,Gooey,Glass Animals
+4,Celestial Bodies,"GHOST DATA, Jovani Occomy"
+4,Everything We Need,"Kanye West, Ty Dolla $ign, Ant Clemons"
+4,I Was The Life Of The Party,The Dramatics
+4,3atma,"El Waili, Samar Tarik"
+4,Wind,Akeboshi
+4,LEGEND,JANNABI
+4,Raksit Leila,Mashrou' Leila
+4,Tudo Que Voce Podia Ser,Quarteto Em Cy
+
+
+# MISSING: data/feature_importance/feature_stats.csv
+
+============================================================
+FILE: data/eda/temporal/genre_trends.csv
+============================================================
+quarter,Hip Hop---Trap,Hip Hop---Cloud Rap,Hip Hop---Gangsta,Hip Hop---Grime,Hip Hop---Conscious
+2024Q2,20.21,18.96,6.26,4.47,4.29
+2025Q3,14.84,14.29,9.89,4.4,2.75
+2025Q4,11.43,9.52,3.81,1.9,2.86
+2025Q2,14.52,10.48,8.06,6.45,1.61
+2023Q3,50.0,50.0,0.0,0.0,0.0
+2025Q1,14.29,20.24,3.57,5.95,4.76
+2024Q3,22.33,21.36,3.88,6.8,2.91
+2024Q4,23.08,18.46,10.77,1.54,9.23
+2023Q4,46.15,7.69,7.69,0.0,7.69
+2024Q1,7.14,21.43,7.14,0.0,0.0
+2023Q2,0.0,0.0,0.0,0.0,0.0
+
+
+============================================================
+FILE: data/eda/language_stats.csv
+============================================================
+language,count,percentage
+english,900,71.83
+unknown,102,8.14
+arabic,51,4.07
+spanish,46,3.67
+portuguese,42,3.35
+japanese,40,3.19
+french,22,1.76
+korean,13,1.04
+russian,13,1.04
+turkish,5,0.4
+norwegian,3,0.24
+vietnamese,2,0.16
+chinese,2,0.16
+serbian,2,0.16
+swedish,2,0.16
+german,2,0.16
+ukrainian,1,0.08
+punjabi,1,0.08
+multilingual,1,0.08
+hebrew,1,0.08
+luganda,1,0.08
+czech,1,0.08
+
+
+============================================================
+FILE: data/eda/audio_extremes.csv
+============================================================
+feature,extreme,track_name,artist,value
+bpm,highest,Bygone Days,Joe Hisaishi,191.406
+bpm,highest,Don't Gas Me,Dizzee Rascal,184.571
+bpm,highest,My Time,Omori,184.57
+bpm,highest,SAMBA TEMPERADO 2015,"You & Explosion Band, Yuji Ohno",184.57
+bpm,highest,トーキョーレギー,Masayoshi Takanaka,178.206
+bpm,lowest,I LIE,Cochise,58.69
+bpm,lowest,I Don't Care...,"LUCKI, Lil Yachty",58.714
+bpm,lowest,Loose Change (feat. Earl Sweatshirt),"The Alchemist, Earl Sweatshirt",59.144
+bpm,lowest,So.Incredible.pkg [Robert Glasper Version Feat. Smino],"Denzel Curry, Kenny Beats, Smino, Robert Glasper",61.028
+bpm,lowest,j'ai encore rêvé d'elle,aupinard,61.96
+danceability,highest,Don't Go To Strangers,J.J. Cale,0.993
+danceability,highest,American Pie,Don McLean,0.993
+danceability,highest,A Town with an Ocean View - from 'Kiki's Delivery Service',"Joe Hisaishi, Royal Philharmonic Orchestra",0.992
+danceability,highest,A Journey (A Dream of Flight),Joe Hisaishi,0.986
+danceability,highest,Big Iron,Marty Robbins,0.986
+danceability,lowest,Hell Bound - Ad 01,Vince Staples,0.0
+danceability,lowest,Praise The Lord (Da Shine) (feat. Skepta),"A$AP Rocky, Skepta",0.0
+danceability,lowest,Crazy,Doechii,0.0
+danceability,lowest,Hit Bout It,"Lil Yachty, Kodak Black",0.0
+danceability,lowest,NAN,DaBaby,0.001
+valence,highest,Anomaly,Camellia,7.548
+valence,highest,Paradigm Shift - Extended Mix,Morimori Atsushi,7.427
+valence,highest,Call me it.,t+pazolite,7.394
+valence,highest,Ultramarine,Seiryu,7.226
+valence,highest,You Spin Me Round (Like a Record),Dead Or Alive,7.092
+valence,lowest,The Breaking of the Fellowship [In Dreams],Echoes of Old Stories,3.389
+valence,lowest,Bygone Days,Joe Hisaishi,3.506
+valence,lowest,GHOST,Jack Harlow,3.527
+valence,lowest,Follow God,Kanye West,3.563
+valence,lowest,Chamber of Reflection,Your Anxiety Buddy,3.578
+arousal,highest,Hard Times,Paramore,7.15
+arousal,highest,Gyakutengeki,Tsukuyomi,7.069
+arousal,highest,ドーナツホール,hachi,7.021
+arousal,highest,We Found Love,"Rihanna, Calvin Harris",7.011
+arousal,highest,BIZCOCHITO,ROSALÍA,7.01
+arousal,lowest,The Breaking of the Fellowship [In Dreams],Echoes of Old Stories,3.276
+arousal,lowest,Chamber of Reflection,Your Anxiety Buddy,3.498
+arousal,lowest,The Flower Garden,Joe Hisaishi,3.552
+arousal,lowest,HENTAI,ROSALÍA,3.59
+arousal,lowest,Glimpse of Us,Joji,3.609
+
+
+============================================================
+FILE: data/eda/temporal/temporal_metrics.json
+============================================================
+{
+  "date_range_days": 910,
+  "earliest_add": "2023-06-21",
+  "latest_add": "2025-12-17",
+  "median_song_age_at_add_years": 2.7,
+  "most_active_month": "2024-06",
+  "most_active_month_count": 557
+}
+
+============================================================
+FILE: data/subclusters/parent_0_2025-12-28_01-40-39_k-means/top_defining_features.csv
+============================================================
+subcluster,rank,feature,cohens_d,subcluster_mean,parent_mean,direction
+0,1,mood_sad,-0.4993,0.1032,0.1492,lower
+0,2,emb_mood_sad,-0.4993,0.1032,0.1492,lower
+0,3,emb_acoustic_electronic,-0.4675,0.0413,0.0759,lower
+0,4,mood_relaxed,-0.4053,0.3295,0.4006,lower
+0,5,emb_mood_relaxed,-0.4053,0.3295,0.4006,lower
+1,1,mood_sad,0.9029,0.2323,0.1492,higher
+1,2,emb_mood_sad,0.9029,0.2323,0.1492,higher
+1,3,emb_acoustic_electronic,0.8455,0.1383,0.0759,higher
+1,4,mood_relaxed,0.733,0.5293,0.4006,higher
+1,5,emb_mood_relaxed,0.733,0.5293,0.4006,higher
+
+
+============================================================
+FILE: data/subclusters/parent_0_2025-12-28_01-40-39_k-means/subcluster_stats.csv
+============================================================
+subcluster,size,top_genre,avg_bpm,dominant_mood,avg_danceability
+0,472,Hip Hop---Trap,103.9,mood_party,0.046
+1,261,Hip Hop---Cloud Rap,110.1,mood_aggressive,0.133
+
+
+============================================================
+FILE: data/subclusters/parent_4_2025-12-28_00-25-57_Cluster-4-N2-KNN/top_defining_features.csv
+============================================================
+subcluster,rank,feature,cohens_d,subcluster_mean,parent_mean,direction
+0,1,mood_sad,-0.6073,0.3689,0.5082,lower
+0,2,emb_mood_sad,-0.6073,0.3689,0.5082,lower
+0,3,danceability,-0.5616,0.2673,0.4516,lower
+0,4,emb_danceability,-0.5616,0.2673,0.4516,lower
+0,5,emb_acoustic_electronic,-0.5447,0.3145,0.472,lower
+1,1,mood_sad,0.9984,0.7372,0.5082,higher
+1,2,emb_mood_sad,0.9984,0.7372,0.5082,higher
+1,3,danceability,0.9232,0.7546,0.4516,higher
+1,4,emb_danceability,0.9232,0.7546,0.4516,higher
+1,5,emb_acoustic_electronic,0.8956,0.731,0.472,higher
+
+
+============================================================
+FILE: data/subclusters/parent_4_2025-12-28_00-25-57_Cluster-4-N2-KNN/subcluster_stats.csv
+============================================================
+subcluster,size,top_genre,avg_bpm,dominant_mood,avg_danceability
+0,97,Hip Hop---Cloud Rap,120.1,mood_aggressive,0.267
+1,59,Rock---Alternative Rock,110.8,mood_aggressive,0.755
