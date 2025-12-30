@@ -186,11 +186,11 @@ def _render_library_growth(df_temp, songs_before_cutoff):
     df_sorted = df_temp.sort_values("added_at").reset_index(drop=True)
     df_sorted["cumulative_additions"] = range(1, len(df_sorted) + 1)
 
+    st.caption(f"Songs Added Since June 4, 2024 (started with {songs_before_cutoff} songs)")
     fig = px.line(
         df_sorted,
         x="added_at",
         y="cumulative_additions",
-        title=f"Songs Added Since June 4, 2024 (started with {songs_before_cutoff} songs)",
         labels={"cumulative_additions": "New Additions", "added_at": "Date"},
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
@@ -209,10 +209,10 @@ def _render_monthly_additions(df_temp):
 
     monthly_additions = df_temp.groupby(df_temp["added_at"].dt.to_period("M")).size()
 
+    st.caption("Monthly Song Additions (Since June 2024)")
     fig = px.bar(
         x=monthly_additions.index.astype(str),
         y=monthly_additions.values,
-        title="Monthly Song Additions (Since June 2024)",
         labels={"x": "Month", "y": "Songs Added"},
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
@@ -280,10 +280,10 @@ def _render_release_year_distribution(df_temp):
     with col2:
         decade_counts_grouped, _ = group_small_slices(decade_counts)
         decade_names = [f"{int(d)}s" if isinstance(d, (int, float)) else d for d in decade_counts_grouped.index]
+        st.caption("Decade Distribution")
         fig = px.pie(
             values=decade_counts_grouped.values,
             names=decade_names,
-            title="Decade Distribution",
             color_discrete_sequence=get_pie_colors(decade_names, CLUSTER_COLORS),
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -311,10 +311,10 @@ def _render_cluster_evolution(df_temp):
         period_cluster = df_sorted_cluster.groupby(["time_period", "cluster"]).size().unstack(fill_value=0)
         period_cluster_pct = period_cluster.div(period_cluster.sum(axis=1), axis=0) * 100
 
+        st.caption("Cluster Distribution Across Time Periods")
         fig = px.bar(
             period_cluster_pct,
             barmode="stack",
-            title="Cluster Distribution Across Time Periods",
             color_discrete_sequence=CLUSTER_COLORS,
         )
         fig.update_layout(height=500)
@@ -406,9 +406,9 @@ def _render_cluster_trends(df_temp):
     )
     rolling_melted["Cluster"] = rolling_melted["Cluster"].str.replace("cluster_", "Cluster ")
 
+    st.caption("Rolling Cluster Distribution (30-song window)")
     fig = px.line(
         rolling_melted, x="added_at", y="Percentage", color="Cluster",
-        title="Rolling Cluster Distribution (30-song window)",
         labels={"Percentage": "Proportion (%)", "added_at": "Date Added"},
         color_discrete_sequence=CLUSTER_COLORS,
     )
@@ -538,9 +538,9 @@ def _render_genre_family_trends(df_temp):
     )
 
     if genre_view == "Quarterly Proportion":
+        st.caption("Genre Family Share of Quarterly Additions")
         fig = px.line(
             timeline_df, x="Quarter", y="Quarter %", color="Genre Family",
-            title="Genre Family Share of Quarterly Additions",
             labels={"Quarter %": "Share of Quarter (%)"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
@@ -552,9 +552,10 @@ def _render_genre_family_trends(df_temp):
         st.caption(caption)
 
     elif genre_view == "Delta (Rate of Change)":
+        st.caption("Genre Family Delta (Quarter-over-Quarter Change)")
         fig = px.bar(
             timeline_df, x="Quarter", y="Delta", color="Genre Family",
-            barmode="group", title="Genre Family Delta (Quarter-over-Quarter Change)",
+            barmode="group",
             labels={"Delta": "Change in Share (pp)"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
@@ -567,9 +568,9 @@ def _render_genre_family_trends(df_temp):
         st.caption(caption)
 
     else:  # Cumulative Growth
+        st.caption("Cumulative Genre Family Growth")
         fig = px.area(
             timeline_df, x="Quarter", y="Cumulative", color="Genre Family",
-            title="Cumulative Genre Family Growth",
             labels={"Cumulative": "Total Songs"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
@@ -630,10 +631,10 @@ def _render_cluster_heatmap(df_temp):
         cluster_month_matrix = df_temp.groupby(["month", "cluster"]).size().unstack(fill_value=0)
 
         if len(cluster_month_matrix) > 1 and len(cluster_month_matrix.columns) > 1:
+            st.caption("Cluster Activity Heatmap")
             fig = px.imshow(
                 cluster_month_matrix.T,
                 labels=dict(x="Month", y="Cluster", color="Songs Added"),
-                title="Cluster Activity Heatmap",
                 aspect="auto",
                 color_continuous_scale="Viridis",
             )

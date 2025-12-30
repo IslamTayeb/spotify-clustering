@@ -119,7 +119,6 @@ def render_genre_fusion_analysis(df: pd.DataFrame):
             labels={"genre_fusion": "Genre Fusion Score", "count": "Number of Songs"},
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
-        fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Mixed")
         st.plotly_chart(fig, use_container_width=True)
 
         col1, col2 = st.columns(2)

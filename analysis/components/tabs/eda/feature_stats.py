@@ -94,7 +94,7 @@ def render_feature_vector_analysis(df: pd.DataFrame):
                 row=row, col=col,
             )
 
-        fig.update_layout(height=700, title_text="Top 9 Embedding Feature Distributions", showlegend=False)
+        fig.update_layout(height=700, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
         # Download Embedding Features

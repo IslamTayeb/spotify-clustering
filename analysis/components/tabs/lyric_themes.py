@@ -256,6 +256,7 @@ def render_lyric_themes(df: pd.DataFrame):
                 st.metric("Neutral", f"{avg_neutral:.3f}")
 
             # Sentiment distribution
+            st.caption("Distribution of Sentiment Scores")
             fig = go.Figure()
 
             fig.add_trace(

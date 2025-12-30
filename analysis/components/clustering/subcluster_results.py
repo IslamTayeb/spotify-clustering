@@ -46,6 +46,7 @@ def render_subcluster_results(subcluster_data: Dict) -> None:
 
     # 3D UMAP visualization
     st.markdown("### 3D Sub-Cluster Visualization")
+    st.caption(f"Cluster {parent_cluster} Sub-Clusters (3D UMAP)")
     fig = _create_subcluster_3d_plot(df, coords, parent_cluster)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -119,7 +120,6 @@ def _create_subcluster_3d_plot(
 
     fig.update_layout(
         height=600,
-        title=f"Cluster {parent_cluster} Sub-Clusters (3D UMAP)",
         scene=dict(
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
@@ -304,6 +304,7 @@ def render_optimal_k_results(optimal_k_data: Dict) -> None:
     )
 
     # Create plot based on selection
+    st.caption(f"Clustering Quality vs k (Cluster {parent_cluster})")
     fig = go.Figure()
 
     if metric_option in ["Silhouette Score", "All Metrics"]:
@@ -410,7 +411,6 @@ def render_optimal_k_results(optimal_k_data: Dict) -> None:
         yaxis_title = "Score (normalized)"
 
     fig.update_layout(
-        title=f"Clustering Quality vs k (Cluster {parent_cluster})",
         xaxis_title="Number of Sub-Clusters (k)",
         yaxis_title=yaxis_title,
         height=400,
@@ -520,6 +520,7 @@ def render_auto_tune_results(auto_tune_data: Dict) -> None:
 
     # Comparison chart
     st.markdown("### 📊 Preset Comparison")
+    st.caption("Silhouette Score by Weight Preset")
 
     # Prepare data for chart
     valid_results = [r for r in all_results if r.get('optimal_score', 0) > 0]
@@ -549,7 +550,6 @@ def render_auto_tune_results(auto_tune_data: Dict) -> None:
         ])
 
         fig.update_layout(
-            title="Silhouette Score by Weight Preset",
             xaxis_title="Preset",
             yaxis_title="Best Silhouette Score",
             height=400,

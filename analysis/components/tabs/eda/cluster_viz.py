@@ -140,7 +140,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                         hovertemplate="%{text}<extra></extra>",
                     ))
 
-            plot_title = f"3D Sub-Clusters of Cluster {parent_cluster} (UMAP)"
+            st.caption(f"Sub-Clusters of Cluster {parent_cluster}")
         else:
             # Standard view: all clusters with full colors
             for i, cluster_id in enumerate(unique_clusters):
@@ -171,8 +171,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                     hovertemplate="%{text}<extra></extra>",
                 ))
 
-            plot_title = "3D Cluster Visualization (UMAP)"
-
+            st.caption("3D Cluster Visualization")
         fig.update_layout(
             height=700,
             scene=dict(
@@ -180,7 +179,6 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                 yaxis=dict(visible=False),
                 zaxis=dict(visible=False),
             ),
-            title=plot_title,
             showlegend=True,
         )
 

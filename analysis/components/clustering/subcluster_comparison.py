@@ -501,7 +501,6 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             showlegend=True,
-            title=f"Sub-Cluster Comparison: {len(selected_subclusters)} Sub-clusters (Normalized)",
             height=500,
         )
 

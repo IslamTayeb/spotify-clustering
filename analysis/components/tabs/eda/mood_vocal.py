@@ -97,13 +97,14 @@ def render_mood_analysis(df: pd.DataFrame):
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
             showlegend=False,
-            title="Average Mood Distribution (%)",
         )
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Average Mood Distribution (%)")
 
         # Valence vs Arousal scatter plot
         if "valence" in df.columns and "arousal" in df.columns:
             st.subheader("Emotional Quadrants (Valence vs Arousal)")
+            st.caption("Songs by Emotional Content")
 
             fig = px.scatter(
                 df,
@@ -112,7 +113,6 @@ def render_mood_analysis(df: pd.DataFrame):
                 color="cluster",
                 hover_data=["track_name", "artist"],
                 labels={"valence": "Valence (Pleasant)", "arousal": "Arousal (Energy)"},
-                title="Songs by Emotional Content",
                 color_continuous_scale="Viridis",
             )
             fig.add_hline(y=0.5, line_dash="dash", line_color="gray", opacity=0.5)
@@ -179,7 +179,6 @@ def render_vocal_analysis(df: pd.DataFrame):
             fig = px.pie(
                 values=gender_counts.values,
                 names=gender_counts.index,
-                title="Voice Gender Distribution",
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -195,7 +194,6 @@ def render_vocal_analysis(df: pd.DataFrame):
                 df,
                 x="acoustic_electronic",
                 nbins=50,
-                title="Acoustic/Electronic Distribution (0=Electronic, 1=Acoustic)",
                 labels={"acoustic_electronic": "Production Style", "count": "Number of Songs"},
                 color_discrete_sequence=[SPOTIFY_GREEN],
             )
@@ -225,10 +223,10 @@ def render_vocal_analysis(df: pd.DataFrame):
 
             production_counts = df_production["production_style"].value_counts()
 
+            st.caption("Production Style Distribution")
             fig = px.pie(
                 values=production_counts.values,
                 names=production_counts.index,
-                title="Production Style Distribution",
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -251,10 +249,10 @@ def render_language_analysis(df: pd.DataFrame):
         lang_counts = df[lang_col].value_counts()
         lang_counts_grouped, _ = group_small_slices(lang_counts)
 
+        st.caption("Language Distribution Across Library")
         fig = px.pie(
             values=lang_counts_grouped.values,
             names=lang_counts_grouped.index,
-            title="Language Distribution Across Library",
             hole=0.3,
             color_discrete_sequence=get_pie_colors(lang_counts_grouped.index, CLUSTER_COLORS),
         )
@@ -311,11 +309,11 @@ def render_language_analysis(df: pd.DataFrame):
             st.markdown("---")
             st.subheader("Language vs Instrumentalness")
 
+            st.caption("Instrumentalness by Language")
             fig = px.box(
                 df[df[lang_col].isin(top_langs + ["none", "unknown"])],
                 x=lang_col,
                 y="instrumentalness",
-                title="Instrumentalness by Language",
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             st.plotly_chart(fig, use_container_width=True)
