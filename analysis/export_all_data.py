@@ -1335,31 +1335,493 @@ def export_all_subclusters(subclusters_dir: str, output_dir: str) -> int:
 # ============================================================================
 
 def export_visualization_images(df: pd.DataFrame, output_dir: str, subclusters_dir: str) -> int:
-    """Export key visualization images (PNG)"""
+    """Export ALL visualization images from the dashboard (PNG)
+
+    Generates 25+ visualizations matching the interactive dashboard:
+    - Overview: cluster sizes, similarity matrix, mood radar
+    - EDA: genre charts, temporal charts, audio features
+    - Feature importance: heatmaps, violin plots
+    - Cluster comparison: radar plots, artist/genre breakdowns
+    """
     file_count = 0
 
     try:
         import plotly.express as px
         import plotly.graph_objects as go
-        from wordcloud import WordCloud
-        import matplotlib.pyplot as plt
-
-        print("  Generating visualization images...")
-
-        # Note: Image generation is complex and would require:
-        # 1. Importing and calling visualization functions from components
-        # 2. Using plotly.io.write_image (requires kaleido)
-        # 3. Handling 3D UMAP plots, heatmaps, radar charts, word clouds
-
-        # This is a placeholder - full implementation would be extensive
-        print("  ⚠️  Image generation not fully implemented yet")
-        print("  ⚠️  To generate images, use --skip-images flag and export data only")
-
-        return file_count
-
+        import plotly.io as pio
     except ImportError as e:
-        print(f"  ⚠️  Cannot generate images: missing dependencies ({e})")
+        print(f"  ⚠️  Cannot generate images: missing plotly ({e})")
         return 0
+
+    # Check for kaleido (required for PNG export)
+    try:
+        import kaleido
+    except ImportError:
+        print("  ⚠️  kaleido not installed. Install with: pip install kaleido")
+        print("  ⚠️  Skipping image generation")
+        return 0
+
+    from analysis.components.visualization.color_palette import (
+        CLUSTER_COLORS,
+        MOOD_COLORS,
+        GENRE_FAMILY_COLORS,
+        SPOTIFY_GREEN,
+        get_cluster_color,
+    )
+    from scipy.spatial.distance import cdist
+
+    print("  Generating visualization images (comprehensive export)...")
+
+    clusters = sorted(df['cluster'].unique())
+    n_clusters = len(clusters)
+
+    # Create subdirectories
+    Path(f"{output_dir}/overview").mkdir(parents=True, exist_ok=True)
+    Path(f"{output_dir}/eda").mkdir(parents=True, exist_ok=True)
+    Path(f"{output_dir}/temporal").mkdir(parents=True, exist_ok=True)
+    Path(f"{output_dir}/feature_importance").mkdir(parents=True, exist_ok=True)
+    Path(f"{output_dir}/comparison").mkdir(parents=True, exist_ok=True)
+
+    # ========================================================================
+    # OVERVIEW TAB CHARTS
+    # ========================================================================
+    print("  [Overview]")
+
+    # 1. 3D UMAP Scatter Plot
+    if all(col in df.columns for col in ['umap_x', 'umap_y', 'umap_z']):
+        print("    Creating 3D UMAP plot...")
+        try:
+            fig = go.Figure()
+            for cluster_id in clusters:
+                cluster_df = df[df['cluster'] == cluster_id]
+                fig.add_trace(go.Scatter3d(
+                    x=cluster_df['umap_x'], y=cluster_df['umap_y'], z=cluster_df['umap_z'],
+                    mode='markers', name=f'Cluster {cluster_id} ({len(cluster_df)})',
+                    marker=dict(size=3, color=get_cluster_color(cluster_id), opacity=0.7),
+                ))
+            fig.update_layout(
+                title='3D UMAP Cluster Visualization', height=800, width=1200, showlegend=True,
+                scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False)),
+            )
+            save_plotly_as_png(fig, f"{output_dir}/overview/umap_3d_clusters.png", width=1200, height=800)
+            file_count += 1
+            print("    ✓ overview/umap_3d_clusters.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # 2. Cluster Size Bar Chart
+    print("    Creating cluster size bar chart...")
+    try:
+        cluster_sizes = df['cluster'].value_counts().sort_index()
+        fig = px.bar(
+            x=cluster_sizes.index, y=cluster_sizes.values,
+            labels={'x': 'Cluster', 'y': 'Number of Songs'}, title='Songs per Cluster',
+            color_discrete_sequence=[get_cluster_color(i) for i in cluster_sizes.index],
+        )
+        fig.update_traces(marker_color=[get_cluster_color(i) for i in cluster_sizes.index])
+        fig.update_layout(height=400, width=800, showlegend=False)
+        fig.update_xaxes(type='category')
+        save_plotly_as_png(fig, f"{output_dir}/overview/cluster_sizes_bar.png", width=800, height=400)
+        file_count += 1
+        print("    ✓ overview/cluster_sizes_bar.png")
+    except Exception as e:
+        print(f"    ⚠️  Failed: {e}")
+
+    # 3. Cluster Size Pie Chart
+    print("    Creating cluster size pie chart...")
+    try:
+        fig = go.Figure(data=[go.Pie(
+            labels=[f'Cluster {c}' for c in cluster_sizes.index],
+            values=cluster_sizes.values,
+            marker=dict(colors=[get_cluster_color(c) for c in cluster_sizes.index]),
+            textinfo='label+percent', textposition='outside',
+        )])
+        fig.update_layout(title='Cluster Size Distribution', height=600, width=800)
+        save_plotly_as_png(fig, f"{output_dir}/overview/cluster_sizes_pie.png", width=800, height=600)
+        file_count += 1
+        print("    ✓ overview/cluster_sizes_pie.png")
+    except Exception as e:
+        print(f"    ⚠️  Failed: {e}")
+
+    # 4. Cluster Similarity Matrix Heatmap
+    print("    Creating similarity matrix heatmap...")
+    try:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        feature_cols = [c for c in numeric_cols if not c.startswith(('x', 'y', 'z', 'cluster', 'umap'))]
+        centroids = df.groupby('cluster')[feature_cols].mean().values
+        similarity_matrix = cdist(centroids, centroids, metric='euclidean')
+
+        fig = px.imshow(
+            similarity_matrix,
+            labels=dict(x='Cluster', y='Cluster', color='Dissimilarity'),
+            x=[f'Cluster {c}' for c in clusters], y=[f'Cluster {c}' for c in clusters],
+            color_continuous_scale='YlOrRd', title='Cluster Dissimilarity Matrix (Lower = More Similar)',
+        )
+        fig.update_layout(height=500, width=600)
+        save_plotly_as_png(fig, f"{output_dir}/overview/similarity_matrix.png", width=600, height=500)
+        file_count += 1
+        print("    ✓ overview/similarity_matrix.png")
+    except Exception as e:
+        print(f"    ⚠️  Failed: {e}")
+
+    # 5. Mood Profiles Radar Chart
+    mood_cols = ['mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party']
+    available_moods = [m for m in mood_cols if m in df.columns]
+    if available_moods:
+        print("    Creating mood radar chart...")
+        try:
+            fig = go.Figure()
+            for cluster_id in clusters:
+                cluster_df = df[df['cluster'] == cluster_id]
+                values = [cluster_df[mood].mean() * 100 for mood in available_moods]
+                fig.add_trace(go.Scatterpolar(
+                    r=values, theta=[m.replace('mood_', '').title() for m in available_moods],
+                    fill='toself', name=f'Cluster {cluster_id}', line_color=get_cluster_color(cluster_id),
+                ))
+            fig.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                title='Mood Profiles by Cluster', height=600, width=800, showlegend=True,
+            )
+            save_plotly_as_png(fig, f"{output_dir}/overview/mood_radar.png", width=800, height=600)
+            file_count += 1
+            print("    ✓ overview/mood_radar.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # ========================================================================
+    # EDA TAB CHARTS
+    # ========================================================================
+    print("  [EDA]")
+
+    # 6. Genre Family Pie Chart
+    if 'top_genre' in df.columns:
+        print("    Creating genre family pie chart...")
+        try:
+            def extract_parent(g):
+                if pd.isna(g) or not isinstance(g, str): return 'Unknown'
+                return g.split('---')[0] if '---' in g else g
+
+            parent_counts = df['top_genre'].apply(extract_parent).value_counts()
+            fig = px.pie(
+                values=parent_counts.values, names=parent_counts.index,
+                title='Genre Family Share', hole=0.3,
+                color_discrete_sequence=CLUSTER_COLORS,
+            )
+            fig.update_layout(height=500, width=600)
+            save_plotly_as_png(fig, f"{output_dir}/eda/genre_family_pie.png", width=600, height=500)
+            file_count += 1
+            print("    ✓ eda/genre_family_pie.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # 7. Top 20 Subgenres Bar Chart
+    if 'top_genre' in df.columns:
+        print("    Creating top 20 subgenres bar chart...")
+        try:
+            genre_counts = df['top_genre'].value_counts().head(20)
+            fig = px.bar(
+                x=genre_counts.values, y=genre_counts.index, orientation='h',
+                labels={'x': 'Number of Songs', 'y': 'Genre'},
+                title='Top 20 Subgenres in Your Library',
+                color_discrete_sequence=[SPOTIFY_GREEN],
+            )
+            fig.update_layout(height=600, width=800, showlegend=False)
+            save_plotly_as_png(fig, f"{output_dir}/eda/top_20_genres.png", width=800, height=600)
+            file_count += 1
+            print("    ✓ eda/top_20_genres.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # 8. Genre Distribution by Cluster (Stacked)
+    if 'top_genre' in df.columns:
+        print("    Creating genre-cluster stacked bar...")
+        try:
+            top_genres = df['top_genre'].value_counts().head(10).index
+            genre_cluster_data = []
+            for cluster_id in clusters:
+                cluster_df = df[df['cluster'] == cluster_id]
+                for genre in top_genres:
+                    count = (cluster_df['top_genre'] == genre).sum()
+                    genre_cluster_data.append({'Cluster': f'Cluster {cluster_id}', 'Genre': genre, 'Count': count})
+            gcd = pd.DataFrame(genre_cluster_data)
+            fig = px.bar(gcd, x='Cluster', y='Count', color='Genre', title='Top 10 Genres by Cluster', barmode='stack',
+                         color_discrete_sequence=CLUSTER_COLORS)
+            fig.update_layout(height=500, width=900)
+            save_plotly_as_png(fig, f"{output_dir}/eda/genre_by_cluster_stacked.png", width=900, height=500)
+            file_count += 1
+            print("    ✓ eda/genre_by_cluster_stacked.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # 9. Genre Ladder Histogram (if available)
+    if 'genre_ladder' in df.columns:
+        print("    Creating genre ladder histogram...")
+        try:
+            fig = px.histogram(df, x='genre_ladder', nbins=50,
+                               title='Genre Ladder Distribution (0=Pure Genre, 1=Genre Fusion)',
+                               labels={'genre_ladder': 'Genre Ladder Score'},
+                               color_discrete_sequence=[SPOTIFY_GREEN])
+            fig.add_vline(x=0.5, line_dash='dash', line_color='gray')
+            fig.update_layout(height=400, width=800)
+            save_plotly_as_png(fig, f"{output_dir}/eda/genre_ladder_histogram.png", width=800, height=400)
+            file_count += 1
+            print("    ✓ eda/genre_ladder_histogram.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # 10. Language Distribution Pie
+    if 'language' in df.columns:
+        print("    Creating language distribution pie...")
+        try:
+            lang_counts = df['language'].value_counts().head(10)
+            fig = px.pie(values=lang_counts.values, names=lang_counts.index, title='Language Distribution (Top 10)')
+            fig.update_layout(height=500, width=600)
+            save_plotly_as_png(fig, f"{output_dir}/eda/language_distribution.png", width=600, height=500)
+            file_count += 1
+            print("    ✓ eda/language_distribution.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # ========================================================================
+    # TEMPORAL CHARTS
+    # ========================================================================
+    if 'added_at' in df.columns:
+        print("  [Temporal]")
+        df_temp = df.copy()
+        df_temp['added_at_dt'] = pd.to_datetime(df_temp['added_at'], errors='coerce')
+        df_temp = df_temp.dropna(subset=['added_at_dt'])
+
+        if len(df_temp) > 0:
+            # 11. Library Growth Line Chart
+            print("    Creating library growth chart...")
+            try:
+                df_sorted = df_temp.sort_values('added_at_dt').reset_index(drop=True)
+                df_sorted['cumulative'] = range(1, len(df_sorted) + 1)
+                fig = px.line(df_sorted, x='added_at_dt', y='cumulative',
+                              title='Library Growth Over Time', labels={'cumulative': 'Total Songs', 'added_at_dt': 'Date'},
+                              color_discrete_sequence=[SPOTIFY_GREEN])
+                fig.update_layout(height=400, width=1000)
+                save_plotly_as_png(fig, f"{output_dir}/temporal/library_growth.png", width=1000, height=400)
+                file_count += 1
+                print("    ✓ temporal/library_growth.png")
+            except Exception as e:
+                print(f"    ⚠️  Failed: {e}")
+
+            # 12. Monthly Additions Bar Chart
+            print("    Creating monthly additions chart...")
+            try:
+                monthly = df_temp.groupby(df_temp['added_at_dt'].dt.to_period('M')).size()
+                fig = px.bar(x=monthly.index.astype(str), y=monthly.values,
+                             title='Monthly Song Additions', labels={'x': 'Month', 'y': 'Songs Added'},
+                             color_discrete_sequence=[SPOTIFY_GREEN])
+                fig.update_layout(height=400, width=1000, showlegend=False)
+                save_plotly_as_png(fig, f"{output_dir}/temporal/monthly_additions.png", width=1000, height=400)
+                file_count += 1
+                print("    ✓ temporal/monthly_additions.png")
+            except Exception as e:
+                print(f"    ⚠️  Failed: {e}")
+
+            # 13. Release Year Distribution
+            if 'release_date' in df_temp.columns:
+                print("    Creating release year histogram...")
+                try:
+                    df_temp['release_year'] = pd.to_datetime(df_temp['release_date'], errors='coerce').dt.year
+                    valid = df_temp['release_year'].between(1900, 2030)
+                    fig = px.histogram(df_temp[valid], x='release_year', nbins=50, title='Release Year Distribution',
+                                       color_discrete_sequence=[SPOTIFY_GREEN])
+                    fig.update_layout(height=400, width=800)
+                    save_plotly_as_png(fig, f"{output_dir}/temporal/release_year_histogram.png", width=800, height=400)
+                    file_count += 1
+                    print("    ✓ temporal/release_year_histogram.png")
+                except Exception as e:
+                    print(f"    ⚠️  Failed: {e}")
+
+            # 14. Cluster Evolution Stacked Area
+            print("    Creating cluster evolution area chart...")
+            try:
+                df_temp['month'] = df_temp['added_at_dt'].dt.to_period('M').astype(str)
+                monthly = df_temp.groupby(['month', 'cluster']).size().reset_index(name='count')
+                fig = px.area(monthly, x='month', y='count', color='cluster', title='Cluster Evolution Over Time',
+                              color_discrete_sequence=CLUSTER_COLORS[:n_clusters])
+                fig.update_layout(height=500, width=1200, xaxis_tickangle=-45)
+                save_plotly_as_png(fig, f"{output_dir}/temporal/cluster_evolution.png", width=1200, height=500)
+                file_count += 1
+                print("    ✓ temporal/cluster_evolution.png")
+            except Exception as e:
+                print(f"    ⚠️  Failed: {e}")
+
+            # 15. Decade Distribution Pie
+            if 'release_year' in df_temp.columns:
+                print("    Creating decade distribution pie...")
+                try:
+                    df_temp['decade'] = (df_temp['release_year'] // 10 * 10).astype('Int64')
+                    decade_counts = df_temp['decade'].value_counts().sort_index().dropna()
+                    fig = px.pie(values=decade_counts.values, names=[f"{int(d)}s" for d in decade_counts.index],
+                                 title='Decade Distribution')
+                    fig.update_layout(height=500, width=600)
+                    save_plotly_as_png(fig, f"{output_dir}/temporal/decade_distribution.png", width=600, height=500)
+                    file_count += 1
+                    print("    ✓ temporal/decade_distribution.png")
+                except Exception as e:
+                    print(f"    ⚠️  Failed: {e}")
+
+            # 16. Cluster Heatmap (month × cluster)
+            print("    Creating cluster heatmap...")
+            try:
+                df_temp['month_period'] = df_temp['added_at_dt'].dt.to_period('M')
+                matrix = df_temp.groupby(['month_period', 'cluster']).size().unstack(fill_value=0)
+                if len(matrix) > 1 and len(matrix.columns) > 1:
+                    fig = px.imshow(matrix.T, labels=dict(x='Month', y='Cluster', color='Songs Added'),
+                                    title='Cluster Activity Heatmap', aspect='auto', color_continuous_scale='Viridis')
+                    fig.update_xaxes(side='bottom')
+                    fig.update_layout(height=400 + n_clusters * 20, width=1000)
+                    save_plotly_as_png(fig, f"{output_dir}/temporal/cluster_heatmap.png", width=1000, height=400 + n_clusters * 20)
+                    file_count += 1
+                    print("    ✓ temporal/cluster_heatmap.png")
+            except Exception as e:
+                print(f"    ⚠️  Failed: {e}")
+
+    # ========================================================================
+    # FEATURE IMPORTANCE CHARTS
+    # ========================================================================
+    print("  [Feature Importance]")
+
+    # 17. Feature Importance Heatmap (Cohen's d)
+    print("    Creating feature importance heatmap...")
+    try:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        feature_cols = [c for c in numeric_cols if not c.startswith(('x', 'y', 'z', 'cluster', 'umap'))]
+        global_means = df[feature_cols].mean()
+        global_stds = df[feature_cols].std()
+
+        all_top_features = set()
+        cluster_importance = {}
+        for cluster_id in clusters:
+            cluster_df = df[df['cluster'] == cluster_id]
+            cluster_means = cluster_df[feature_cols].mean()
+            importance = {}
+            for feature in feature_cols:
+                if global_stds[feature] > 0:
+                    importance[feature] = (cluster_means[feature] - global_means[feature]) / global_stds[feature]
+            sorted_features = sorted(importance.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
+            all_top_features.update([f[0] for f in sorted_features])
+            cluster_importance[cluster_id] = importance
+
+        top_features = sorted(list(all_top_features))[:15]
+        heatmap_data = [[cluster_importance[c].get(f, 0) for c in clusters] for f in top_features]
+
+        fig = go.Figure(data=go.Heatmap(
+            z=heatmap_data, x=[f'Cluster {c}' for c in clusters], y=top_features,
+            colorscale='RdBu_r', zmid=0, colorbar=dict(title="Cohen's d"),
+        ))
+        fig.update_layout(title="Feature Importance Heatmap (Cohen's d)", height=600, width=1000,
+                          yaxis=dict(tickfont=dict(size=10)))
+        save_plotly_as_png(fig, f"{output_dir}/feature_importance/importance_heatmap.png", width=1000, height=600)
+        file_count += 1
+        print("    ✓ feature_importance/importance_heatmap.png")
+    except Exception as e:
+        print(f"    ⚠️  Failed: {e}")
+
+    # 18-22. Feature Distribution Violin Plots (top 5 features)
+    key_features = ['bpm', 'danceability', 'valence', 'arousal', 'instrumentalness']
+    available_features = [f for f in key_features if f in df.columns][:5]
+
+    for feature in available_features:
+        print(f"    Creating {feature} violin plot...")
+        try:
+            fig = go.Figure()
+            for cluster_id in clusters:
+                cluster_values = df[df['cluster'] == cluster_id][feature].dropna()
+                fig.add_trace(go.Violin(
+                    y=cluster_values, name=f'Cluster {cluster_id}', box_visible=True, meanline_visible=True,
+                    line_color=get_cluster_color(cluster_id), fillcolor=get_cluster_color(cluster_id), opacity=0.6,
+                ))
+            fig.update_layout(title=f"Distribution of '{feature}' Across Clusters", yaxis_title=feature, height=500, width=800)
+            save_plotly_as_png(fig, f"{output_dir}/feature_importance/violin_{feature}.png", width=800, height=500)
+            file_count += 1
+            print(f"    ✓ feature_importance/violin_{feature}.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    # ========================================================================
+    # CLUSTER COMPARISON CHARTS
+    # ========================================================================
+    print("  [Comparison]")
+
+    # 23. Multi-Cluster Radar Plot (normalized features)
+    print("    Creating multi-cluster radar plot...")
+    try:
+        radar_features = ['bpm', 'danceability', 'valence', 'arousal', 'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed']
+        radar_features = [f for f in radar_features if f in df.columns]
+        if len(radar_features) >= 3:
+            normalized_df = df[radar_features].copy()
+            for col in radar_features:
+                min_val, max_val = normalized_df[col].min(), normalized_df[col].max()
+                if max_val > min_val:
+                    normalized_df[col] = (normalized_df[col] - min_val) / (max_val - min_val)
+            normalized_df['cluster'] = df['cluster'].values
+
+            fig = go.Figure()
+            for cluster_id in clusters:
+                cluster_means = normalized_df[normalized_df['cluster'] == cluster_id][radar_features].mean()
+                fig.add_trace(go.Scatterpolar(
+                    r=cluster_means.values, theta=radar_features, fill='toself',
+                    name=f'Cluster {cluster_id}', line_color=get_cluster_color(cluster_id), opacity=0.6,
+                ))
+            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                              title='Multi-Cluster Comparison (Normalized)', height=600, width=800, showlegend=True)
+            save_plotly_as_png(fig, f"{output_dir}/comparison/multi_cluster_radar.png", width=800, height=600)
+            file_count += 1
+            print("    ✓ comparison/multi_cluster_radar.png")
+    except Exception as e:
+        print(f"    ⚠️  Failed: {e}")
+
+    # 24. Top Artists per Cluster (horizontal bar chart for each cluster)
+    if 'artist' in df.columns:
+        print("    Creating top artists per cluster charts...")
+        for cluster_id in clusters:
+            try:
+                cluster_df = df[df['cluster'] == cluster_id]
+                artist_counts = cluster_df['artist'].value_counts().head(10)
+                if len(artist_counts) > 0:
+                    fig = px.bar(x=artist_counts.values, y=artist_counts.index, orientation='h',
+                                 labels={'x': 'Song Count', 'y': 'Artist'},
+                                 title=f'Cluster {cluster_id} - Top 10 Artists',
+                                 color_discrete_sequence=[get_cluster_color(cluster_id)])
+                    fig.update_layout(height=400, width=600, showlegend=False)
+                    save_plotly_as_png(fig, f"{output_dir}/comparison/top_artists_cluster_{cluster_id}.png", width=600, height=400)
+                    file_count += 1
+            except:
+                pass
+        print(f"    ✓ comparison/top_artists_cluster_*.png ({n_clusters} files)")
+
+    # 25. Genre Distribution by Cluster (grouped bar)
+    if 'top_genre' in df.columns:
+        print("    Creating genre distribution grouped bar...")
+        try:
+            genre_counts = Counter(df['top_genre'].dropna())
+            top_genres = [g for g, _ in genre_counts.most_common(15)]
+            genre_data = []
+            for genre in top_genres:
+                for cluster_id in clusters:
+                    cluster_df = df[df['cluster'] == cluster_id]
+                    count = len(cluster_df[cluster_df['top_genre'] == genre])
+                    genre_data.append({
+                        'genre': genre.split('---')[-1] if '---' in genre else genre,
+                        'cluster': f'Cluster {cluster_id}', 'count': count,
+                    })
+            genre_df = pd.DataFrame(genre_data)
+            fig = px.bar(genre_df, x='genre', y='count', color='cluster', barmode='group',
+                         title='Genre Distribution by Cluster (Top 15)', color_discrete_sequence=CLUSTER_COLORS[:n_clusters])
+            fig.update_layout(height=500, width=1200, xaxis_tickangle=-45)
+            save_plotly_as_png(fig, f"{output_dir}/comparison/genre_by_cluster.png", width=1200, height=500)
+            file_count += 1
+            print("    ✓ comparison/genre_by_cluster.png")
+        except Exception as e:
+            print(f"    ⚠️  Failed: {e}")
+
+    print(f"  Generated {file_count} images total")
+    return file_count
 
 
 # ============================================================================
@@ -1455,9 +1917,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python analysis/export_all_data.py
-  python analysis/export_all_data.py --skip-images
-  python analysis/export_all_data.py --mode audio --output-dir ~/Desktop/export
+  python analysis/export_all_data.py                    # Full export with images
+  python analysis/export_all_data.py --llm-bundle       # Data-only for LLM upload
+  python analysis/export_all_data.py --skip-images      # Data + no images
         """
     )
     parser.add_argument('--data-file', default='analysis/outputs/analysis_data.pkl',
@@ -1468,15 +1930,20 @@ Examples:
                         help='Output directory for exported files')
     parser.add_argument('--subclusters-dir', default='analysis/outputs/subclusters',
                         help='Directory containing saved sub-cluster files')
-    parser.add_argument('--lyrics-dir', default='lyrics/temp',
+    parser.add_argument('--lyrics-dir', default='lyrics/data',
                         help='Directory containing lyrics files')
     parser.add_argument('--skip-images', action='store_true',
                         help='Skip PNG image generation (faster, data-only export)')
     parser.add_argument('--skip-full-dataset', action='store_true',
                         help='Skip full_dataset.csv export (saves ~10MB, use for LLM uploads)')
     parser.add_argument('--llm-bundle', action='store_true',
-                        help='Create llm_bundle.txt with key files concatenated for easy LLM upload (~5K tokens)')
+                        help='Create llm_bundle.txt (auto-skips images and full dataset)')
     args = parser.parse_args()
+
+    # --llm-bundle implies --skip-images and --skip-full-dataset
+    if args.llm_bundle:
+        args.skip_images = True
+        args.skip_full_dataset = True
 
     start_time = time.time()
 

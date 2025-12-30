@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def load_lyrics_for_cluster(
     df: pd.DataFrame,
     cluster_id: int,
-    lyrics_dir: str = 'lyrics/temp/',
+    lyrics_dir: str = 'lyrics/data/',
 ) -> List[Tuple[str, str]]:
     """
     Load all lyric text files for songs in cluster.

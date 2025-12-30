@@ -1,7 +1,7 @@
 ================================================================================
 SPOTIFY CLUSTERING DATA EXPORT - LLM BUNDLE
 ================================================================================
-Generated: 2025-12-29T03:54:23.395777
+Generated: 2025-12-30T04:07:00.675595
 Total files: 24
 
 This bundle contains Tier 1 (essential) + Tier 2 (deep analysis) files.
@@ -12,7 +12,7 @@ Combine with your narrative notes for complete LLM context.
 FILE: metadata.json
 ============================================================
 {
-  "export_timestamp": "2025-12-29T03:53:28.026128",
+  "export_timestamp": "2025-12-30T04:00:44.230179",
   "source_file": "analysis/outputs/analysis_data.pkl",
   "clustering_mode": "combined",
   "audio_backend": "interpretable",
@@ -27,7 +27,7 @@ FILE: metadata.json
   "files_exported": {
     "data_files": 54,
     "plot_images": 0,
-    "total_size_mb": 0.64
+    "total_size_mb": 10.38
   },
   "feature_vector_info": {
     "audio_dims": "0-15 (BPM, moods, genre, production, etc.)",
@@ -35,7 +35,7 @@ FILE: metadata.json
     "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
     "meta_dims": "29-32 (theme, language, popularity, release_year)"
   },
-  "export_duration_seconds": 2.47
+  "export_duration_seconds": 3.1
 }
 
 ============================================================
@@ -389,56 +389,56 @@ Electronic---Big Beat,1,0.08
 FILE: data/cluster_comparison/sample_songs_per_cluster.csv
 ============================================================
 cluster,track_name,artist
-0,bouncin,"bxnji, crystation"
-0,Whoopty,CJ
-0,BANG THAT,"Vince Staples, Mustard"
-0,Highlights,Kanye West
+0,Wahda W Nos,"Mared, Big Moe"
+0,She Bad,Khantrast
+0,Whip It,BigXthaPlug
+0,Jameel's Space Ride,Thundercat
+0,Know Better (feat. Rv),"Headie One, Rv"
 0,Big Brother,Kanye West
-0,Glock In My Lap,"21 Savage, Metro Boomin"
-0,BALD!,JPEGMAFIA
-0,Spicy (feat. Post Malone),"Ty Dolla $ign, Post Malone"
-0,BALD! REMIX,"JPEGMAFIA, Denzel Curry"
-0,Winning Speech,"Karan Aujla, Seshnolan"
+0,DVP,PUP
+0,Reminisce,Nas
+0,Loose Change (feat. Earl Sweatshirt),"The Alchemist, Earl Sweatshirt"
+0,TURN IT UP,Cochise
+1,TIL FURTHER NOTICE (feat. James Blake & 21 Savage),"Travis Scott, James Blake, 21 Savage"
+1,Galaxy,JID
 1,Amrikkka,"Shabjdeed, Al Nather"
-1,Father Time (feat. Sampha),"Kendrick Lamar, Sampha"
-1,夜のピエロ - TeddyLoid Remix,"Ado, TeddyLoid"
-1,Drake,Ahmed Santa
-1,Oddloop,frederic
-1,Love Me Again - Radio Edit,John Newman
-1,untitled 05 | 09.21.2014.,Kendrick Lamar
-1,Little Talks,Of Monsters and Men
-1,What’s Next,Drake
-1,Demasiadas Mujeres,C. Tangana
+1,"Am I Dreaming (Metro Boomin & A$AP Rocky, Roisee)","Metro Boomin, A$AP Rocky, Roisee"
+1,wadda3,"Daboor, Al Nather"
+1,United In Grief,Kendrick Lamar
+1,WHAT KIND OF RAPPIN' IS THIS?,JPEGMAFIA
+1,BA$$,Che
+1,Dedicated to Tar Feather,"McKinley Dixon, Anjimile"
+1,Tick Tock,Joji
+2,Chill SQ: FINAL FANTASY IV ～Theme Of Love,Uyama Hiroto
+2,Osono's Request,Joe Hisaishi
+2,Mstny,El Waili
+2,Menuet,Toshifumi Hinata
+2,Vision Eyes (feat. Golden Boy),"Uyama Hiroto, Golden Boy"
+2,SPYRO SKANK,Zeñel
 2,Me and Your Mama,Childish Gambino
-2,Hard-Wired,Dave Weckl
-2,Lone Sojourner,"Yu-Peng Chen, HOYO-MiX"
-2,Last Words,Kenny Beats
-2,Saudade Vem Correndo,"Stan Getz, Luiz Bonfá, Maria Toledo"
-2,put ya hands in the air,"KTmelodies, dBona"
-2,"After The Storm (feat. Tyler, The Creator & Bootsy Collins)","Kali Uchis, Tyler, The Creator, Bootsy Collins"
-2,Feather (feat. Cise Starr & Akin from CYNE),"Nujabes, Cise Starr & Akin from CYNE"
-2,Eucalyptus,MF DOOM
-2,SALVALAI,SALVALAI
-3,IDK HOW 2 FIGHT,BaBa
+2,a bird's last look - slowed,skywave
+2,Chick's Pain,Mathieu Fiset
+2,Largo,"Portraits in Jazz, Nikolaj Hess, Claus Waidtløw"
+3,ΩΩPARTS,Camellia
+3,Ultramarine,Seiryu
 3,"Cafe SQ: Romancing SaGa 2 ""The Ultimate Confrontation""",sasakure.UK
-3,Papi Julio,"VDYCD, фрози"
-3,NUCLEAR-STAR,Camellia
-3,x-tudo - slowed,"slxughter, Mc Gw"
-3,Call me it.,t+pazolite
-3,Neverender - Rampa Remix,"Justice, Tame Impala, Rampa, Keinemusik"
-3,Paradigm Shift - Extended Mix,Morimori Atsushi
 3,"L’Étoile d’Afrique, Pt. 2",VDYCD
-3,Orquestra Maldita,"TRASHXRL, Mc Delux"
-4,summerfallwinter sprinG.,JANNABI
-4,SKELETONS,Travis Scott
-4,More Spell On You,Eddie Johns
-4,PREACHER MAN,"Ye, Kanye West"
-4,Only One,"Kanye West, Paul McCartney"
-4,Steve Biko (Stir It Up),A Tribe Called Quest
-4,Previsão,"Bossacucanova, Adriana Calcanhotto"
-4,OGRA,"Xander Ghost, Marwan Pablo"
-4,EVERYTHING MUST GO,"Tyler, The Creator"
-4,MY EYES,Travis Scott
+3,Critical Crystal - Bd Mix,Seiryu
+3,x-tudo - slowed,"slxughter, Mc Gw"
+3,IDK HOW 2 FIGHT,BaBa
+3,Unmask Me - Ashley Beedle Vocal Mix,"MAMA, Ashley Beedle"
+3,Anomaly,Camellia
+3,Step Back!,"1nonly, SXMPRA"
+4,Talk Of The Town,Jack Harlow
+4,running out of time,Lil Yachty
+4,I Was The Life Of The Party,The Dramatics
+4,WE DID IT KID,jsa
+4,Collage,"Shabjdeed, Al Nather"
+4,Mona Lisa,Dominic Fike
+4,geum ui hwan hyang,JANNABI
+4,Genesis,Grimes
+4,"Tenha Fé, Pois Amanhã um Lindo Dia Vai Nascer",Os Originais Do Samba
+4,Everybody Wants To Rule The World,Tears For Fears
 
 
 # MISSING: data/feature_importance/feature_stats.csv

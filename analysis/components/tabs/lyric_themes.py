@@ -26,7 +26,7 @@ from analysis.components.visualization.color_palette import SPOTIFY_GREEN
 
 
 @st.cache_data
-def load_all_lyrics(df: pd.DataFrame, lyrics_dir: str = "lyrics/temp/"):
+def load_all_lyrics(df: pd.DataFrame, lyrics_dir: str = "lyrics/data/"):
     """Load all lyrics for the dataset (cached)."""
     all_lyrics = []
 
@@ -59,7 +59,7 @@ def render_lyric_themes(df: pd.DataFrame):
     # Lyrics directory configuration
     lyrics_dir = st.text_input(
         "Lyrics directory",
-        value="lyrics/temp/",
+        value="lyrics/data/",
         help="Directory containing lyric .txt files",
     )
 

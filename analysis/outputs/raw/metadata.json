@@ -1,5 +1,5 @@
 {
-  "export_timestamp": "2025-12-29T03:54:23.396545",
+  "export_timestamp": "2025-12-30T04:07:00.676441",
   "source_file": "analysis/outputs/analysis_data.pkl",
   "clustering_mode": "combined",
   "audio_backend": "interpretable",
@@ -14,7 +14,7 @@
   "files_exported": {
     "data_files": 54,
     "plot_images": 0,
-    "total_size_mb": 0.64
+    "total_size_mb": 10.38
   },
   "feature_vector_info": {
     "audio_dims": "0-15 (BPM, moods, genre, production, etc.)",
@@ -22,5 +22,5 @@
     "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
     "meta_dims": "29-32 (theme, language, popularity, release_year)"
   },
-  "export_duration_seconds": 2.41
+  "export_duration_seconds": 2.49
 }
