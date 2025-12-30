@@ -45,53 +45,55 @@ DEFAULT_UMAP_PARAMS: Dict[str, Any] = {
 # =============================================================================
 
 # Theme scale for interpretable lyric features
-# Maps lyric themes to ordinal values (introspective → energetic/positive)
+# Maps lyric themes to ordinal values (energetic/positive → heavy/dark)
+# 10 themes evenly spaced across [0, 1] (spacing = 1/9 ≈ 0.111)
 THEME_SCALE: Dict[str, float] = {
     "party": 1.0,
-    "flex": 0.9,
-    "love": 0.8,
-    "social": 0.7,
-    "spirituality": 0.6,
-    "introspection": 0.5,
-    "street": 0.4,
-    "heartbreak": 0.3,
-    "struggle": 0.2,
-    "other": 0.1,
+    "flex": 0.889,
+    "love": 0.778,
+    "social": 0.667,
+    "spirituality": 0.556,
+    "introspection": 0.444,
+    "street": 0.333,
+    "heartbreak": 0.222,
+    "struggle": 0.111,
+    "other": 0.0,
     "none": 0.5,  # Centered for instrumental tracks (equidistant from all categories)
 }
 
 # Language scale for interpretable lyric features
 # Maps detected language to ordinal encoding
 # Language family buckets - grouped by musical tradition similarity
+# 8 families evenly spaced across [0, 1] (spacing = 1/7 ≈ 0.143)
 LANGUAGE_SCALE: Dict[str, float] = {
     # English (standalone - dominant Western pop/hip-hop baseline)
     "english": 1.0,
     # Romance (Latin pop, reggaeton, shared production)
-    "spanish": 0.85,
-    "portuguese": 0.85,
-    "french": 0.85,
+    "spanish": 0.857,
+    "portuguese": 0.857,
+    "french": 0.857,
     # Germanic (European pop traditions)
-    "german": 0.70,
-    "swedish": 0.70,
-    "norwegian": 0.70,
+    "german": 0.714,
+    "swedish": 0.714,
+    "norwegian": 0.714,
     # Slavic (Eastern European traditions)
-    "russian": 0.55,
-    "ukrainian": 0.55,
-    "serbian": 0.55,
-    "czech": 0.55,
+    "russian": 0.571,
+    "ukrainian": 0.571,
+    "serbian": 0.571,
+    "czech": 0.571,
     # Middle Eastern (maqam scales, shared instrumentation)
-    "arabic": 0.40,
-    "hebrew": 0.40,
-    "turkish": 0.40,
+    "arabic": 0.429,
+    "hebrew": 0.429,
+    "turkish": 0.429,
     # South Asian
-    "punjabi": 0.30,
+    "punjabi": 0.286,
     # East Asian (K-pop/J-pop/C-pop aesthetics)
-    "korean": 0.20,
-    "japanese": 0.20,
-    "chinese": 0.20,
-    "vietnamese": 0.20,
+    "korean": 0.143,
+    "japanese": 0.143,
+    "chinese": 0.143,
+    "vietnamese": 0.143,
     # African
-    "luganda": 0.10,
+    "luganda": 0.0,
     # Other/Unknown - centered for instrumental tracks (equidistant from all categories)
     "multilingual": 0.5,
     "unknown": 0.5,
