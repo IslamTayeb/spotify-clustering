@@ -1,5 +1,5 @@
 {
-  "export_timestamp": "2025-12-29T03:48:56.117325",
+  "export_timestamp": "2025-12-29T03:54:23.396545",
   "source_file": "analysis/outputs/analysis_data.pkl",
   "clustering_mode": "combined",
   "audio_backend": "interpretable",
@@ -22,5 +22,5 @@
     "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
     "meta_dims": "29-32 (theme, language, popularity, release_year)"
   },
-  "export_duration_seconds": 2.48
+  "export_duration_seconds": 2.41
 }

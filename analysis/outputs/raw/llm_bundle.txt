@@ -1,8 +1,8 @@
 ================================================================================
 SPOTIFY CLUSTERING DATA EXPORT - LLM BUNDLE
 ================================================================================
-Generated: 2025-12-29T03:48:56.116510
-Total files: 19
+Generated: 2025-12-29T03:54:23.395777
+Total files: 24
 
 This bundle contains Tier 1 (essential) + Tier 2 (deep analysis) files.
 Combine with your narrative notes for complete LLM context.
@@ -12,7 +12,7 @@ Combine with your narrative notes for complete LLM context.
 FILE: metadata.json
 ============================================================
 {
-  "export_timestamp": "2025-12-29T03:30:15.438847",
+  "export_timestamp": "2025-12-29T03:53:28.026128",
   "source_file": "analysis/outputs/analysis_data.pkl",
   "clustering_mode": "combined",
   "audio_backend": "interpretable",
@@ -27,7 +27,7 @@ FILE: metadata.json
   "files_exported": {
     "data_files": 54,
     "plot_images": 0,
-    "total_size_mb": 11.89
+    "total_size_mb": 0.64
   },
   "feature_vector_info": {
     "audio_dims": "0-15 (BPM, moods, genre, production, etc.)",
@@ -35,7 +35,7 @@ FILE: metadata.json
     "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
     "meta_dims": "29-32 (theme, language, popularity, release_year)"
   },
-  "export_duration_seconds": 2.49
+  "export_duration_seconds": 2.47
 }
 
 ============================================================
@@ -389,56 +389,56 @@ Electronic---Big Beat,1,0.08
 FILE: data/cluster_comparison/sample_songs_per_cluster.csv
 ============================================================
 cluster,track_name,artist
-0,"Hip-Hop (feat. BigXthaPlug, Jay Jones)","Lil Wayne, BigXthaPlug, Jay Jones"
-0,Brand New 911,"Joey Bada$$, Westside Gunn"
-0,Freestyle,Lil Baby
-0,RICKY,Denzel Curry
-0,MASSA,"Tyler, The Creator"
-0,Big Dreams,Bakar
-0,Kickboxer,YoungBoy Never Broke Again
-0,On God,Kanye West
-0,PULL UP,Internet Girl
-0,The End (feat. BABYMETAL),"Lil Uzi Vert, BABYMETAL"
-1,She Looked Like Me!,Magdalena Bay
-1,PROM / KING,Saba
-1,Follow God,Kanye West
-1,Inn Ann,"Daboor, Shabjdeed, Al Nather"
-1,Hard Times,Paramore
-1,麻痺,yama
-1,Walkin - Cold Blooded Soul Version,Denzel Curry
-1,4:44,JAY-Z
-1,LA FAMA,"ROSALÍA, The Weeknd"
-1,Out of Time (feat. Bea Miller),"Zedd, Bea Miller"
-2,a bird's last look,skywave
-2,Bygone Days,Joe Hisaishi
-2,One Summer Day,Joe Hisaishi
-2,The Ecstasy of Gold - L'Estasi Dell'oro,"Ennio Morricone, Edda Dell'Orso"
-2,Vision Eyes (feat. Golden Boy),"Uyama Hiroto, Golden Boy"
-2,Fantastic Planet,SOIL & “PIMP” SESSIONS
-2,Serbian March,Joe Hisaishi
-2,Spacemountain,Uyama Hiroto
-2,Amazon,Gábor Szabó
-2,Trofeo de Bolos,Alfred Jazz Ensemble
+0,bouncin,"bxnji, crystation"
+0,Whoopty,CJ
+0,BANG THAT,"Vince Staples, Mustard"
+0,Highlights,Kanye West
+0,Big Brother,Kanye West
+0,Glock In My Lap,"21 Savage, Metro Boomin"
+0,BALD!,JPEGMAFIA
+0,Spicy (feat. Post Malone),"Ty Dolla $ign, Post Malone"
+0,BALD! REMIX,"JPEGMAFIA, Denzel Curry"
+0,Winning Speech,"Karan Aujla, Seshnolan"
+1,Amrikkka,"Shabjdeed, Al Nather"
+1,Father Time (feat. Sampha),"Kendrick Lamar, Sampha"
+1,夜のピエロ - TeddyLoid Remix,"Ado, TeddyLoid"
+1,Drake,Ahmed Santa
+1,Oddloop,frederic
+1,Love Me Again - Radio Edit,John Newman
+1,untitled 05 | 09.21.2014.,Kendrick Lamar
+1,Little Talks,Of Monsters and Men
+1,What’s Next,Drake
+1,Demasiadas Mujeres,C. Tangana
+2,Me and Your Mama,Childish Gambino
+2,Hard-Wired,Dave Weckl
+2,Lone Sojourner,"Yu-Peng Chen, HOYO-MiX"
+2,Last Words,Kenny Beats
+2,Saudade Vem Correndo,"Stan Getz, Luiz Bonfá, Maria Toledo"
+2,put ya hands in the air,"KTmelodies, dBona"
+2,"After The Storm (feat. Tyler, The Creator & Bootsy Collins)","Kali Uchis, Tyler, The Creator, Bootsy Collins"
+2,Feather (feat. Cise Starr & Akin from CYNE),"Nujabes, Cise Starr & Akin from CYNE"
+2,Eucalyptus,MF DOOM
+2,SALVALAI,SALVALAI
+3,IDK HOW 2 FIGHT,BaBa
+3,"Cafe SQ: Romancing SaGa 2 ""The Ultimate Confrontation""",sasakure.UK
+3,Papi Julio,"VDYCD, фрози"
+3,NUCLEAR-STAR,Camellia
+3,x-tudo - slowed,"slxughter, Mc Gw"
+3,Call me it.,t+pazolite
+3,Neverender - Rampa Remix,"Justice, Tame Impala, Rampa, Keinemusik"
+3,Paradigm Shift - Extended Mix,Morimori Atsushi
 3,"L’Étoile d’Afrique, Pt. 2",VDYCD
-3,L'Étoile D'afrique - #18,VDYCD
-3,Śiva,"XI, BlackY"
-3,ΩΩPARTS,Camellia
-3,Cash Flow - Blazy Mix,Hydraa
-3,Unmask Me - Ashley Beedle Vocal Mix,"MAMA, Ashley Beedle"
-3,Les Trompettes D'afrique,VDYCD
-3,Lunaria,VDYCD
-3,Give Me More - Just Rawer,Aloboi
-3,Hustler Ambitions,Juice
-4,Dream On,Aerosmith
-4,Gooey,Glass Animals
-4,Celestial Bodies,"GHOST DATA, Jovani Occomy"
-4,Everything We Need,"Kanye West, Ty Dolla $ign, Ant Clemons"
-4,I Was The Life Of The Party,The Dramatics
-4,3atma,"El Waili, Samar Tarik"
-4,Wind,Akeboshi
-4,LEGEND,JANNABI
-4,Raksit Leila,Mashrou' Leila
-4,Tudo Que Voce Podia Ser,Quarteto Em Cy
+3,Orquestra Maldita,"TRASHXRL, Mc Delux"
+4,summerfallwinter sprinG.,JANNABI
+4,SKELETONS,Travis Scott
+4,More Spell On You,Eddie Johns
+4,PREACHER MAN,"Ye, Kanye West"
+4,Only One,"Kanye West, Paul McCartney"
+4,Steve Biko (Stir It Up),A Tribe Called Quest
+4,Previsão,"Bossacucanova, Adriana Calcanhotto"
+4,OGRA,"Xander Ghost, Marwan Pablo"
+4,EVERYTHING MUST GO,"Tyler, The Creator"
+4,MY EYES,Travis Scott
 
 
 # MISSING: data/feature_importance/feature_stats.csv
@@ -545,6 +545,131 @@ FILE: data/eda/temporal/temporal_metrics.json
   "most_active_month": "2024-06",
   "most_active_month_count": 557
 }
+
+============================================================
+FILE: data/overview/similarity_pairs.csv
+============================================================
+cluster_a,cluster_b,dissimilarity
+2,4,4.063104980860555
+1,4,9.38455650569877
+0,1,9.963170838481352
+1,2,10.860642988202827
+2,3,12.171146580789015
+1,3,13.810073992934285
+3,4,14.491279475110309
+0,4,16.253239583713135
+0,2,18.209672072761744
+0,3,18.845747369155443
+
+
+============================================================
+FILE: data/cluster_comparison/top_genres_per_cluster.csv
+============================================================
+cluster,rank,genre,count,percentage
+0,1,Hip Hop---Trap,207,28.24
+0,2,Hip Hop---Cloud Rap,165,22.51
+0,3,Hip Hop---Gangsta,65,8.87
+0,4,Hip Hop---Grime,42,5.73
+0,5,Hip Hop---Conscious,30,4.09
+0,6,Electronic---House,21,2.86
+0,7,Hip Hop---Hardcore Hip-Hop,21,2.86
+0,8,Hip Hop---Boom Bap,16,2.18
+0,9,Latin---Reggaeton,14,1.91
+0,10,Rock---Alternative Rock,13,1.77
+1,1,Hip Hop---Cloud Rap,36,15.93
+1,2,Pop---J-pop,19,8.41
+1,3,Hip Hop---Trap,18,7.96
+1,4,Hip Hop---Conscious,17,7.52
+1,5,Hip Hop---Gangsta,15,6.64
+1,6,Electronic---House,11,4.87
+1,7,Hip Hop---Grime,11,4.87
+1,8,Rock---Alternative Rock,10,4.42
+1,9,Funk / Soul---Neo Soul,7,3.1
+1,10,Rock---Indie Rock,6,2.65
+2,1,Stage & Screen---Soundtrack,8,8.79
+2,2,Electronic---Ambient,6,6.59
+2,3,Electronic---Downtempo,6,6.59
+2,4,Classical---Contemporary,5,5.49
+2,5,Jazz---Jazz-Funk,4,4.4
+2,6,Electronic---Deep House,4,4.4
+2,7,Jazz---Contemporary Jazz,4,4.4
+2,8,Hip Hop---Jazzy Hip-Hop,3,3.3
+2,9,Jazz---Easy Listening,3,3.3
+2,10,Electronic---Future Jazz,3,3.3
+3,1,Electronic---Deep House,5,10.64
+3,2,Electronic---House,4,8.51
+3,3,Electronic---Chiptune,4,8.51
+3,4,Electronic---Hardcore,4,8.51
+3,5,Electronic---Experimental,3,6.38
+3,6,Electronic---Dubstep,3,6.38
+3,7,Electronic---Breakcore,3,6.38
+3,8,Electronic---Juke,2,4.26
+3,9,Electronic---Drum n Bass,2,4.26
+3,10,Electronic---Happy Hardcore,2,4.26
+4,1,Rock---Alternative Rock,17,10.9
+4,2,Hip Hop---Cloud Rap,10,6.41
+4,3,"Folk, World, & Country---Folk",9,5.77
+4,4,Electronic---House,9,5.77
+4,5,Electronic---Downtempo,8,5.13
+4,6,Rock---Pop Rock,8,5.13
+4,7,Rock---Indie Rock,7,4.49
+4,8,Electronic---Experimental,5,3.21
+4,9,Latin---Samba,5,3.21
+4,10,Funk / Soul---Neo Soul,5,3.21
+
+
+============================================================
+FILE: data/eda/vocal_extremes.csv
+============================================================
+category,track_name,artist,instrumentalness
+most_vocal,New Tank,Playboi Carti,0.0
+most_vocal,BANG THAT,"Vince Staples, Mustard",0.0
+most_vocal,223's (feat. BabyTron),"midwxst, BabyTron",0.0
+most_vocal,On That Time,Playboi Carti,0.0
+most_vocal,Son Of A Gun,Key Glock,0.001
+most_instrumental,Mean What You Say,"Thad Jones, Pepper Adams Quintet",0.975
+most_instrumental,"Waltz No. 1, Collapse",Hikaru Shirosu,0.975
+most_instrumental,Nakahara,Meiko N Fantasy,0.974
+most_instrumental,Opening Song - Merry-Go-Round of Life,Joe Hisaishi,0.972
+most_instrumental,フルートとハープのための協奏曲 K. 299 ハ長調　第2楽章　アンダンティーノ,桑原まこ,0.97
+
+
+============================================================
+FILE: data/eda/temporal/temporal_extremes.csv
+============================================================
+category,track_name,artist,year,date
+oldest_release,Take Five,The Dave Brubeck Quartet,1959.0,
+oldest_release,Tall Handsome Stranger,Marty Robbins,1963.0,
+oldest_release,Ladyfingers,Herb Alpert & The Tijuana Brass,1965.0,
+oldest_release,Mean What You Say,"Thad Jones, Pepper Adams Quintet",1966.0,
+oldest_release,Even If I Could,The Mamas & The Papas,1966.0,
+newest_release,Get To It (feat. Nino Paid),"ian, Nino Paid",2025.0,
+newest_release,Shock The World - Melody Version - Inspired By House Is Not A Home,That Boy Franco,2025.0,
+newest_release,HOUSE IS NOT A HOME FUNK,DJ972,2025.0,
+newest_release,Stripper Song,Paris Texas,2025.0,
+newest_release,DIA DELÍCIA,"Nakama, ΣP",2025.0,
+first_added,Pressure,Billy Joel,,2023-06-21
+first_added,ABC (feat. Sophia Black),"Polyphia, Sophia Black",,2023-06-21
+first_added,BURN EVERYTHING,"Sean Leon, Yé",,2023-07-16
+first_added,Red,"IDK, Westside Gunn, MF DOOM, J A Y E L E C T R O N I C A",,2023-07-16
+first_added,"Am I Dreaming (Metro Boomin & A$AP Rocky, Roisee)","Metro Boomin, A$AP Rocky, Roisee",,2023-12-01
+last_added,Ahwak,Abu,,2025-12-17
+last_added,keep steady,sosocamo,,2025-12-17
+last_added,إيميلي,طارق العربي طرقان,,2025-12-17
+last_added,Critical Crystal - Bd Mix,Seiryu,,2025-12-17
+last_added,Paved Garden,"t+pazolite, ginkiha, Hommarju",,2025-12-17
+
+
+============================================================
+FILE: data/overview/key_features_summary.csv
+============================================================
+cluster,bpm,danceability,valence,arousal,mood_happy,mood_sad
+0,106.112,0.077,5.031,5.275,0.532,0.149
+1,114.25,0.201,5.156,5.304,0.525,0.284
+2,116.361,0.528,5.093,5.019,0.753,0.543
+3,109.819,0.062,6.11,5.622,0.747,0.111
+4,116.578,0.452,5.082,4.996,0.634,0.508
+
 
 ============================================================
 FILE: data/subclusters/parent_0_2025-12-28_01-40-39_k-means/top_defining_features.csv

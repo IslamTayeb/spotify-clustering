@@ -1380,7 +1380,7 @@ def export_llm_bundle(output_dir: str) -> None:
         "data/eda/temporal/decade_distribution.csv",
     ]
 
-    # Tier 2: Deep analysis (~4K tokens)
+    # Tier 2: Deep analysis (~5K tokens)
     tier2_files = [
         "data/overview/genre_distribution.csv",
         "data/eda/genre_stats.csv",
@@ -1390,6 +1390,12 @@ def export_llm_bundle(output_dir: str) -> None:
         "data/eda/language_stats.csv",
         "data/eda/audio_extremes.csv",
         "data/eda/temporal/temporal_metrics.json",
+        # Deep cuts - cluster relationships and extremes
+        "data/overview/similarity_pairs.csv",
+        "data/cluster_comparison/top_genres_per_cluster.csv",
+        "data/eda/vocal_extremes.csv",
+        "data/eda/temporal/temporal_extremes.csv",
+        "data/overview/key_features_summary.csv",
     ]
 
     # Add subcluster files dynamically
