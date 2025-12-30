@@ -113,7 +113,7 @@ def compute_feature_importance(
             "voice_gender_female",
             "mood_acoustic",
             "mood_electronic",
-            "genre_ladder",
+            "genre_fusion",
             # ═══════════════════════════════════════════════════════════════
             # LYRIC FEATURES (gpt-5-mini-2025-08-07 + local)
             # ═══════════════════════════════════════════════════════════════

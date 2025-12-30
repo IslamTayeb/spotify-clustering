@@ -69,23 +69,21 @@ def build_hover_text(row: pd.Series) -> str:
         f"- Party: {row.get('mood_party', 0):.2f}<br>"
     )
 
-    if 'genre_ladder' in row:
-        genre_type = 'Acoustic' if row['genre_ladder'] < 0.4 else 'Electronic' if row['genre_ladder'] > 0.6 else 'Hybrid'
-        text += f"Genre Ladder: {row['genre_ladder']:.2f} ({genre_type})<br>"
+    if 'genre_fusion' in row:
+        genre_type = 'Pure' if row['genre_fusion'] < 0.4 else 'Fusion' if row['genre_fusion'] > 0.6 else 'Mixed'
+        text += f"Genre Fusion: {row['genre_fusion']:.2f} ({genre_type})<br>"
 
     return text
 
 
 def create_umap_3d_plot(
     df: pd.DataFrame,
-    title: str = "3D UMAP Visualization",
     color_by: str = "label",
 ) -> go.Figure:
     """Create 3D UMAP scatter plot.
 
     Args:
         df: DataFrame with columns 'x', 'y', 'z', and 'label'
-        title: Plot title
         color_by: Column name to color points by (default: 'label')
 
     Returns:
@@ -140,7 +138,6 @@ def create_umap_3d_plot(
             yaxis=dict(visible=False),
             zaxis=dict(visible=False),
         ),
-        title=title,
     )
 
     return fig
@@ -148,18 +145,13 @@ def create_umap_3d_plot(
 
 def create_interactive_cluster_map(
     df: pd.DataFrame,
-    algorithm_name: str,
-    mode: str = "combined"
 ) -> go.Figure:
     """Create interactive 3D cluster map with selection support.
 
     Args:
         df: DataFrame with UMAP coordinates and cluster labels
-        algorithm_name: Name of clustering algorithm used
-        mode: Feature mode (audio/lyrics/combined)
 
     Returns:
         Plotly Figure with interactive selection
     """
-    title = f"{algorithm_name} Clustering ({mode} mode) - UMAP Visualization"
-    return create_umap_3d_plot(df, title=title)
+    return create_umap_3d_plot(df)

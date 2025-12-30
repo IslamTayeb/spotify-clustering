@@ -112,7 +112,7 @@ Each dimension has explicit meaning and rationale:
 | 10 | `mood_relaxed` | mood_relaxed classifier | Calm/peaceful presence |
 | 11 | `mood_party` | mood_party classifier | Upbeat/celebratory presence |
 | 12 | `voice_gender` | gender classifier | 0=female, 1=male, 0=instrumental* |
-| 13 | `genre_ladder` | Entropy of genre_probs | 0=pure genre, 1=genre fusion |
+| 13 | `genre_fusion` | Entropy of genre_probs | 0=pure genre, 1=genre fusion |
 | 14 | `acoustic_electronic` | mood_acoustic - mood_electronic | 0=electronic, 1=acoustic |
 | 15 | `timbre_brightness` | timbre classifier | 0=dark/mellow, 1=bright/crisp |
 | 16 | `key_sin` | Essentia RhythmExtractor | sin(2π × pitch/12) × 0.33 |
@@ -121,8 +121,8 @@ Each dimension has explicit meaning and rationale:
 
 *Voice gender is set to 0 for instrumental tracks (instrumentalness >= 0.5) since there's no voice to classify.
 
-**Genre Ladder Deep-Dive:**
-The genre_ladder measures how "categorizable" a song is, computed from the entropy of the 400-dimensional Discogs genre probability vector:
+**Genre Fusion Deep-Dive:**
+The genre_fusion measures how "categorizable" a song is, computed from the entropy of the 400-dimensional Discogs genre probability vector:
 - Low entropy (→0) = Song clearly belongs to one genre (artist working WITHIN a tradition)
 - High entropy (→1) = Song crosses many genres (artist CROSSING boundaries)
 
@@ -423,7 +423,7 @@ python export/create_playlists.py
 | `analysis/pipeline/lyric_features.py` | GPT lyric classification, prompt design |
 | `analysis/pipeline/clustering.py` | HAC clustering, UMAP visualization, feature preparation |
 | `analysis/pipeline/config.py` | Theme/language scales, default parameters |
-| `analysis/pipeline/genre_ladder.py` | Entropy-based genre purity calculation |
+| `analysis/pipeline/genre_fusion.py` | Entropy-based genre fusion calculation |
 | `analysis/interactive_interpretability.py` | Streamlit dashboard for parameter tuning |
 | `analysis/run_analysis.py` | Main orchestration script |
 
@@ -470,7 +470,7 @@ spotify-clustering/
 │   │   ├── interpretable_features.py
 │   │   ├── clustering.py
 │   │   ├── config.py
-│   │   └── genre_ladder.py
+│   │   └── genre_fusion.py
 │   ├── cache/              # Feature caches (gitignored)
 │   ├── outputs/            # Results and visualizations
 │   ├── run_analysis.py     # Main entry point

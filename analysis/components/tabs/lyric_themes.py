@@ -139,12 +139,12 @@ def render_lyric_themes(df: pd.DataFrame):
                     unigrams_df["TF-IDF Score"] = unigrams_df["TF-IDF Score"].round(4)
 
                     # Bar chart
+                    st.caption("Top 20 Keywords")
                     fig = px.bar(
                         unigrams_df.head(20),
                         x="TF-IDF Score",
                         y="Word",
                         orientation="h",
-                        title="Top 20 Keywords",
                         color_discrete_sequence=[SPOTIFY_GREEN],
                     )
                     fig.update_layout(height=500)
@@ -268,7 +268,6 @@ def render_lyric_themes(df: pd.DataFrame):
             )
 
             fig.update_layout(
-                title="Distribution of Sentiment Scores",
                 xaxis_title="Compound Sentiment Score",
                 yaxis_title="Number of Songs",
                 height=400,

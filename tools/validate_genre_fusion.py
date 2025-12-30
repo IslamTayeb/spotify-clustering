@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Validate Genre Ladder Implementation (Entropy-based)
+Validate Genre Fusion Implementation (Entropy-based)
 
-This script validates the genre_ladder feature by:
+This script validates the genre_fusion feature by:
 1. Loading audio features from cache
-2. Checking that genre_ladder exists for all tracks
-3. Visualizing distribution of genre_ladder values
+2. Checking that genre_fusion exists for all tracks
+3. Visualizing distribution of genre_fusion values
 4. Showing most genre-pure and genre-fluid songs
 5. Comparing with other audio features
 """
@@ -28,49 +28,49 @@ def load_audio_features(cache_path="analysis/cache/audio_features.pkl"):
     return features
 
 
-def validate_genre_ladder(features):
-    """Validate genre_ladder feature."""
+def validate_genre_fusion(features):
+    """Validate genre_fusion feature."""
     print("=" * 70)
-    print("GENRE LADDER VALIDATION (Entropy-based)")
+    print("GENRE FUSION VALIDATION (Entropy-based)")
     print("=" * 70)
 
     # Check version
-    version = features[0].get("genre_ladder_version", "unknown")
+    version = features[0].get("genre_fusion_version", "unknown")
     print(f"\nVersion: {version}")
 
-    # Check if genre_ladder exists
-    has_ladder = [f.get("genre_ladder") is not None for f in features]
-    coverage = sum(has_ladder) / len(features) * 100
+    # Check if genre_fusion exists
+    has_fusion = [f.get("genre_fusion") is not None for f in features]
+    coverage = sum(has_fusion) / len(features) * 100
 
     print(f"\n1. Coverage Check:")
     print(f"   Total tracks: {len(features)}")
-    print(f"   Tracks with genre_ladder: {sum(has_ladder)} ({coverage:.1f}%)")
+    print(f"   Tracks with genre_fusion: {sum(has_fusion)} ({coverage:.1f}%)")
 
     if coverage < 100:
         print(
-            f"   ⚠️  Warning: {len(features) - sum(has_ladder)} tracks missing genre_ladder"
+            f"   ⚠️  Warning: {len(features) - sum(has_fusion)} tracks missing genre_fusion"
         )
 
-    # Extract genre_ladder values
-    ladder_values = [
-        f.get("genre_ladder") for f in features if f.get("genre_ladder") is not None
+    # Extract genre_fusion values
+    fusion_values = [
+        f.get("genre_fusion") for f in features if f.get("genre_fusion") is not None
     ]
 
-    if len(ladder_values) == 0:
-        print("\n⚠️  No genre_ladder values found!")
+    if len(fusion_values) == 0:
+        print("\n⚠️  No genre_fusion values found!")
         print(
             "   Run: python analysis/run_analysis.py --audio-embedding-backend interpretable --use-cache"
         )
         return None
 
-    ladder_values = np.array(ladder_values)
+    fusion_values = np.array(fusion_values)
 
     print(f"\n2. Distribution Statistics:")
-    print(f"   Mean:   {np.mean(ladder_values):.3f}")
-    print(f"   Median: {np.median(ladder_values):.3f}")
-    print(f"   Std:    {np.std(ladder_values):.3f}")
-    print(f"   Min:    {np.min(ladder_values):.3f}")
-    print(f"   Max:    {np.max(ladder_values):.3f}")
+    print(f"   Mean:   {np.mean(fusion_values):.3f}")
+    print(f"   Median: {np.median(fusion_values):.3f}")
+    print(f"   Std:    {np.std(fusion_values):.3f}")
+    print(f"   Min:    {np.min(fusion_values):.3f}")
+    print(f"   Max:    {np.max(fusion_values):.3f}")
 
     # Build DataFrame
     df = pd.DataFrame(
@@ -83,7 +83,7 @@ def validate_genre_ladder(features):
                     if f.get("top_3_genres")
                     else "Unknown"
                 ),
-                "genre_ladder": f.get("genre_ladder", 0.5),
+                "genre_fusion": f.get("genre_fusion", 0.5),
             }
             for f in features
         ]
@@ -91,22 +91,22 @@ def validate_genre_ladder(features):
 
     print("\n3. Most Genre-PURE Songs (Low Entropy → 0.0):")
     print("   These songs are clearly one genre - AI is confident.\n")
-    pure = df.nsmallest(15, "genre_ladder")[
-        ["track_name", "artist", "top_genre", "genre_ladder"]
+    pure = df.nsmallest(15, "genre_fusion")[
+        ["track_name", "artist", "top_genre", "genre_fusion"]
     ]
     for _, row in pure.iterrows():
         print(
-            f"   {row['track_name']:40s} | {row['top_genre']:35s} | {row['genre_ladder']:.3f}"
+            f"   {row['track_name']:40s} | {row['top_genre']:35s} | {row['genre_fusion']:.3f}"
         )
 
     print("\n4. Most Genre-FLUID Songs (High Entropy → 1.0):")
     print("   These songs cross genres - AI is uncertain.\n")
-    fluid = df.nlargest(15, "genre_ladder")[
-        ["track_name", "artist", "top_genre", "genre_ladder"]
+    fluid = df.nlargest(15, "genre_fusion")[
+        ["track_name", "artist", "top_genre", "genre_fusion"]
     ]
     for _, row in fluid.iterrows():
         print(
-            f"   {row['track_name']:40s} | {row['top_genre']:35s} | {row['genre_ladder']:.3f}"
+            f"   {row['track_name']:40s} | {row['top_genre']:35s} | {row['genre_fusion']:.3f}"
         )
 
     print("\n5. Distribution by Bucket:")
@@ -118,8 +118,8 @@ def validate_genre_ladder(features):
         (0.8, 1.0, "Very Fusion"),
     ]
     for lo, hi, label in buckets:
-        count = sum(1 for v in ladder_values if lo <= v < hi)
-        pct = count / len(ladder_values) * 100
+        count = sum(1 for v in fusion_values if lo <= v < hi)
+        pct = count / len(fusion_values) * 100
         bar = "█" * int(pct / 2)
         print(f"   {label:12s} ({lo:.1f}-{hi:.1f}): {count:4d} ({pct:5.1f}%) {bar}")
 
@@ -138,21 +138,21 @@ def main():
     if features is None:
         return
 
-    df = validate_genre_ladder(features)
+    df = validate_genre_fusion(features)
 
     if df is not None:
         # Save summary
-        output_path = Path("analysis/outputs/genre_ladder_validation.txt")
+        output_path = Path("analysis/outputs/genre_fusion_validation.txt")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, "w") as f:
-            f.write("Genre Ladder Validation Summary\n")
+            f.write("Genre Fusion Validation Summary\n")
             f.write("=" * 50 + "\n\n")
             f.write(f"Version: entropy-based\n")
             f.write(f"Total tracks: {len(features)}\n")
-            ladder_values = [feat.get("genre_ladder", 0.5) for feat in features]
-            f.write(f"Mean: {np.mean(ladder_values):.3f}\n")
-            f.write(f"Std: {np.std(ladder_values):.3f}\n")
+            fusion_values = [feat.get("genre_fusion", 0.5) for feat in features]
+            f.write(f"Mean: {np.mean(fusion_values):.3f}\n")
+            f.write(f"Std: {np.std(fusion_values):.3f}\n")
             f.write(f"\nInterpretation:\n")
             f.write("  0.0 = Pure genre (clearly one genre)\n")
             f.write("  1.0 = Genre fusion (crosses many genres)\n")

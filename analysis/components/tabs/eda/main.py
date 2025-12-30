@@ -20,7 +20,7 @@ from .feature_stats import (
     render_raw_features,
     render_overall_statistics,
 )
-from .genre_analysis import render_genre_analysis, render_genre_ladder_analysis
+from .genre_analysis import render_genre_analysis, render_genre_fusion_analysis
 from .mood_vocal import (
     render_audio_extremes,
     render_mood_analysis,
@@ -50,8 +50,8 @@ def render_eda_explorer(df: pd.DataFrame):
     render_mood_analysis(df)
     render_vocal_analysis(df)
 
-    # Genre Ladder & Language
-    render_genre_ladder_analysis(df)
+    # Genre Fusion & Language
+    render_genre_fusion_analysis(df)
     render_language_analysis(df)
 
     # Temporal

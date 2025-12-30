@@ -654,11 +654,11 @@ def export_eda_data(df: pd.DataFrame, output_dir: str) -> int:
         save_dataframe(matrix_df, f"{output_dir}/genre_cluster_matrix.csv", "Genre-cluster matrix")
         file_count += 1
 
-    # 8. Genre purity (genre_ladder)
-    if 'genre_ladder' in df.columns and 'track_name' in df.columns:
-        purity_df = df[['track_name', 'artist', 'top_genre', 'genre_ladder']].copy()
-        purity_df = purity_df.sort_values('genre_ladder')
-        save_dataframe(purity_df, f"{output_dir}/genre_purity.csv", "Genre purity")
+    # 8. Genre fusion (genre_fusion)
+    if 'genre_fusion' in df.columns and 'track_name' in df.columns:
+        fusion_df = df[['track_name', 'artist', 'top_genre', 'genre_fusion']].copy()
+        fusion_df = fusion_df.sort_values('genre_fusion')
+        save_dataframe(fusion_df, f"{output_dir}/genre_fusion.csv", "Genre fusion")
         file_count += 1
 
     # 9. Language statistics
@@ -1553,19 +1553,19 @@ def export_visualization_images(df: pd.DataFrame, output_dir: str, subclusters_d
         except Exception as e:
             print(f"    ⚠️  Failed: {e}")
 
-    # 9. Genre Ladder Histogram (if available)
-    if 'genre_ladder' in df.columns:
-        print("    Creating genre ladder histogram...")
+    # 9. Genre Fusion Histogram (if available)
+    if 'genre_fusion' in df.columns:
+        print("    Creating genre fusion histogram...")
         try:
-            fig = px.histogram(df, x='genre_ladder', nbins=50,
-                               title='Genre Ladder Distribution (0=Pure Genre, 1=Genre Fusion)',
-                               labels={'genre_ladder': 'Genre Ladder Score'},
+            fig = px.histogram(df, x='genre_fusion', nbins=50,
+                               title='Genre Fusion Distribution (0=Pure Genre, 1=Genre Fusion)',
+                               labels={'genre_fusion': 'Genre Fusion Score'},
                                color_discrete_sequence=[SPOTIFY_GREEN])
             fig.add_vline(x=0.5, line_dash='dash', line_color='gray')
             fig.update_layout(height=400, width=800)
-            save_plotly_as_png(fig, f"{output_dir}/eda/genre_ladder_histogram.png", width=800, height=400)
+            save_plotly_as_png(fig, f"{output_dir}/eda/genre_fusion_histogram.png", width=800, height=400)
             file_count += 1
-            print("    ✓ eda/genre_ladder_histogram.png")
+            print("    ✓ eda/genre_fusion_histogram.png")
         except Exception as e:
             print(f"    ⚠️  Failed: {e}")
 

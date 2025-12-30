@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Genre Ladder Feature Extraction (Entropy-based)
+Genre Fusion Feature Extraction (Entropy-based)
 
-Computes a continuous 0-1 "genre_ladder" score for each song where:
-- 0.0 = High genre purity (song clearly belongs to one genre)
+Computes a continuous 0-1 "genre_fusion" score for each song where:
+- 0.0 = Pure genre (song clearly belongs to one genre)
 - 1.0 = High genre fusion (song crosses many genres, AI uncertain)
 
 This measures "how categorizable" a song is - a meta-feature about the song's
 relationship to genre traditions:
-- Low values = Artist working WITHIN a genre tradition
-- High values = Artist CROSSING genre boundaries
+- Low values = Artist working WITHIN a genre tradition (pure genre)
+- High values = Artist CROSSING genre boundaries (fusion)
 
 Uses entropy of the 400-dimensional genre probability vector from Essentia's
 discogs400 classifier.
@@ -67,11 +67,41 @@ def compute_genre_entropy(genre_probs: np.ndarray) -> float:
     return float(ent)
 
 
-def add_genre_ladder_to_features(audio_features: List[Dict]) -> List[Dict]:
+def migrate_genre_purity_to_fusion(audio_features: List[Dict]) -> List[Dict]:
     """
-    Main entry point: add genre_ladder field to all audio features.
+    Migrate old 'genre_purity' field name to new 'genre_fusion' field name.
 
-    The genre_ladder measures genre purity/fusion:
+    This handles backward compatibility with caches that used the old naming.
+    The values are semantically identical (0=pure, 1=fusion), just renamed
+    for clarity since high "purity" meaning "fusion" was confusing.
+
+    Args:
+        audio_features: List of audio feature dictionaries
+
+    Returns:
+        Same list with 'genre_purity' renamed to 'genre_fusion'
+    """
+    migrated_count = 0
+    for track in audio_features:
+        # Migrate genre_purity -> genre_fusion if old key exists
+        if "genre_purity" in track and "genre_fusion" not in track:
+            track["genre_fusion"] = track.pop("genre_purity")
+            migrated_count += 1
+        # Migrate genre_purity_version -> genre_fusion_version
+        if "genre_purity_version" in track and "genre_fusion_version" not in track:
+            track["genre_fusion_version"] = track.pop("genre_purity_version")
+
+    if migrated_count > 0:
+        logger.info(f"Migrated {migrated_count} tracks from genre_purity to genre_fusion")
+
+    return audio_features
+
+
+def add_genre_fusion_to_features(audio_features: List[Dict]) -> List[Dict]:
+    """
+    Main entry point: add genre_fusion field to all audio features.
+
+    The genre_fusion measures how much a song crosses genre boundaries:
     - 0.0 = Pure (clearly one genre, e.g., pure Trap)
     - 1.0 = Fusion (crosses many genres, e.g., experimental crossover)
 
@@ -79,9 +109,12 @@ def add_genre_ladder_to_features(audio_features: List[Dict]) -> List[Dict]:
         audio_features: List of audio feature dictionaries with 'genre_probs'
 
     Returns:
-        Same list with 'genre_ladder' field added to each track
+        Same list with 'genre_fusion' field added to each track
     """
-    logger.info("Computing genre ladder scores (entropy-based)...")
+    # First, migrate any old genre_purity fields to genre_fusion
+    audio_features = migrate_genre_purity_to_fusion(audio_features)
+
+    logger.info("Computing genre fusion scores (entropy-based)...")
 
     # First pass: collect all entropies to normalize
     raw_entropies = []
@@ -99,7 +132,7 @@ def add_genre_ladder_to_features(audio_features: List[Dict]) -> List[Dict]:
     if not valid_entropies:
         logger.warning("No genre probabilities found - setting all to 0.5")
         for track in audio_features:
-            track["genre_ladder"] = 0.5
+            track["genre_fusion"] = 0.5
         return audio_features
 
     # Compute min/max for normalization
@@ -108,26 +141,26 @@ def add_genre_ladder_to_features(audio_features: List[Dict]) -> List[Dict]:
     range_ent = max_ent - min_ent if max_ent > min_ent else 1.0
 
     # Second pass: normalize and assign
-    ladder_values = []
+    fusion_values = []
     for i, track in enumerate(audio_features):
         if raw_entropies[i] is not None:
             # Normalize to [0, 1]
             normalized = (raw_entropies[i] - min_ent) / range_ent
             normalized = max(0.0, min(1.0, normalized))
-            track["genre_ladder"] = float(normalized)
-            track["genre_ladder_version"] = "entropy"  # Mark as entropy-based
-            ladder_values.append(normalized)
+            track["genre_fusion"] = float(normalized)
+            track["genre_fusion_version"] = "entropy"  # Mark as entropy-based
+            fusion_values.append(normalized)
         else:
-            track["genre_ladder"] = 0.5  # Default
-            track["genre_ladder_version"] = "entropy"
+            track["genre_fusion"] = 0.5  # Default
+            track["genre_fusion_version"] = "entropy"
 
     # Log statistics
-    if ladder_values:
-        logger.info(f"Genre ladder computed for {len(ladder_values)} songs")
-        logger.info(f"  - Mean: {np.mean(ladder_values):.3f}")
-        logger.info(f"  - Min: {np.min(ladder_values):.3f}")
-        logger.info(f"  - Max: {np.max(ladder_values):.3f}")
-        logger.info(f"  - Std: {np.std(ladder_values):.3f}")
+    if fusion_values:
+        logger.info(f"Genre fusion computed for {len(fusion_values)} songs")
+        logger.info(f"  - Mean: {np.mean(fusion_values):.3f}")
+        logger.info(f"  - Min: {np.min(fusion_values):.3f}")
+        logger.info(f"  - Max: {np.max(fusion_values):.3f}")
+        logger.info(f"  - Std: {np.std(fusion_values):.3f}")
         logger.info("  - Interpretation: 0=Pure genre, 1=Genre fusion")
 
     return audio_features

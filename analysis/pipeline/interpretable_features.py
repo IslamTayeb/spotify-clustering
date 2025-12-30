@@ -220,7 +220,7 @@ def build_interpretable_features(
             require_float("mood_relaxed"),          # 10: Mood - Relaxed
             require_float("mood_party"),            # 11: Mood - Party
             0.5 if is_instrumental else require_float("voice_gender_male"),  # 12: Voice Gender (0=female, 0.5=instrumental, 1=male)
-            require_float("genre_ladder"),          # 13: Genre Ladder (0=pure, 1=fusion)
+            require_float("genre_fusion"),          # 13: Genre Fusion (0=pure, 1=fusion)
             acoustic_electronic,                    # 14: Acoustic/Electronic (0=electronic, 1=acoustic)
             timbre_brightness,                      # 15: Timbre Brightness (0=dark, 1=bright)
         ]

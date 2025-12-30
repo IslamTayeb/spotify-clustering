@@ -57,11 +57,11 @@ def render_overview(df: pd.DataFrame):
     cluster_sizes = df["cluster"].value_counts().sort_index()
     bar_colors = [get_cluster_color(idx) for idx in cluster_sizes.index]
 
+    st.caption("Songs per Cluster")
     fig = px.bar(
         x=cluster_sizes.index,
         y=cluster_sizes.values,
         labels={"x": "Cluster", "y": "Number of Songs"},
-        title="Songs per Cluster",
         color_discrete_sequence=bar_colors,
     )
     fig.update_traces(marker_color=bar_colors)
@@ -100,7 +100,6 @@ def render_overview(df: pd.DataFrame):
             x=similarity_matrix.columns,
             y=similarity_matrix.index,
             color_continuous_scale="YlOrRd",
-            title="Cluster Dissimilarity Matrix (Lower = More Similar)",
             aspect="auto",
         )
 
@@ -234,7 +233,6 @@ def render_overview(df: pd.DataFrame):
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
             showlegend=True,
-            title="Mood Profiles by Cluster",
             height=600,
         )
 

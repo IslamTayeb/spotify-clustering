@@ -296,7 +296,7 @@ def _build_dataframe(
             'engagement_score': audio_f.get('engagement_score', 0.0),
             'mtg_jamendo_probs': audio_f.get('mtg_jamendo_probs', []),
             'bpm': audio_f['bpm'],
-            'genre_ladder': audio_f.get('genre_ladder', 0.5),
+            'genre_fusion': audio_f.get('genre_fusion', 0.5),
             'key': audio_f['key'],
             'danceability': audio_f['danceability'],
             'instrumentalness': audio_f['instrumentalness'],

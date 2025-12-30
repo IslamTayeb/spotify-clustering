@@ -242,7 +242,6 @@ def render_cluster_comparison(df: pd.DataFrame):
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             showlegend=True,
-            title=f"Multi-Cluster Comparison: {len(selected_clusters)} Clusters (Normalized Features)",
             height=600,
         )
 

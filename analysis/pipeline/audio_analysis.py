@@ -639,8 +639,8 @@ def update_cached_features(cache_path: str = 'analysis/cache/audio_features.pkl'
                     raise RuntimeError("MusiCNN embeddings not available - cannot extract MIREX moods")
                 feature['moods_mirex_probs'] = extractor.moods_mirex_model(musicnn_embeddings).mean(axis=0).tolist()
 
-            # 16. Genre Ladder (computed from top_3_genres, added after all features are collected)
-            # Note: This is handled in add_genre_ladder_to_features() call after the loop
+            # 16. Genre Fusion (computed from top_3_genres, added after all features are collected)
+            # Note: This is handled in add_genre_fusion_to_features() call after the loop
 
             updated_features.append(feature)
 
@@ -648,9 +648,9 @@ def update_cached_features(cache_path: str = 'analysis/cache/audio_features.pkl'
             logger.error(f"Error updating {feature.get('filename')}: {e}")
             updated_features.append(feature)
 
-    # Add genre ladder feature if missing
-    from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
-    updated_features = add_genre_ladder_to_features(updated_features)
+    # Add genre fusion feature if missing
+    from analysis.pipeline.genre_fusion import add_genre_fusion_to_features
+    updated_features = add_genre_fusion_to_features(updated_features)
 
     # Save back to cache
     with open(cache_path, 'wb') as f:
@@ -692,9 +692,9 @@ def extract_audio_features(master_index_path: str = 'spotify/master_index.json',
                 pickle.dump(features, f)
             logger.info(f"Cached {len(features)} features")
 
-    # Add genre ladder feature (0=acoustic, 1=electronic)
-    from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
-    features = add_genre_ladder_to_features(features)
+    # Add genre fusion feature (0=pure genre, 1=genre fusion)
+    from analysis.pipeline.genre_fusion import add_genre_fusion_to_features
+    features = add_genre_fusion_to_features(features)
 
     with open(cache_path, 'wb') as f:
         pickle.dump(features, f)

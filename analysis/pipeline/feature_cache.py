@@ -61,9 +61,9 @@ def save_to_cache(features: List[Dict[str, Any]], cache_path: str, feature_type:
 
 
 def upgrade_audio_cache_if_needed(audio_features: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Upgrade audio cache with genre_ladder if needed.
+    """Upgrade audio cache with genre_fusion if needed.
 
-    The genre_ladder feature was added later and uses an entropy-based calculation.
+    The genre_fusion feature was added later and uses an entropy-based calculation.
     This function checks if cached audio features need the upgrade and applies it
     if necessary.
 
@@ -71,23 +71,23 @@ def upgrade_audio_cache_if_needed(audio_features: List[Dict[str, Any]]) -> List[
         audio_features: Audio features loaded from cache
 
     Returns:
-        audio_features with genre_ladder added/updated if needed
+        audio_features with genre_fusion added/updated if needed
     """
-    from analysis.pipeline.genre_ladder import add_genre_ladder_to_features
+    from analysis.pipeline.genre_fusion import add_genre_fusion_to_features
 
     # Check if any of the first 10 tracks have the entropy-based version
     has_entropy_version = any(
-        f.get("genre_ladder_version") == "entropy"
+        f.get("genre_fusion_version") == "entropy"
         for f in audio_features[:10]
     )
 
     if not has_entropy_version:
-        logger.info("Upgrading genre_ladder to entropy-based version...")
-        audio_features = add_genre_ladder_to_features(audio_features)
+        logger.info("Upgrading genre_fusion to entropy-based version...")
+        audio_features = add_genre_fusion_to_features(audio_features)
 
         # Save updated cache
         save_to_cache(audio_features, "analysis/cache/audio_features.pkl", "audio")
-        logger.info("✓ Updated audio cache with genre_ladder")
+        logger.info("✓ Updated audio cache with genre_fusion")
 
     return audio_features
 

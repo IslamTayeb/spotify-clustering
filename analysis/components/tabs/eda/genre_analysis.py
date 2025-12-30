@@ -34,10 +34,10 @@ def render_genre_analysis(df: pd.DataFrame):
         col1, col2 = st.columns([1, 1])
 
         with col1:
+            st.caption("Genre Family Share")
             fig_pie = px.pie(
                 values=parent_counts_grouped.values,
                 names=parent_counts_grouped.index,
-                title="Genre Family Share",
                 hole=0.3,
                 color_discrete_sequence=get_pie_colors(parent_counts_grouped.index, CLUSTER_COLORS),
             )
@@ -45,12 +45,12 @@ def render_genre_analysis(df: pd.DataFrame):
             st.plotly_chart(fig_pie, use_container_width=True)
 
         with col2:
+            st.caption("Genre Family Counts")
             fig_bar = px.bar(
                 x=parent_counts.values,
                 y=parent_counts.index,
                 orientation="h",
                 labels={"x": "Number of Songs", "y": "Genre Family"},
-                title="Genre Family Counts",
                 color_discrete_sequence=[SPOTIFY_GREEN],
             )
             fig_bar.update_layout(height=400, showlegend=False)
@@ -68,7 +68,6 @@ def render_genre_analysis(df: pd.DataFrame):
             y=genre_counts.index,
             orientation="h",
             labels={"x": "Number of Songs", "y": "Genre"},
-            title="Top 20 Subgenres in Your Library",
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
         fig.update_layout(height=600, showlegend=False)
@@ -91,34 +90,33 @@ def render_genre_analysis(df: pd.DataFrame):
 
         genre_cluster_df = pd.DataFrame(genre_cluster_data)
 
+        st.caption("Top 10 Genres by Cluster")
         fig = px.bar(
             genre_cluster_df,
             x="Cluster",
             y="Count",
             color="Genre",
-            title="Top 10 Genres by Cluster",
             barmode="stack",
             color_discrete_sequence=CLUSTER_COLORS,
         )
         st.plotly_chart(fig, use_container_width=True)
 
 
-def render_genre_ladder_analysis(df: pd.DataFrame):
-    """Render genre ladder analysis section."""
-    with st.expander("🎸 Genre Purity Analysis", expanded=False):
-        if "genre_ladder" not in df.columns:
-            st.warning("Genre ladder information not available")
+def render_genre_fusion_analysis(df: pd.DataFrame):
+    """Render genre fusion analysis section."""
+    with st.expander("🎸 Genre Fusion Analysis", expanded=False):
+        if "genre_fusion" not in df.columns:
+            st.warning("Genre fusion information not available")
             return
 
         st.subheader("Pure Genre ↔ Genre Fusion Distribution")
-        st.caption("Genre ladder measures genre entropy (0=pure single genre, 1=genre fusion/hybrid)")
+        st.caption("Genre fusion measures genre entropy (0=pure single genre, 1=genre fusion/hybrid)")
 
         fig = px.histogram(
             df,
-            x="genre_ladder",
+            x="genre_fusion",
             nbins=50,
-            title="Genre Ladder Distribution (0=Pure Genre, 1=Genre Fusion)",
-            labels={"genre_ladder": "Genre Ladder Score", "count": "Number of Songs"},
+            labels={"genre_fusion": "Genre Fusion Score", "count": "Number of Songs"},
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
         fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Mixed")
@@ -127,34 +125,33 @@ def render_genre_ladder_analysis(df: pd.DataFrame):
         col1, col2 = st.columns(2)
         with col1:
             st.write("**Most Pure Genre Songs**")
-            pure = df.nsmallest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
+            pure = df.nsmallest(10, "genre_fusion")[["track_name", "artist", "top_genre", "genre_fusion"]]
             st.dataframe(pure, use_container_width=True, hide_index=True)
 
         with col2:
             st.write("**Most Genre-Fusion Songs**")
-            fusion = df.nlargest(10, "genre_ladder")[["track_name", "artist", "top_genre", "genre_ladder"]]
+            fusion = df.nlargest(10, "genre_fusion")[["track_name", "artist", "top_genre", "genre_fusion"]]
             st.dataframe(fusion, use_container_width=True, hide_index=True)
 
-        # Compare genre purity with actual acoustic/electronic production
+        # Compare genre fusion with actual acoustic/electronic production
         if "acoustic_electronic" in df.columns:
             st.markdown("---")
-            st.subheader("Genre Purity vs Acoustic/Electronic Production")
+            st.subheader("Genre Fusion vs Acoustic/Electronic Production")
             st.caption("Does genre fusion correlate with acoustic or electronic production style?")
 
             fig = px.scatter(
                 df,
-                x="genre_ladder",
+                x="genre_fusion",
                 y="acoustic_electronic",
                 color="cluster",
                 hover_data=["track_name", "artist", "top_genre"],
                 labels={
-                    "genre_ladder": "Genre Ladder (0=Pure, 1=Fusion)",
+                    "genre_fusion": "Genre Fusion (0=Pure, 1=Fusion)",
                     "acoustic_electronic": "Production (0=Electronic, 1=Acoustic)",
                 },
-                title="Genre Purity vs Production Style",
                 color_continuous_scale="Viridis",
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            correlation = df["genre_ladder"].corr(df["acoustic_electronic"])
-            st.metric("Genre Purity ↔ Acoustic Production Correlation", f"{correlation:.3f}")
+            correlation = df["genre_fusion"].corr(df["acoustic_electronic"])
+            st.metric("Genre Fusion ↔ Acoustic Production Correlation", f"{correlation:.3f}")

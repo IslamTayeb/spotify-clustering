@@ -190,7 +190,6 @@ def render_feature_importance(df: pd.DataFrame):
             color_continuous_scale="RdBu_r",
             color_continuous_midpoint=0,
             aspect="auto",
-            title="Feature Effect Sizes Across All Clusters",
         )
 
         fig.update_xaxes(side="bottom")
@@ -213,6 +212,7 @@ def render_feature_importance(df: pd.DataFrame):
     )
 
     if selected_feature in df.columns:
+        st.caption(f"Distribution of '{selected_feature}' Across Clusters")
         # Create violin plot
         fig = go.Figure()
 
@@ -233,7 +233,6 @@ def render_feature_importance(df: pd.DataFrame):
             )
 
         fig.update_layout(
-            title=f"Distribution of '{selected_feature}' Across Clusters",
             yaxis_title=selected_feature,
             xaxis_title="Cluster",
             showlegend=True,
