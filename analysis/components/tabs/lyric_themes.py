@@ -147,7 +147,7 @@ def render_lyric_themes(df: pd.DataFrame):
                         orientation="h",
                         color_discrete_sequence=[SPOTIFY_GREEN],
                     )
-                    fig.update_layout(height=500)
+                    fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
                     st.plotly_chart(fig, use_container_width=True)
 
                     st.dataframe(unigrams_df, use_container_width=True, hide_index=True)
@@ -271,7 +271,8 @@ def render_lyric_themes(df: pd.DataFrame):
             fig.update_layout(
                 xaxis_title="Compound Sentiment Score",
                 yaxis_title="Number of Songs",
-                height=400,
+                height=500,
+                margin=dict(t=0, l=0, r=0, b=0),
             )
 
             st.plotly_chart(fig, use_container_width=True)

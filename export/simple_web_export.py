@@ -13,30 +13,40 @@ project_root = current_dir.parent
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
-from analysis.components.visualization.umap_3d import compute_umap_embedding, build_hover_text, get_cluster_color, OUTLIER_COLOR
+from analysis.components.visualization.umap_3d import compute_umap_embedding, get_cluster_color, OUTLIER_COLOR
+from analysis.pipeline.config import CLUSTER_NAMES, SUBCLUSTER_NAMES
+
+# Simplified hover text function that only shows song name and artist
+def build_hover_text(row):
+    """Build simplified hover text with just song name and artist."""
+    return (
+        f"<b>{row['track_name']}</b><br>"
+        f"Artist: {row['artist']}"
+    )
 import plotly.graph_objects as go
 import pandas as pd
 
 # ============================================================================
-# CLUSTER NAME MAPPINGS
+# COLOR PALETTES FOR OVERLAY
 # ============================================================================
 
-CLUSTER_NAMES = {
-    0: "Hard-Rap",
-    1: "Narrative-Rap",
-    2: "Jazz-Fusion",
-    3: "Rhythm-Game-EDM",
-    4: "Mellow"
-}
+# Blues palette for audio clusters
+AUDIO_COLORS = [
+    '#08519c',  # Dark blue
+    '#3182bd',  # Medium blue
+    '#6baed6',  # Light blue
+    '#9ecae1',  # Lighter blue
+    '#c6dbef',  # Very light blue
+]
 
-SUBCLUSTER_NAMES = {
-    # Cluster 0 (Hard-Rap) subclusters
-    (0, 0): "Hard-Rap-Aggro",
-    (0, 1): "Hard-Rap-Acoustic",
-    # Cluster 4 (Mellow) subclusters
-    (4, 0): "Mellow-Hopecore",
-    (4, 1): "Mellow-Sadcore"
-}
+# Greens palette for lyrics clusters
+LYRICS_COLORS = [
+    '#006d2c',  # Dark green
+    '#31a354',  # Medium green
+    '#74c476',  # Light green
+    '#a1d99b',  # Lighter green
+    '#c7e9c0',  # Very light green
+]
 
 # ============================================================================
 # CUSTOM VISUALIZATION WITH NAMED CLUSTERS
@@ -98,6 +108,89 @@ def create_umap_3d_plot_with_names(df, cluster_names=None, is_subcluster=False, 
 
     return fig
 
+
+def create_overlay_plot(audio_df, lyrics_df):
+    """Create overlay plot of audio and lyrics clusters."""
+    fig = go.Figure()
+
+    # Plot audio clusters in blues
+    unique_audio_labels = sorted(audio_df['label'].unique())
+    for label in unique_audio_labels:
+        if label == -1:
+            continue  # Skip outliers
+
+        cluster_points = audio_df[audio_df['label'] == label]
+        if cluster_points.empty:
+            continue
+
+        # Use blue palette
+        color_val = AUDIO_COLORS[label % len(AUDIO_COLORS)]
+        name = f"Audio: {CLUSTER_NAMES.get(label, f'Cluster {label}')} ({len(cluster_points)})"
+
+        # Build hover text
+        hover_texts = cluster_points.apply(build_hover_text, axis=1)
+
+        fig.add_trace(
+            go.Scatter3d(
+                x=cluster_points["x"],
+                y=cluster_points["y"],
+                z=cluster_points["z"],
+                mode="markers",
+                name=name,
+                marker=dict(
+                    size=5,
+                    color=color_val,
+                    opacity=0.7,
+                    symbol='circle',  # Circles for audio
+                    line=dict(width=0)
+                ),
+                text=hover_texts,
+                hovertemplate="%{text}<extra></extra>",
+                legendgroup="audio",
+                legendgrouptitle_text="Audio Clusters"
+            )
+        )
+
+    # Plot lyrics clusters in greens
+    unique_lyrics_labels = sorted(lyrics_df['label'].unique())
+    for label in unique_lyrics_labels:
+        if label == -1:
+            continue  # Skip outliers
+
+        cluster_points = lyrics_df[lyrics_df['label'] == label]
+        if cluster_points.empty:
+            continue
+
+        # Use green palette
+        color_val = LYRICS_COLORS[label % len(LYRICS_COLORS)]
+        name = f"Lyrics: {CLUSTER_NAMES.get(label, f'Cluster {label}')} ({len(cluster_points)})"
+
+        # Build hover text
+        hover_texts = cluster_points.apply(build_hover_text, axis=1)
+
+        fig.add_trace(
+            go.Scatter3d(
+                x=cluster_points["x"],
+                y=cluster_points["y"],
+                z=cluster_points["z"],
+                mode="markers",
+                name=name,
+                marker=dict(
+                    size=5,
+                    color=color_val,
+                    opacity=0.7,
+                    symbol='diamond',  # Diamonds for lyrics
+                    line=dict(width=0)
+                ),
+                text=hover_texts,
+                hovertemplate="%{text}<extra></extra>",
+                legendgroup="lyrics",
+                legendgrouptitle_text="Lyrics Clusters"
+            )
+        )
+
+    return fig
+
 # ============================================================================
 # TRULY FREE FOREVER OPTIONS (No trials, no limits, no BS)
 # ============================================================================
@@ -140,7 +233,7 @@ def export_for_bearblog(mode="combined", input_file="analysis/outputs/analysis_d
     # Update layout for web
     fig.update_layout(
         title='',  # No title - cleaner for embedding
-        height=700,
+        # No fixed height - let iframe control it
         autosize=True,
         paper_bgcolor="rgba(0,0,0,0)",  # Transparent paper background
         plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot background
@@ -169,8 +262,10 @@ def export_for_bearblog(mode="combined", input_file="analysis/outputs/analysis_d
             ),
             bgcolor="rgba(0,0,0,0)",  # Transparent background
             camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.5)  # Default camera position
-            )
+                eye=dict(x=1.25, y=1.25, z=1.25),  # Slightly closer view
+                center=dict(x=0, y=0, z=0)  # Center on origin
+            ),
+            aspectmode='data'  # Maintain data proportions
         ),
         legend=dict(
             yanchor="top",
@@ -189,7 +284,13 @@ def export_for_bearblog(mode="combined", input_file="analysis/outputs/analysis_d
     # Use Plotly's built-in HTML generation (handles JSON serialization properly)
     html = fig.to_html(
         include_plotlyjs='cdn',
-        config={'displayModeBar': True, 'displaylogo': False, 'responsive': True}
+        config={
+            'displayModeBar': True,
+            'displaylogo': False,
+            'responsive': True,
+            'fillFrame': True  # Fill the entire frame
+        },
+        div_id="plotly-div"
     )
 
     # Determine output directory
@@ -261,6 +362,152 @@ def export_for_bearblog(mode="combined", input_file="analysis/outputs/analysis_d
     print('</iframe>')
 
     print(f"\n💡 That's it! Just drag the '{output_dir}' folder to Netlify Drop!")
+
+    return output_file
+
+
+def export_audio_lyrics_overlay(input_file="analysis/outputs/analysis_data.pkl"):
+    """Export overlay visualization of audio and lyrics clusters."""
+
+    print("\n🎨 EXPORTING AUDIO VS LYRICS OVERLAY")
+    print("="*50)
+
+    # Load data
+    print("Loading data...")
+    with open(input_file, 'rb') as f:
+        data = pickle.load(f)
+
+    if 'audio' not in data or 'lyrics' not in data:
+        print("  ⚠️  Need both audio and lyrics data for overlay")
+        return None
+
+    # Prepare audio dataframe
+    audio_df = data['audio']['dataframe'].copy()
+    if 'label' not in audio_df.columns and 'cluster' in audio_df.columns:
+        audio_df['label'] = audio_df['cluster']
+
+    # Compute UMAP for audio if needed
+    if 'x' not in audio_df.columns:
+        print("Computing 3D coordinates for audio...")
+        if 'pca_features' in data['audio']:
+            features = data['audio']['pca_features']
+        else:
+            exclude_cols = ['track_name', 'artist', 'cluster', 'label', 'x', 'y', 'z',
+                          'preview_url', 'track_id', 'album_id', 'artist_id',
+                          'genre', 'key', 'scale']
+            feature_cols = [col for col in audio_df.columns if col not in exclude_cols]
+            features = audio_df[feature_cols].values
+
+        coords = compute_umap_embedding(features)
+        audio_df['x'] = coords[:, 0]
+        audio_df['y'] = coords[:, 1]
+        audio_df['z'] = coords[:, 2]
+
+    # Prepare lyrics dataframe
+    lyrics_df = data['lyrics']['dataframe'].copy()
+    if 'label' not in lyrics_df.columns and 'cluster' in lyrics_df.columns:
+        lyrics_df['label'] = lyrics_df['cluster']
+
+    # Compute UMAP for lyrics if needed
+    if 'x' not in lyrics_df.columns:
+        print("Computing 3D coordinates for lyrics...")
+        if 'pca_features' in data['lyrics']:
+            features = data['lyrics']['pca_features']
+        else:
+            exclude_cols = ['track_name', 'artist', 'cluster', 'label', 'x', 'y', 'z',
+                          'preview_url', 'track_id', 'album_id', 'artist_id',
+                          'genre', 'key', 'scale']
+            feature_cols = [col for col in lyrics_df.columns if col not in exclude_cols]
+            features = lyrics_df[feature_cols].values
+
+        coords = compute_umap_embedding(features)
+        lyrics_df['x'] = coords[:, 0]
+        lyrics_df['y'] = coords[:, 1]
+        lyrics_df['z'] = coords[:, 2]
+
+    # Create overlay visualization
+    print("Creating overlay visualization...")
+    fig = create_overlay_plot(audio_df, lyrics_df)
+
+    # Update layout
+    fig.update_layout(
+        title='',  # No title
+        # No fixed height - let iframe control it
+        autosize=True,
+        paper_bgcolor="rgba(0,0,0,0)",  # Transparent paper background
+        plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot background
+        margin=dict(l=0, r=0, t=30, b=0),
+        scene=dict(
+            xaxis=dict(
+                visible=False,
+                showbackground=False,
+                showgrid=False,
+                showline=False,
+                showticklabels=False
+            ),
+            yaxis=dict(
+                visible=False,
+                showbackground=False,
+                showgrid=False,
+                showline=False,
+                showticklabels=False
+            ),
+            zaxis=dict(
+                visible=False,
+                showbackground=False,
+                showgrid=False,
+                showline=False,
+                showticklabels=False
+            ),
+            bgcolor="rgba(0,0,0,0)",  # Transparent background
+            camera=dict(
+                eye=dict(x=1.25, y=1.25, z=1.25),  # Slightly closer view
+                center=dict(x=0, y=0, z=0)  # Center on origin
+            ),
+            aspectmode='data'  # Maintain data proportions
+        ),
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01,
+            bgcolor="rgba(255, 255, 255, 0.9)",
+            bordercolor="rgba(0, 0, 0, 0.2)",
+            borderwidth=1,
+            font=dict(size=11),
+            orientation="v",
+            tracegroupgap=10,  # More spacing between groups
+            groupclick="toggleitem"  # Allow toggling individual items
+        )
+    )
+
+    # Generate HTML
+    html = fig.to_html(
+        include_plotlyjs='cdn',
+        config={
+            'displayModeBar': True,
+            'displaylogo': False,
+            'responsive': True,
+            'fillFrame': True
+        },
+        div_id="plotly-div"
+    )
+
+    # Save to appropriate directory
+    output_dir = "export/visualizations/audio-vs-lyrics"
+    os.makedirs(output_dir, exist_ok=True)
+
+    output_file = os.path.join(output_dir, "index.html")
+    with open(output_file, 'w') as f:
+        f.write(html)
+
+    file_size = len(html) / 1024
+    print(f"\n✅ Created {output_file} ({file_size:.1f} KB)")
+
+    print("\n📊 Visualization Legend:")
+    print("  • Blue circles = Audio clustering")
+    print("  • Green diamonds = Lyrics clustering")
+    print("  • Toggle clusters on/off by clicking legend items")
 
     return output_file
 
@@ -370,7 +617,7 @@ def export_saved_subclusters():
         # Update layout
         fig.update_layout(
             title='',  # No title
-            height=700,
+            # No fixed height - let iframe control it
             autosize=True,
             paper_bgcolor="rgba(0,0,0,0)",  # Transparent paper background
             plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot background
@@ -399,8 +646,10 @@ def export_saved_subclusters():
                 ),
                 bgcolor="rgba(0,0,0,0)",  # Transparent background
                 camera=dict(
-                    eye=dict(x=1.5, y=1.5, z=1.5)  # Default camera position
-                )
+                    eye=dict(x=1.25, y=1.25, z=1.25),  # Slightly closer view
+                    center=dict(x=0, y=0, z=0)  # Center on origin
+                ),
+                aspectmode='data'  # Maintain data proportions
             ),
             legend=dict(
                 yanchor="top",
@@ -422,7 +671,13 @@ def export_saved_subclusters():
         # Generate HTML
         html = fig.to_html(
             include_plotlyjs='cdn',
-            config={'displayModeBar': True, 'displaylogo': False, 'responsive': True}
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'responsive': True,
+                'fillFrame': True  # Fill the entire frame
+            },
+            div_id="plotly-div"
         )
 
         # Save to appropriate directory
@@ -459,6 +714,13 @@ def export_all_modes(input_file="analysis/outputs/analysis_data.pkl", include_su
             output_path = export_for_bearblog(mode, input_file)
             exported_paths.append(output_path)
 
+    # Export audio vs lyrics overlay
+    if 'audio' in data and 'lyrics' in data:
+        print("\n🎨 Exporting audio vs lyrics overlay...")
+        overlay_path = export_audio_lyrics_overlay(input_file)
+        if overlay_path:
+            exported_paths.append(overlay_path)
+
     # Export saved subclusters if requested
     subcluster_paths = []
     if include_subclusters:
@@ -474,6 +736,7 @@ def export_all_modes(input_file="analysis/outputs/analysis_data.pkl", include_su
     print("   • export/visualizations/audio/")
     print("   • export/visualizations/lyrics/")
     print("   • export/visualizations/combined/")
+    print("   • export/visualizations/audio-vs-lyrics/")
     if len(subcluster_paths) > 0:
         print(f"   • export/visualizations/subclusters/ ({len(subcluster_paths)} subclusters)")
         for path in subcluster_paths:
@@ -495,15 +758,20 @@ if __name__ == "__main__":
     parser.add_argument("--input", default="analysis/outputs/analysis_data.pkl",
                        help="Path to analysis data pickle file")
     parser.add_argument("--all", action="store_true",
-                       help="Export ALL modes (audio, lyrics, combined) + subclusters")
+                       help="Export ALL modes (audio, lyrics, combined, overlay) + subclusters")
     parser.add_argument("--subclusters", action="store_true",
                        help="Export combined + saved subclusters (default behavior)")
     parser.add_argument("--only", action="store_true",
                        help="Only export the specified mode, no subclusters")
+    parser.add_argument("--overlay", action="store_true",
+                       help="Export audio vs lyrics overlay comparison")
 
     args = parser.parse_args()
 
-    if args.all:
+    if args.overlay:
+        # Export audio vs lyrics overlay
+        export_audio_lyrics_overlay(args.input)
+    elif args.all:
         # Export all three clustering modes + subclusters
         export_all_modes(args.input, include_subclusters=True)
     elif args.mode and args.only:

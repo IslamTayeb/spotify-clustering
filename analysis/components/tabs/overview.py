@@ -20,6 +20,7 @@ from analysis.interpretability.cluster_comparison import (
     compute_cluster_similarity_matrix,
 )
 from analysis.components.visualization.color_palette import CLUSTER_COLORS, get_cluster_color
+from analysis.pipeline.config import get_cluster_name
 
 
 def render_overview(df: pd.DataFrame):
@@ -65,7 +66,7 @@ def render_overview(df: pd.DataFrame):
         color_discrete_sequence=bar_colors,
     )
     fig.update_traces(marker_color=bar_colors)
-    fig.update_layout(height=400, showlegend=False)
+    fig.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
     fig.update_xaxes(type="category")
     st.plotly_chart(fig, use_container_width=True)
 
@@ -77,7 +78,7 @@ def render_overview(df: pd.DataFrame):
 
         cluster_info.append(
             {
-                "Cluster": f"Cluster {cluster_id}",
+                "Cluster": get_cluster_name(cluster_id),
                 "Size": size,
                 "Percentage": f"{percentage:.1f}%",
             }
@@ -101,9 +102,11 @@ def render_overview(df: pd.DataFrame):
             y=similarity_matrix.index,
             color_continuous_scale="YlOrRd",
             aspect="auto",
+            text_auto=".2f",
         )
 
-        fig.update_layout(height=500)
+        fig.update_traces(textfont_size=12)
+        fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
     # Most and least similar cluster pairs
@@ -112,16 +115,17 @@ def render_overview(df: pd.DataFrame):
     with col1:
         st.write("**Most Similar Cluster Pairs**")
 
-        # Get all pairs with their similarity scores
+        # Get all pairs with their similarity scores using cluster names
         pairs = []
         cluster_ids = sorted(df["cluster"].unique())
+        cluster_names = [get_cluster_name(cid) for cid in cluster_ids]
 
-        for i, cluster_a in enumerate(cluster_ids):
-            for cluster_b in cluster_ids[i + 1 :]:
-                dissimilarity = similarity_matrix.loc[cluster_a, cluster_b]
+        for i, (cluster_a, name_a) in enumerate(zip(cluster_ids, cluster_names)):
+            for cluster_b, name_b in zip(cluster_ids[i + 1:], cluster_names[i + 1:]):
+                dissimilarity = similarity_matrix.loc[name_a, name_b]
                 pairs.append(
                     {
-                        "Pair": f"Cluster {cluster_a} & {cluster_b}",
+                        "Pair": f"{name_a} & {name_b}",
                         "Dissimilarity": f"{dissimilarity:.3f}",
                     }
                 )
@@ -140,14 +144,16 @@ def render_overview(df: pd.DataFrame):
     st.markdown("---")
     st.subheader("🎯 Key Feature Summary Across All Clusters")
 
-    # Select a few key features to summarize
+    # Select key features to summarize (representative from 33-dim vector)
     key_features = [
-        "bpm",
-        "danceability",
-        "valence",
-        "arousal",
-        "mood_happy",
-        "mood_sad",
+        # Audio core
+        "bpm", "danceability", "instrumentalness", "valence", "arousal",
+        # Audio moods
+        "mood_happy", "mood_sad", "mood_aggressive", "mood_relaxed", "mood_party",
+        # Lyric core
+        "lyric_valence", "lyric_arousal",
+        # Meta
+        "popularity",
     ]
     key_features = [f for f in key_features if f in df.columns]
 
@@ -160,7 +166,7 @@ def render_overview(df: pd.DataFrame):
             for cluster_id in sorted(df["cluster"].unique()):
                 cluster_df = df[df["cluster"] == cluster_id]
                 mean_val = cluster_df[feature].mean()
-                feature_data[f"Cluster {cluster_id}"] = f"{mean_val:.3f}"
+                feature_data[get_cluster_name(cluster_id)] = f"{mean_val:.3f}"
 
             summary_data.append(feature_data)
 
@@ -184,7 +190,7 @@ def render_overview(df: pd.DataFrame):
                 percentage = (
                     (count / len(cluster_df) * 100) if len(cluster_df) > 0 else 0
                 )
-                row[f"Cluster {cluster_id}"] = f"{percentage:.1f}%"
+                row[get_cluster_name(cluster_id)] = f"{percentage:.1f}%"
 
             genre_cluster_data.append(row)
 
@@ -225,7 +231,7 @@ def render_overview(df: pd.DataFrame):
                     r=mood_means,
                     theta=["Happy", "Sad", "Aggressive", "Relaxed", "Party"],
                     fill="toself",
-                    name=f"Cluster {cluster_id}",
+                    name=get_cluster_name(cluster_id),
                     line_color=colors[i % len(colors)],
                 )
             )
@@ -233,7 +239,8 @@ def render_overview(df: pd.DataFrame):
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
             showlegend=True,
-            height=600,
+            height=700,
+            margin=dict(t=0, l=0, r=0, b=0),
         )
 
         st.plotly_chart(fig, use_container_width=True)

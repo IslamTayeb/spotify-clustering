@@ -426,13 +426,14 @@ def main():
         st.stop()
 
     # Tabs (always visible at the top)
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 EDA Explorer",
         "🎯 Feature Importance",
         "⚖️ Cluster Comparison",
         "📝 Lyric Themes",
+        "🔀 Audio vs Lyrics",
         "🔍 Overview",
-        "🗂️ Cluster Inspector",  # NEW TAB
+        "🗂️ Cluster Inspector",
     ])
 
     with tab1:
@@ -448,9 +449,12 @@ def main():
         simplified_tabs.render_lyric_themes(df)
 
     with tab5:
+        simplified_tabs.render_audio_vs_lyrics(df)
+
+    with tab6:
         simplified_tabs.render_overview(df)
 
-    with tab6:  # NEW CLUSTER INSPECTOR TAB
+    with tab7:
         st.header("🗂️ Cluster Inspector")
         st.write("Browse and filter tracks by cluster. Click a row to view details.")
 

@@ -119,7 +119,8 @@ def _create_subcluster_3d_plot(
         ))
 
     fig.update_layout(
-        height=600,
+        height=700,
+        margin=dict(t=0, l=0, r=0, b=0),
         scene=dict(
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
@@ -220,7 +221,7 @@ def _render_subcluster_top_artists(df: pd.DataFrame) -> None:
                     labels={"x": "Song Count", "y": "Artist"},
                     color_discrete_sequence=[colors[i % len(colors)]],
                 )
-                fig.update_layout(height=300, showlegend=False)
+                fig.update_layout(height=400, margin=dict(t=0, l=0, r=0, b=0), showlegend=False)
                 st.plotly_chart(fig, use_container_width=True, key=f"subcluster_results_artist_chart_{subcluster_id}")
 
                 # Show percentage
@@ -413,7 +414,8 @@ def render_optimal_k_results(optimal_k_data: Dict) -> None:
     fig.update_layout(
         xaxis_title="Number of Sub-Clusters (k)",
         yaxis_title=yaxis_title,
-        height=400,
+        height=500,
+        margin=dict(t=0, l=0, r=0, b=0),
         showlegend=True,
         legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
         xaxis=dict(tickmode='linear', tick0=2, dtick=1),
@@ -552,7 +554,8 @@ def render_auto_tune_results(auto_tune_data: Dict) -> None:
         fig.update_layout(
             xaxis_title="Preset",
             yaxis_title="Best Silhouette Score",
-            height=400,
+            height=500,
+            margin=dict(t=0, l=0, r=0, b=0),
             showlegend=False,
             xaxis_tickangle=-45,
         )

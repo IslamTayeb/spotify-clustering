@@ -16,6 +16,7 @@ try:
     from analysis.components.tabs.cluster_comparison import render_cluster_comparison
     from analysis.components.tabs.lyric_themes import render_lyric_themes
     from analysis.components.tabs.overview import render_overview
+    from analysis.components.tabs.audio_vs_lyrics import render_audio_vs_lyrics
     HAS_ALL_TABS = True
 except ImportError as e:
     HAS_ALL_TABS = False
@@ -46,6 +47,10 @@ if not HAS_ALL_TABS:
         st.header("🔍 Overview")
         st.error(f"Tab import failed: {IMPORT_ERROR}")
 
+    def render_audio_vs_lyrics(df: pd.DataFrame) -> None:
+        st.header("🔀 Audio vs Lyrics")
+        st.error(f"Tab import failed: {IMPORT_ERROR}")
+
 
 # Re-export for easy importing
 __all__ = [
@@ -54,4 +59,5 @@ __all__ = [
     "render_cluster_comparison",
     "render_lyric_themes",
     "render_overview",
+    "render_audio_vs_lyrics",
 ]

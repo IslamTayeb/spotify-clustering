@@ -94,7 +94,7 @@ def render_feature_vector_analysis(df: pd.DataFrame):
                 row=row, col=col,
             )
 
-        fig.update_layout(height=700, showlegend=False)
+        fig.update_layout(height=800, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
         # Download Embedding Features

@@ -115,6 +115,55 @@ CACHE_PATHS: Dict[str, str] = {
 }
 
 
+# =============================================================================
+# CLUSTER NAME MAPPINGS
+# =============================================================================
+
+# User-defined cluster names (maps cluster index to human-readable label)
+CLUSTER_NAMES: Dict[int, str] = {
+    0: "Hard-Rap",
+    1: "Narrative-Rap",
+    2: "Jazz-Fusion",
+    3: "Rhythm-Game-EDM",
+    4: "Mellow",
+}
+
+# Subcluster names (maps (parent_cluster, subcluster_index) to label)
+SUBCLUSTER_NAMES: Dict[tuple, str] = {
+    # Cluster 0 (Hard-Rap) subclusters
+    (0, 0): "Hard-Rap-Aggro",
+    (0, 1): "Hard-Rap-Acoustic",
+    # Cluster 4 (Mellow) subclusters
+    (4, 0): "Mellow-Hopecore",
+    (4, 1): "Mellow-Sadcore",
+}
+
+
+def get_cluster_name(cluster_id: int) -> str:
+    """Get human-readable cluster name from ID.
+
+    Args:
+        cluster_id: Cluster index
+
+    Returns:
+        Cluster name if defined, else 'Cluster {id}'
+    """
+    return CLUSTER_NAMES.get(cluster_id, f"Cluster {cluster_id}")
+
+
+def get_subcluster_name(parent_cluster: int, subcluster_id: int) -> str:
+    """Get human-readable subcluster name.
+
+    Args:
+        parent_cluster: Parent cluster index
+        subcluster_id: Subcluster index within parent
+
+    Returns:
+        Subcluster name if defined, else 'Subcluster {id}'
+    """
+    return SUBCLUSTER_NAMES.get((parent_cluster, subcluster_id), f"Subcluster {subcluster_id}")
+
+
 def get_lyric_cache_path(backend: str) -> str:
     """Get cache path for lyric embedding backend.
 

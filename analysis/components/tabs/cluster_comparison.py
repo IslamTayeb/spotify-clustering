@@ -191,16 +191,28 @@ def render_cluster_comparison(df: pd.DataFrame):
     st.markdown("---")
     st.subheader("🎯 Multi-Dimensional Comparison")
 
-    # Select key features for radar plot
+    # Select key features for radar plot (representative features from all 33 dims)
     radar_features = [
-        "bpm",
+        # Audio core
         "danceability",
+        "instrumentalness",
         "valence",
         "arousal",
+        # Audio moods
         "mood_happy",
         "mood_sad",
         "mood_aggressive",
         "mood_relaxed",
+        "mood_party",
+        # Audio texture
+        "emb_acoustic_electronic",
+        "emb_timbre_brightness",
+        # Lyric core
+        "lyric_valence",
+        "lyric_arousal",
+        # Lyric content
+        "lyric_explicit",
+        "lyric_narrative",
     ]
     radar_features = [f for f in radar_features if f in df.columns]
 
@@ -242,7 +254,8 @@ def render_cluster_comparison(df: pd.DataFrame):
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             showlegend=True,
-            height=600,
+            height=700,
+            margin=dict(t=0, l=0, r=0, b=0),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -276,7 +289,7 @@ def render_cluster_comparison(df: pd.DataFrame):
                         get_cluster_color(i)
                     ],
                 )
-                fig.update_layout(height=400, showlegend=False)
+                fig.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
                 st.plotly_chart(fig, use_container_width=True)
 
         # Genre overlap analysis for all selected clusters
@@ -349,7 +362,7 @@ def render_cluster_comparison(df: pd.DataFrame):
                         labels={"x": "Song Count", "y": "Artist"},
                         color_discrete_sequence=[get_cluster_color(i)],
                     )
-                    fig.update_layout(height=400, showlegend=False)
+                    fig.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
                     st.plotly_chart(fig, use_container_width=True, key=f"cluster_artist_chart_{cluster_id}")
 
                     # Show percentage

@@ -11,8 +11,36 @@ from scipy import stats
 from typing import List, Dict, Tuple
 
 from analysis.interpretability.feature_importance import compute_cohens_d
+from analysis.pipeline.config import get_cluster_name
 
 logger = logging.getLogger(__name__)
+
+
+# Full 33-dimensional interpretable feature list
+# This should be used for all cluster comparisons to match the clustering space
+FULL_33_DIM_FEATURES = [
+    # ═══════════════════════════════════════════════════════════════════════
+    # AUDIO FEATURES (dims 0-15)
+    # ═══════════════════════════════════════════════════════════════════════
+    'bpm', 'danceability', 'instrumentalness', 'valence', 'arousal',
+    'engagement_score', 'approachability_score',
+    'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
+    'emb_voice_gender', 'genre_fusion', 'emb_acoustic_electronic', 'emb_timbre_brightness',
+    # ═══════════════════════════════════════════════════════════════════════
+    # KEY FEATURES (dims 16-18)
+    # ═══════════════════════════════════════════════════════════════════════
+    'emb_key_sin', 'emb_key_cos', 'emb_key_scale',
+    # ═══════════════════════════════════════════════════════════════════════
+    # LYRIC FEATURES (dims 19-28)
+    # ═══════════════════════════════════════════════════════════════════════
+    'lyric_valence', 'lyric_arousal',
+    'lyric_mood_happy', 'lyric_mood_sad', 'lyric_mood_aggressive', 'lyric_mood_relaxed',
+    'lyric_explicit', 'lyric_narrative', 'lyric_vocabulary_richness', 'lyric_repetition',
+    # ═══════════════════════════════════════════════════════════════════════
+    # META FEATURES (dims 29-32)
+    # ═══════════════════════════════════════════════════════════════════════
+    'emb_theme', 'emb_language', 'popularity', 'emb_release_year',
+]
 
 
 def compare_two_clusters(
@@ -31,7 +59,7 @@ def compare_two_clusters(
         df: DataFrame with cluster assignments and features
         cluster_a: ID of first cluster
         cluster_b: ID of second cluster
-        features: List of feature names to compare (default: common continuous features)
+        features: List of feature names to compare (default: full 33-dim interpretable vector)
 
     Returns:
         DataFrame with columns:
@@ -43,14 +71,7 @@ def compare_two_clusters(
         - significant: Boolean (p < 0.05)
     """
     if features is None:
-        features = [
-            'bpm', 'danceability', 'instrumentalness', 'valence', 'arousal',
-            'engagement_score', 'approachability_score',
-            'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
-            'timbre_bright', 'timbre_dark',
-            'voice_gender_male', 'voice_gender_female',
-            'mood_acoustic', 'mood_electronic',
-        ]
+        features = FULL_33_DIM_FEATURES.copy()
 
     # Filter to only include features that exist in the dataframe
     features = [f for f in features if f in df.columns]
@@ -158,18 +179,14 @@ def find_most_different_pairs(
 
     Args:
         df: DataFrame with cluster assignments and features
-        features: List of features to consider (default: common continuous features)
+        features: List of features to consider (default: full 33-dim interpretable vector)
         top_n: Number of top pairs to return
 
     Returns:
         List of tuples: (cluster_a, cluster_b, avg_effect_size)
     """
     if features is None:
-        features = [
-            'bpm', 'danceability', 'instrumentalness', 'valence', 'arousal',
-            'engagement_score', 'approachability_score',
-            'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
-        ]
+        features = FULL_33_DIM_FEATURES.copy()
 
     features = [f for f in features if f in df.columns]
     cluster_ids = sorted(df['cluster'].unique())
@@ -193,6 +210,7 @@ def find_most_different_pairs(
 def compute_cluster_similarity_matrix(
     df: pd.DataFrame,
     features: List[str] = None,
+    use_names: bool = True,
 ) -> pd.DataFrame:
     """
     Compute overall similarity matrix for all clusters.
@@ -202,40 +220,46 @@ def compute_cluster_similarity_matrix(
 
     Args:
         df: DataFrame with cluster assignments and features
-        features: List of features to consider
+        features: List of features to consider (default: full 33-dim interpretable vector)
+        use_names: If True, use cluster names as index/columns; else use IDs
 
     Returns:
-        DataFrame where rows and columns are cluster IDs,
+        DataFrame where rows and columns are cluster names (or IDs),
         values are average absolute effect sizes (dissimilarity)
     """
     if features is None:
-        features = [
-            'bpm', 'danceability', 'instrumentalness', 'valence', 'arousal',
-            'engagement_score', 'approachability_score',
-            'mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party',
-        ]
+        features = FULL_33_DIM_FEATURES.copy()
 
     features = [f for f in features if f in df.columns]
     cluster_ids = sorted(df['cluster'].unique())
 
+    # Create index/column labels
+    if use_names:
+        labels = [get_cluster_name(cid) for cid in cluster_ids]
+    else:
+        labels = cluster_ids
+
     matrix = pd.DataFrame(
-        index=cluster_ids,
-        columns=cluster_ids,
+        index=labels,
+        columns=labels,
         dtype=float
     )
 
-    for cluster_a in cluster_ids:
-        for cluster_b in cluster_ids:
+    # Build a mapping from label to cluster_id for lookups
+    label_to_id = {label: cid for label, cid in zip(labels, cluster_ids)}
+
+    for label_a, cluster_a in zip(labels, cluster_ids):
+        for label_b, cluster_b in zip(labels, cluster_ids):
             if cluster_a == cluster_b:
-                matrix.loc[cluster_a, cluster_b] = 0.0
+                matrix.loc[label_a, label_b] = 0.0
             else:
                 comparison_df = compare_two_clusters(df, cluster_a, cluster_b, features)
 
                 if len(comparison_df) > 0:
                     # Average absolute effect size = dissimilarity
                     avg_effect = comparison_df['effect_size'].abs().mean()
-                    matrix.loc[cluster_a, cluster_b] = avg_effect
+                    matrix.loc[label_a, label_b] = avg_effect
                 else:
-                    matrix.loc[cluster_a, cluster_b] = 0.0
+                    matrix.loc[label_a, label_b] = 0.0
 
     return matrix

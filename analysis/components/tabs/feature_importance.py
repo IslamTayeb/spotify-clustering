@@ -193,7 +193,7 @@ def render_feature_importance(df: pd.DataFrame):
         )
 
         fig.update_xaxes(side="bottom")
-        fig.update_layout(height=400 + len(cluster_ids) * 50)
+        fig.update_layout(height=500 + len(cluster_ids) * 50, margin=dict(t=0, l=0, r=0, b=0))
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -236,7 +236,8 @@ def render_feature_importance(df: pd.DataFrame):
             yaxis_title=selected_feature,
             xaxis_title="Cluster",
             showlegend=True,
-            height=500,
+            height=600,
+            margin=dict(t=0, l=0, r=0, b=0),
         )
 
         st.plotly_chart(fig, use_container_width=True)

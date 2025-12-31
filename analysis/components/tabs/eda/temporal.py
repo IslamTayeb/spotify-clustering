@@ -194,7 +194,7 @@ def _render_library_growth(df_temp, songs_before_cutoff):
         labels={"cumulative_additions": "New Additions", "added_at": "Date"},
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
-    fig.update_layout(height=400)
+    fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
     st.caption(
         f"This chart shows the {len(df_temp)} songs added after June 4, 2024. "
@@ -216,7 +216,7 @@ def _render_monthly_additions(df_temp):
         labels={"x": "Month", "y": "Songs Added"},
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
-    fig.update_layout(height=400, showlegend=False)
+    fig.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -239,7 +239,7 @@ def _render_song_age_distribution(df_temp):
     )
 
     fig = px.histogram(df_age, x="age_at_add_years", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
-    fig.update_layout(height=400)
+    fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
     category_counts = df_age["age_category"].value_counts()
@@ -264,7 +264,7 @@ def _render_release_year_distribution(df_temp):
     df_year = df_temp[valid_years].copy()
 
     fig = px.histogram(df_year, x="release_year", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
-    fig.update_layout(height=400)
+    fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
     df_year["decade"] = (df_year["release_year"] // 10) * 10
@@ -286,6 +286,7 @@ def _render_release_year_distribution(df_temp):
             names=decade_names,
             color_discrete_sequence=get_pie_colors(decade_names, CLUSTER_COLORS),
         )
+        fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -317,7 +318,7 @@ def _render_cluster_evolution(df_temp):
             barmode="stack",
             color_discrete_sequence=CLUSTER_COLORS,
         )
-        fig.update_layout(height=500)
+        fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
         st.write("**Time Period Breakdown:**")
@@ -426,7 +427,7 @@ def _render_cluster_trends(df_temp):
                     name=f"{cluster} trend", showlegend=False, opacity=0.7,
                 ))
 
-    fig.update_layout(height=500)
+    fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
     caption = "Shows how the proportion of each cluster changes as you add songs over time"
@@ -476,7 +477,7 @@ def _render_mood_trends(df_temp):
                     name=f"{mood} trend", showlegend=False, opacity=0.7,
                 ))
 
-    fig.update_layout(height=500)
+    fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
     if show_mood_trendlines:
         st.caption("Dashed lines show overall trend direction for each mood")
@@ -581,7 +582,7 @@ def _render_genre_family_trends(df_temp):
             caption += " (dashed = linear growth rate)"
         st.caption(caption)
 
-    fig.update_layout(height=500)
+    fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
     # Summary statistics
@@ -639,7 +640,7 @@ def _render_cluster_heatmap(df_temp):
                 color_continuous_scale="Viridis",
             )
             fig.update_xaxes(side="bottom")
-            fig.update_layout(height=400 + len(cluster_month_matrix.columns) * 20)
+            fig.update_layout(height=500 + len(cluster_month_matrix.columns) * 20, margin=dict(t=0, l=0, r=0, b=0))
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Not enough time periods")

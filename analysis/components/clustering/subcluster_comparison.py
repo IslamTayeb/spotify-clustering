@@ -168,7 +168,8 @@ def render_dissimilarity_matrix(
     ))
 
     fig.update_layout(
-        height=400,
+        height=500,
+        margin=dict(t=0, l=0, r=0, b=0),
         xaxis_title="Sub-cluster",
         yaxis_title="Sub-cluster",
         yaxis=dict(autorange="reversed"),  # Match matrix orientation
@@ -501,7 +502,8 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             showlegend=True,
-            height=500,
+            height=600,
+            margin=dict(t=0, l=0, r=0, b=0),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -530,7 +532,7 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
                     labels={"x": "Count", "y": "Genre"},
                     color_discrete_sequence=[colors[i % len(colors)]],
                 )
-                fig.update_layout(height=300, showlegend=False)
+                fig.update_layout(height=400, margin=dict(t=0, l=0, r=0, b=0), showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
 
     # Artist comparison
@@ -560,7 +562,7 @@ def render_subcluster_comparison(subcluster_data: Dict) -> None:
                         labels={"x": "Song Count", "y": "Artist"},
                         color_discrete_sequence=[colors[i % len(colors)]],
                     )
-                    fig.update_layout(height=300, showlegend=False)
+                    fig.update_layout(height=400, margin=dict(t=0, l=0, r=0, b=0), showlegend=False)
                     st.plotly_chart(fig, use_container_width=True, key=f"subcluster_comparison_artist_chart_{sc_id}")
 
                     # Show percentage

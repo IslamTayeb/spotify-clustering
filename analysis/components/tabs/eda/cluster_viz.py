@@ -173,13 +173,14 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
 
             st.caption("3D Cluster Visualization")
         fig.update_layout(
-            height=700,
+            height=800,
             scene=dict(
                 xaxis=dict(visible=False),
                 yaxis=dict(visible=False),
                 zaxis=dict(visible=False),
             ),
             showlegend=True,
+            margin=dict(t=0, l=0, r=0, b=0),
         )
 
         st.plotly_chart(fig, use_container_width=True)
