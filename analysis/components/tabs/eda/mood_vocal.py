@@ -184,7 +184,7 @@ def render_vocal_analysis(df: pd.DataFrame):
             st.plotly_chart(fig, use_container_width=True)
 
         # Acoustic vs Electronic (using the actual clustering dimension)
-        if "acoustic_electronic" in df.columns:
+        if "electronic_acoustic" in df.columns:
             st.subheader("Acoustic ↔ Electronic Distribution")
             st.caption("Production style dimension (0=electronic/synthetic, 1=acoustic/organic)")
 
@@ -192,9 +192,9 @@ def render_vocal_analysis(df: pd.DataFrame):
 
             fig = px.histogram(
                 df,
-                x="acoustic_electronic",
+                x="electronic_acoustic",
                 nbins=50,
-                labels={"acoustic_electronic": "Production Style", "count": "Number of Songs"},
+                labels={"electronic_acoustic": "Production Style", "count": "Number of Songs"},
                 color_discrete_sequence=[SPOTIFY_GREEN],
             )
             fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Hybrid")
@@ -203,18 +203,18 @@ def render_vocal_analysis(df: pd.DataFrame):
             col1, col2 = st.columns(2)
             with col1:
                 st.write("**Most Electronic Songs**")
-                electronic = df.nsmallest(10, "acoustic_electronic")[["track_name", "artist", "top_genre", "acoustic_electronic"]]
+                electronic = df.nsmallest(10, "electronic_acoustic")[["track_name", "artist", "top_genre", "electronic_acoustic"]]
                 st.dataframe(electronic, use_container_width=True, hide_index=True)
 
             with col2:
                 st.write("**Most Acoustic Songs**")
-                acoustic = df.nlargest(10, "acoustic_electronic")[["track_name", "artist", "top_genre", "acoustic_electronic"]]
+                acoustic = df.nlargest(10, "electronic_acoustic")[["track_name", "artist", "top_genre", "electronic_acoustic"]]
                 st.dataframe(acoustic, use_container_width=True, hide_index=True)
 
-        # Fallback: show raw mood_acoustic/mood_electronic if acoustic_electronic not available
+        # Fallback: show raw mood_acoustic/mood_electronic if electronic_acoustic not available
         elif "mood_acoustic" in df.columns and "mood_electronic" in df.columns:
             st.subheader("Acoustic vs Electronic Distribution (Raw Scores)")
-            st.caption("⚠️ Using raw mood scores - acoustic_electronic dimension not found")
+            st.caption("⚠️ Using raw mood scores - electronic_acoustic dimension not found")
 
             df_production = df.copy()
             df_production["production_style"] = "Mixed"

@@ -1,0 +1,292 @@
+================================================================================
+LYRIC vs AUDIO CLUSTERING COVARIANCE ANALYSIS
+================================================================================
+
+================================================================================
+1. CLUSTERING AGREEMENT METRICS
+================================================================================
+
+3 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.074
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.092
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.438
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.203
+  Lyrics silhouette: 0.271
+
+4 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.068
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.094
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.346
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.137
+  Lyrics silhouette: 0.319
+
+5 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.092
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.118
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.308
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.096
+  Lyrics silhouette: 0.322
+
+6 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.114
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.158
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.310
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.103
+  Lyrics silhouette: 0.306
+
+8 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.076
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.175
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.220
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.087
+  Lyrics silhouette: 0.261
+
+10 Clusters:
+--------------------------------------------------
+  Adjusted Rand Index: 0.073
+    (0=random, 1=perfect agreement, <0=worse than random)
+  Normalized Mutual Info: 0.189
+    (0=no mutual info, 1=perfect agreement)
+  Fowlkes-Mallows Index: 0.190
+    (0=no similarity, 1=identical)
+  Audio silhouette: 0.098
+  Lyrics silhouette: 0.241
+
+================================================================================
+2. DETAILED ANALYSIS (5 CLUSTERS)
+================================================================================
+
+📊 Contingency Matrix (rows=audio clusters, cols=lyric clusters):
+--------------------------------------------------
+     Lyr0 Lyr1 Lyr2 Lyr3 Lyr4 | Total
+--------------------------------------------------
+Aud0   25  123   31   35   52 |  266
+Aud1   56  204   56    4  148 |  468
+Aud2   36    1   25   41    3 |  106
+Aud3   62   17   48   42   17 |  186
+Aud4   65   73   30    4   55 |  227
+--------------------------------------------------
+Total 244  418  190  126  275 | 1253
+
+🎯 Where Audio Clusters End Up in Lyric Space:
+--------------------------------------------------
+
+Audio Cluster 0 (266 tracks) distributes as:
+  → Lyric Cluster 1: 123 tracks ( 46.2%)
+  → Lyric Cluster 2:  31 tracks ( 11.7%)
+  → Lyric Cluster 3:  35 tracks ( 13.2%)
+  → Lyric Cluster 4:  52 tracks ( 19.5%)
+
+Audio Cluster 1 (468 tracks) distributes as:
+  → Lyric Cluster 0:  56 tracks ( 12.0%)
+  → Lyric Cluster 1: 204 tracks ( 43.6%)
+  → Lyric Cluster 2:  56 tracks ( 12.0%)
+  → Lyric Cluster 4: 148 tracks ( 31.6%)
+
+Audio Cluster 2 (106 tracks) distributes as:
+  → Lyric Cluster 0:  36 tracks ( 34.0%)
+  → Lyric Cluster 2:  25 tracks ( 23.6%)
+  → Lyric Cluster 3:  41 tracks ( 38.7%)
+
+Audio Cluster 3 (186 tracks) distributes as:
+  → Lyric Cluster 0:  62 tracks ( 33.3%)
+  → Lyric Cluster 2:  48 tracks ( 25.8%)
+  → Lyric Cluster 3:  42 tracks ( 22.6%)
+
+Audio Cluster 4 (227 tracks) distributes as:
+  → Lyric Cluster 0:  65 tracks ( 28.6%)
+  → Lyric Cluster 1:  73 tracks ( 32.2%)
+  → Lyric Cluster 2:  30 tracks ( 13.2%)
+  → Lyric Cluster 4:  55 tracks ( 24.2%)
+
+📝 Where Lyric Clusters Come From in Audio Space:
+--------------------------------------------------
+
+Lyric Cluster 0 (244 tracks) comes from:
+  ← Audio Cluster 0:  25 tracks ( 10.2%)
+  ← Audio Cluster 1:  56 tracks ( 23.0%)
+  ← Audio Cluster 2:  36 tracks ( 14.8%)
+  ← Audio Cluster 3:  62 tracks ( 25.4%)
+  ← Audio Cluster 4:  65 tracks ( 26.6%)
+
+Lyric Cluster 1 (418 tracks) comes from:
+  ← Audio Cluster 0: 123 tracks ( 29.4%)
+  ← Audio Cluster 1: 204 tracks ( 48.8%)
+  ← Audio Cluster 4:  73 tracks ( 17.5%)
+
+Lyric Cluster 2 (190 tracks) comes from:
+  ← Audio Cluster 0:  31 tracks ( 16.3%)
+  ← Audio Cluster 1:  56 tracks ( 29.5%)
+  ← Audio Cluster 2:  25 tracks ( 13.2%)
+  ← Audio Cluster 3:  48 tracks ( 25.3%)
+  ← Audio Cluster 4:  30 tracks ( 15.8%)
+
+Lyric Cluster 3 (126 tracks) comes from:
+  ← Audio Cluster 0:  35 tracks ( 27.8%)
+  ← Audio Cluster 2:  41 tracks ( 32.5%)
+  ← Audio Cluster 3:  42 tracks ( 33.3%)
+
+Lyric Cluster 4 (275 tracks) comes from:
+  ← Audio Cluster 0:  52 tracks ( 18.9%)
+  ← Audio Cluster 1: 148 tracks ( 53.8%)
+  ← Audio Cluster 4:  55 tracks ( 20.0%)
+
+================================================================================
+3. CLUSTER AGREEMENT ANALYSIS
+================================================================================
+
+📊 Overall Statistics:
+--------------------------------------------------
+Tracks in same cluster number: 351 / 1253 (28.0%)
+Tracks that switch clusters: 902 (72.0%)
+
+🔄 Example Track Movements:
+--------------------------------------------------
+
+✅ Tracks stable across audio & lyrics (same cluster #):
+  Cluster 1: Lil Baby, 42 Dugg - Grace (feat. 42 Dugg)
+  Cluster 1: Wegz - عفاريت الأسفلت
+  Cluster 3: That Boy Franco - Shock The World - Melody Version - Inspired By House Is Not A Home
+  Cluster 1: Tyler, The Creator, Lil Wayne, Kanye West - SMUCKERS (feat. Lil Wayne & Kanye West)
+  Cluster 1: Clipse - Intro
+
+🚀 Tracks with largest cluster movement:
+  Audio 4 → Lyric 0: JID, Johnta Austin - Better Days (feat. Johnta Austin)
+  Audio 0 → Lyric 4: ian, Nino Paid - Get To It (feat. Nino Paid)
+  Audio 4 → Lyric 0: Kendrick Lamar - United In Grief
+  Audio 4 → Lyric 0: 070 Shake - Cocoon
+  Audio 0 → Lyric 4: Bakar - Big Dreams
+  Audio 4 → Lyric 0: McKinley Dixon, Anjimile - Dedicated to Tar Feather
+  Audio 4 → Lyric 0: Fawzi, Shabjdeed, Al Nather - YOUMI
+  Audio 4 → Lyric 0: Denzel Curry - Melt Session #1 - Cold Blooded Soul Version
+  Audio 0 → Lyric 4: Khantrast - She Bad
+  Audio 0 → Lyric 4: Kid Cudi - PORSCHE TOPLESS
+
+🎵 Instrumental Track Clustering (142 tracks):
+--------------------------------------------------
+Audio cluster distribution:
+  Cluster 3: 47 tracks
+  Cluster 2: 43 tracks
+  Cluster 0: 40 tracks
+  Cluster 4: 7 tracks
+  Cluster 1: 5 tracks
+
+Lyric cluster distribution (should be meaningless):
+  Cluster 3: 125 tracks
+  Cluster 2: 12 tracks
+  Cluster 0: 3 tracks
+  Cluster 4: 1 tracks
+  Cluster 1: 1 tracks
+
+================================================================================
+4. GENRE-SPECIFIC CLUSTER MOVEMENT
+================================================================================
+
+🎤 Hip-Hop Tracks (741 total):
+--------------------------------------------------
+Agreement rate: 34.4%
+
+Movement matrix (Audio → Lyric):
+lyric_cluster   0    1   2  3    4
+audio_cluster                     
+0               5  102   5  1   39
+1              32  200  18  1  116
+2               2    0   0  0    0
+3              14    9   6  2    6
+4              45   68  21  1   48
+
+⚡ Electronic Tracks (201 total):
+--------------------------------------------------
+Agreement rate: 16.4%
+
+Movement matrix (Audio → Lyric):
+lyric_cluster   0   1   2   3   4
+audio_cluster                    
+0               8  11   9  32   9
+1               7   4  19   3  18
+2               1   0   1   4   0
+3              19   0  12  19   0
+4              13   2   6   3   1
+
+================================================================================
+5. CROSS-DOMAIN FEATURE CORRELATIONS
+================================================================================
+
+🔗 Strongest Audio↔Lyric Feature Correlations:
+--------------------------------------------------
+
+Top 10 Positive Correlations:
+  mood_party           ↔ arousal        : +0.553
+  engagement           ↔ arousal        : +0.509
+  mood_party           ↔ explicit       : +0.441
+  mood_party           ↔ mood_aggressive: +0.411
+  engagement           ↔ explicit       : +0.409
+  engagement           ↔ mood_aggressive: +0.407
+  voice_gender         ↔ narrative      : +0.303
+  voice_gender         ↔ explicit       : +0.286
+  voice_gender         ↔ vocabulary     : +0.274
+  approachability      ↔ mood_relaxed   : +0.270
+
+Top 10 Negative Correlations:
+  instrumentalness     ↔ vocabulary     : -0.737
+  instrumentalness     ↔ narrative      : -0.606
+  instrumentalness     ↔ explicit       : -0.595
+  mood_sad             ↔ arousal        : -0.572
+  acoustic_electronic  ↔ arousal        : -0.532
+  instrumentalness     ↔ arousal        : -0.531
+  instrumentalness     ↔ mood_aggressive: -0.527
+  mood_relaxed         ↔ arousal        : -0.509
+  mood_sad             ↔ explicit       : -0.493
+  acoustic_electronic  ↔ explicit       : -0.481
+
+================================================================================
+6. FEATURE COMBINATION EXPERIMENTS
+================================================================================
+
+📊 Clustering Quality vs Audio/Lyric Weight:
+--------------------------------------------------
+Weight  | Silhouette | Description
+--------------------------------------------------
+  0.00  |      0.322 | Lyrics only
+  0.25  |      0.246 | 25% audio, 75% lyrics
+  0.50  |      0.135 | 50% audio, 50% lyrics
+  0.75  |      0.111 | 75% audio, 25% lyrics
+  1.00  |      0.096 | Audio only
+
+================================================================================
+SUMMARY
+================================================================================
+
+Key Findings:
+1. Audio and lyric clusters show LOW agreement (ARI=0.092 for 5 clusters)
+2. Only 28.0% of tracks stay in the same cluster number
+3. Lyrics-only clustering has BETTER silhouette score (0.322) than audio (0.096)
+4. Instrumental tracks scatter randomly in lyric space (as expected)
+5. The two feature spaces capture fundamentally different aspects of music
+
+This low covariance suggests that:
+- Songs that sound similar don't necessarily have similar lyrics
+- Lyrical themes cross audio genre boundaries
+- The 33-dim combined space captures complementary, not redundant, information
+
+================================================================================

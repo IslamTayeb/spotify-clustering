@@ -46,7 +46,7 @@ The final architecture produces a 33-dimensional vector where:
 **Problem discovered:** Jazz and osu/electronic game music were clustering together—both are instrumental, but the model couldn't distinguish acoustic instruments from synthesizers.
 
 **Solution:** Added two dimensions:
-- `acoustic_electronic`: Separates acoustic (jazz, classical) from electronic (synths, game music)
+- `electronic_acoustic`: Separates acoustic (jazz, classical) from electronic (synths, game music)
 - `timbre_brightness`: Distinguishes dark/mellow sounds from bright/crisp production
 
 ### 8. Added Release Year Metadata (32 → 33 dims)
@@ -113,7 +113,7 @@ Each dimension has explicit meaning and rationale:
 | 11 | `mood_party` | mood_party classifier | Upbeat/celebratory presence |
 | 12 | `voice_gender` | gender classifier | 0=female, 1=male, 0=instrumental* |
 | 13 | `genre_fusion` | Entropy of genre_probs | 0=pure genre, 1=genre fusion |
-| 14 | `acoustic_electronic` | mood_acoustic - mood_electronic | 0=electronic, 1=acoustic |
+| 14 | `electronic_acoustic` | mood_acoustic - mood_electronic | 0=electronic, 1=acoustic |
 | 15 | `timbre_brightness` | timbre classifier | 0=dark/mellow, 1=bright/crisp |
 | 16 | `key_sin` | Essentia RhythmExtractor | sin(2π × pitch/12) × 0.33 |
 | 17 | `key_cos` | Essentia RhythmExtractor | cos(2π × pitch/12) × 0.33 |
@@ -236,7 +236,7 @@ multilingual/unknown/none=0.5 (centered)
 - `engagement_regression` - Active vs background listening (continuous)
 - `gender` - Voice male/female
 - `timbre` - Bright vs dark (used in dim 15: timbre_brightness)
-- `mood_acoustic` - Acoustic vs electronic (used in dim 14: acoustic_electronic)
+- `mood_acoustic` - Acoustic vs electronic (used in dim 14: electronic_acoustic)
 - `mtg_jamendo_moodtheme` - 56 mood/theme classes (extracted for reference)
 - `mtg_jamendo_instrument` - 40 instrument classes (extracted for reference)
 - `moods_mirex` - 5 MIREX mood clusters (extracted for reference)

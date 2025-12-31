@@ -133,7 +133,7 @@ def render_genre_fusion_analysis(df: pd.DataFrame):
             st.dataframe(fusion, use_container_width=True, hide_index=True)
 
         # Compare genre fusion with actual acoustic/electronic production
-        if "acoustic_electronic" in df.columns:
+        if "electronic_acoustic" in df.columns:
             st.markdown("---")
             st.subheader("Genre Fusion vs Acoustic/Electronic Production")
             st.caption("Does genre fusion correlate with acoustic or electronic production style?")
@@ -141,16 +141,16 @@ def render_genre_fusion_analysis(df: pd.DataFrame):
             fig = px.scatter(
                 df,
                 x="genre_fusion",
-                y="acoustic_electronic",
+                y="electronic_acoustic",
                 color="cluster",
                 hover_data=["track_name", "artist", "top_genre"],
                 labels={
                     "genre_fusion": "Genre Fusion (0=Pure, 1=Fusion)",
-                    "acoustic_electronic": "Production (0=Electronic, 1=Acoustic)",
+                    "electronic_acoustic": "Production (0=Electronic, 1=Acoustic)",
                 },
                 color_continuous_scale="Viridis",
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            correlation = df["genre_fusion"].corr(df["acoustic_electronic"])
+            correlation = df["genre_fusion"].corr(df["electronic_acoustic"])
             st.metric("Genre Fusion ↔ Acoustic Production Correlation", f"{correlation:.3f}")

@@ -17,7 +17,7 @@ EMBEDDING_DIM_NAMES = [
     "emb_mood_party",             # 11: Mood - Party
     "emb_voice_gender",           # 12: Voice Gender (0=female, 1=male)
     "emb_genre_fusion",           # 13: Genre Fusion (0=pure genre, 1=genre fusion)
-    "emb_acoustic_electronic",    # 14: Acoustic/Electronic (0=electronic, 1=acoustic)
+    "emb_electronic_acoustic",    # 14: Acoustic/Electronic (0=electronic, 1=acoustic)
     "emb_timbre_brightness",      # 15: Timbre Brightness (0=dark, 1=bright)
     # Key features (3 dims: indices 16-18)
     "emb_key_sin",                # 16: Key pitch (sin component)

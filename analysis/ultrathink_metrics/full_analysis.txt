@@ -1,0 +1,511 @@
+================================================================================
+COMPREHENSIVE SPOTIFY CLUSTERING ANALYSIS
+================================================================================
+
+================================================================================
+1. DRAKE COMPREHENSIVE ANALYSIS
+================================================================================
+
+Total Drake tracks in library: 28
+Percentage of library: 2.2%
+
+📊 Drake vs. Library Averages:
+--------------------------------------------------
+danceability        : Drake= 0.073, Library= 0.178 ( -59.3%)
+mood_party          : Drake= 0.659, Library= 0.605 (  +8.9%)
+mood_aggressive     : Drake= 0.796, Library= 0.775 (  +2.8%)
+valence             : Drake= 4.506, Library= 5.105 ( -11.7%)
+arousal             : Drake= 5.026, Library= 5.240 (  -4.1%)
+engagement_score    : Drake= 0.780, Library= 0.761 (  +2.5%)
+approachability_score: Drake= 0.602, Library= 0.570 (  +5.7%)
+instrumentalness    : Drake= 0.080, Library= 0.194 ( -58.7%)
+
+📋 All Drake Tracks (sorted by danceability):
+--------------------------------------------------
+Circadian Rhythm               | dance=0.232 party=0.326 aggr=0.946 val=4.60
+Gently (feat. Bad Bunny)       | dance=0.224 party=0.665 aggr=0.929 val=4.64
+Champagne Poetry               | dance=0.206 party=0.418 aggr=0.925 val=4.58
+8 Out Of 10                    | dance=0.203 party=0.615 aggr=0.821 val=4.10
+9                              | dance=0.140 party=0.707 aggr=0.777 val=4.38
+6 Man                          | dance=0.138 party=0.507 aggr=0.836 val=4.27
+Major Distribution             | dance=0.121 party=0.542 aggr=0.778 val=4.63
+Jumbotron Shit Poppin          | dance=0.107 party=0.697 aggr=0.934 val=4.44
+Feel No Ways                   | dance=0.105 party=0.767 aggr=0.849 val=5.35
+Money In The Grave (Drake ft. Rick Ross) | dance=0.088 party=0.616 aggr=0.762 val=4.09
+Gyalchester                    | dance=0.078 party=0.495 aggr=0.889 val=4.11
+First Person Shooter (feat. J. Cole) | dance=0.060 party=0.729 aggr=0.843 val=4.21
+Jumpman                        | dance=0.058 party=0.459 aggr=0.888 val=4.42
+NOKIA                          | dance=0.050 party=0.897 aggr=0.814 val=5.54
+Circo Loco                     | dance=0.033 party=0.804 aggr=0.698 val=4.34
+No Friends In The Industry     | dance=0.033 party=0.599 aggr=0.491 val=4.41
+Oh U Went (feat. Drake)        | dance=0.028 party=0.816 aggr=0.888 val=4.22
+POPSTAR (feat. Drake)          | dance=0.028 party=0.263 aggr=0.863 val=4.03
+I'm Upset                      | dance=0.025 party=0.454 aggr=0.822 val=4.84
+Nonstop                        | dance=0.017 party=0.654 aggr=0.714 val=4.23
+R.I.C.O. (feat. Drake)         | dance=0.010 party=0.804 aggr=0.702 val=5.07
+No Face                        | dance=0.010 party=0.611 aggr=0.801 val=4.18
+D4L                            | dance=0.009 party=0.845 aggr=0.507 val=4.46
+What Did I Miss?               | dance=0.007 party=0.739 aggr=0.909 val=4.79
+Push Ups                       | dance=0.007 party=0.850 aggr=0.727 val=3.88
+6 God                          | dance=0.007 party=0.910 aggr=0.620 val=4.90
+GIMME A HUG                    | dance=0.006 party=0.778 aggr=0.806 val=4.80
+What’s Next                    | dance=0.002 party=0.895 aggr=0.747 val=4.65
+
+🎯 Drake's Cluster Distribution:
+--------------------------------------------------
+Cluster 0: 23 Drake tracks out of 733 total (3.1%)
+Cluster 1: 4 Drake tracks out of 226 total (1.8%)
+Cluster 4: 1 Drake tracks out of 156 total (0.6%)
+
+================================================================================
+2. COMPREHENSIVE CORRELATION ANALYSIS
+================================================================================
+
+🔗 Pearson Correlations:
+--------------------------------------------------
+engagement_score     ↔ mood_party          : +0.753
+engagement_score     ↔ danceability        : -0.605
+engagement_score     ↔ valence             : +0.265
+engagement_score     ↔ arousal             : +0.370
+mood_party           ↔ danceability        : -0.759
+mood_party           ↔ arousal             : +0.387
+mood_party           ↔ valence             : +0.200
+danceability         ↔ valence             : -0.065
+danceability         ↔ arousal             : -0.276
+valence              ↔ arousal             : +0.693
+mood_aggressive      ↔ mood_party          : -0.456
+mood_happy           ↔ valence             : -0.241
+mood_sad             ↔ valence             : -0.183
+
+================================================================================
+3. ENGAGEMENT/PARTY PARADOXES & EDGE CASES
+================================================================================
+
+🎭 High Engagement (>0.7) + Low Party (<0.3): 41 tracks
+--------------------------------------------------
+BROCKHAMPTON         - Brockhampton                   | eng=0.73 party=0.23 dance=0.64
+Brent Faiyaz         - No One Knows                   | eng=0.75 party=0.30 dance=0.14
+PUP                  - DVP                            | eng=1.01 party=0.30 dance=0.66
+Turnstile            - BLACKOUT                       | eng=0.95 party=0.25 dance=0.31
+2KE, 808iuli         - X-SLIDE - Ultra Slowed         | eng=0.72 party=0.25 dance=0.11
+Kenya Bee            - God Level                      | eng=0.74 party=0.24 dance=0.17
+Barns Courtney       - Glitter & Gold                 | eng=0.70 party=0.04 dance=0.79
+Kanye West           - Ultralight Beam                | eng=0.72 party=0.27 dance=0.21
+MAXIMUM THE HORMONE  - HAWATARI NIOKU CENTI [2-hundred-million-centimeter-long blades] - TV edit | eng=0.96 party=0.28 dance=0.30
+Kali Uchis, Tyler, The Creator, Bootsy Collins - After The Storm (feat. Tyler, The Creator & Bootsy Collins) | eng=0.79 party=0.13 dance=0.15
+
+🎉 Low Engagement (<0.3) + High Party (>0.7): 0 tracks
+--------------------------------------------------
+
+💃 High Danceability (>0.7) + Low Party (<0.3): 83 tracks
+--------------------------------------------------
+Marty Robbins        - Big Iron                       | dance=0.99 party=0.03 val=5.43
+Hikaru Shirosu       - Waltz No. 1, Collapse          | dance=0.89 party=0.01 val=3.99
+JANNABI              - DOLMARO                        | dance=0.96 party=0.00 val=4.51
+Toshifumi Hinata     - Menuet                         | dance=0.97 party=0.01 val=3.64
+Oliver Malcolm       - Outside                        | dance=0.88 party=0.03 val=4.46
+Cherry Glazerr       - Teenage Girl                   | dance=0.88 party=0.07 val=4.81
+She & Him            - I Thought I Saw Your Face Today | dance=0.86 party=0.02 val=5.01
+Mustafa              - Name of God                    | dance=0.82 party=0.03 val=4.68
+Souad Massi          - Samira Meskina                 | dance=0.94 party=0.00 val=4.36
+Cyril Chambers       - He Knows She's Good For You    | dance=0.98 party=0.09 val=5.53
+
+================================================================================
+4. 33-DIMENSIONAL FEATURE SPACE ANALYSIS
+================================================================================
+
+📐 Feature Space Statistics:
+--------------------------------------------------
+Total dimensions: 33
+Audio dimensions: 16 (48.5%)
+Key dimensions: 3 (9.1%)
+Lyric dimensions: 10 (30.3%)
+Meta dimensions: 4 (12.1%)
+
+📊 Variance Contribution by Feature Group:
+--------------------------------------------------
+Audio features: 46.8% of total variance
+Key features: 4.1%
+Lyric features: 33.3%
+Meta features: 15.8%
+
+🎯 Clustering Quality by Feature Subset:
+--------------------------------------------------
+Audio-only silhouette: 0.090 (std: 0.152)
+Lyrics-only silhouette: 0.155 (std: 0.279)
+Full 33-dim silhouette: 0.144 (std: 0.132)
+Audio+Lyrics (no meta): 0.144 (std: 0.132)
+
+🔬 PCA Dimensionality Analysis:
+--------------------------------------------------
+Dimensions for 80% variance: 10
+Dimensions for 90% variance: 15
+Dimensions for 95% variance: 20
+First 10 components explain: 81.8% of variance
+
+================================================================================
+5. COMPREHENSIVE TEMPORAL ANALYSIS
+================================================================================
+
+📅 Temporal Coverage:
+--------------------------------------------------
+Date range: 2023-06-21 to 2025-12-17
+Total months: 26
+Average tracks per month: 48.2
+
+📈 Months with Extreme Values:
+--------------------------------------------------
+
+mood_party:
+  Highest: 2023-06 (0.890)
+  Lowest: 2024-03 (0.233)
+
+valence:
+  Highest: 2023-06 (6.188)
+  Lowest: 2024-03 (4.593)
+
+arousal:
+  Highest: 2023-06 (5.955)
+  Lowest: 2024-03 (4.748)
+
+danceability:
+  Highest: 2024-03 (0.464)
+  Lowest: 2024-05 (0.047)
+
+🌸 Spring 2024 Deep Dive (April-June):
+--------------------------------------------------
+
+2024-05: 2 tracks
+  party=0.849, happy=0.606, sad=0.114
+  valence=5.257, arousal=4.897, dance=0.047
+
+2024-06: 557 tracks
+  party=0.588, happy=0.557, sad=0.252
+  valence=5.026, arousal=5.204, dance=0.175
+
+🍂 October 2024 Analysis:
+--------------------------------------------------
+Tracks added: 15
+Average mood_party: 0.733
+Average valence: 5.166
+
+Track list:
+  • 100 gecs - Dumbest Girl Alive
+  • Tyler, The Creator, Daniel Caesar - St. Chroma (feat. Daniel Caesar)
+  • Tyler, The Creator, Doechii - Balloon (feat. Doechii)
+  • Travis Scott - Backyard
+  • Tyler, The Creator, GloRilla, Sexyy Red, Lil Wayne - Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)
+  • Freddie Gibbs - Big Boss Rabbit
+  • Ski Mask The Slump God - Catch Me Outside
+  • Lil Tecca - 120
+  • Tyler, The Creator - Rah Tah Tah
+  • Kendrick Lamar - untitled 08 | 09.06.2014.
+  • Future, Drake, Young Thug - D4L
+  • Freddie Gibbs, Madlib, BJ The Chicago Kid - Shame (feat. BJ The Chicago Kid)
+  • Xander Ghost, Marwan Pablo - OGRA
+  • Creepy Nuts - オトノケ - Otonoke
+  • Lil Yachty - Strike (Holster)
+
+================================================================================
+6. EXTREME TRACKS ANALYSIS
+================================================================================
+
+💃 Top 15 Most Danceable Tracks:
+--------------------------------------------------
+0.993 | J.J. Cale                 - Don't Go To Strangers               | party=0.02 val=4.8
+0.993 | Don McLean                - American Pie                        | party=0.06 val=5.1
+0.992 | Joe Hisaishi, Royal Philharmonic Orchestra - A Town with an Ocean View - from 'Kiki's Delivery Service' | party=0.02 val=4.6
+0.986 | Joe Hisaishi              - A Journey (A Dream of Flight)       | party=0.01 val=4.2
+0.986 | Marty Robbins             - Big Iron                            | party=0.03 val=5.4
+0.984 | Marty Robbins             - Tall Handsome Stranger              | party=0.08 val=4.8
+0.983 | JANNABI                   - Old dog                             | party=0.00 val=4.0
+0.982 | 桑原まこ                      - フルートとハープのための協奏曲 K. 299 ハ長調　第2楽章　アンダンティーノ | party=0.01 val=4.0
+0.981 | Cyril Chambers            - He Knows She's Good For You         | party=0.09 val=5.5
+0.979 | Wabie                     - Cyclones                            | party=0.01 val=4.4
+0.979 | Joe Hisaishi              - Merry-Go-Round of Life - from 'Howl's Moving Castle' | party=0.01 val=4.4
+0.978 | Kate Bush                 - Army Dreamers                       | party=0.01 val=4.3
+0.972 | Yu-Peng Chen, HOYO-MiX    - Lone Sojourner                      | party=0.00 val=4.0
+0.972 | Toshifumi Hinata          - Menuet                              | party=0.01 val=3.6
+0.971 | Gábor Szabó               - Amazon                              | party=0.04 val=5.1
+
+🚫 Least Danceable but High Party (party > 0.7):
+--------------------------------------------------
+dance=0.000 party=0.97 | A$AP Rocky, Skepta   - Praise The Lord (Da Shine) (feat. Skepta)
+dance=0.000 party=0.98 | Doechii              - Crazy
+dance=0.000 party=0.97 | Lil Yachty, Kodak Black - Hit Bout It
+dance=0.001 party=0.94 | DaBaby               - NAN
+dance=0.001 party=0.95 | Fimiguerrero         - my bad bro
+dance=0.001 party=0.98 | BabyTron             - Grab Yo Skates
+dance=0.001 party=0.76 | Key Glock            - Son Of A Gun
+dance=0.001 party=0.74 | Nas, A$AP Rocky, DJ Premier - Wave Gods
+dance=0.001 party=0.96 | joyful               - frog
+dance=0.001 party=0.96 | BaBa                 - IDK HOW 2 FIGHT
+
+⚡ Top 10 Most Engaging Tracks:
+--------------------------------------------------
+1.050 | Dizzee Rascal, Afronaut Zu - Patterning Vibez                    | party=0.96 dance=0.00
+1.024 | NOTION, Unknown T, D38    - TENTEN                              | party=0.92 dance=0.02
+1.018 | XI, BlackY                - Śiva                                | party=0.92 dance=0.05
+1.017 | Ducky Chix, Bratt Sinclaire - Prayer - Extended mix               | party=0.93 dance=0.01
+1.011 | PUP                       - DVP                                 | party=0.30 dance=0.66
+1.009 | Dead Or Alive             - You Spin Me Round (Like a Record)   | party=0.98 dance=0.01
+1.009 | Team Grimoire             - Aphasia                             | party=0.85 dance=0.05
+1.008 | Morimori Atsushi          - Paradigm Shift - Extended Mix       | party=0.98 dance=0.01
+1.008 | Camellia                  - Anomaly                             | party=0.91 dance=0.03
+1.004 | BlackY                    - LINARIA                             | party=0.92 dance=0.03
+
+================================================================================
+7. GENRE DISTRIBUTION & FUSION
+================================================================================
+
+🎵 Genre Fusion Score Distribution:
+--------------------------------------------------
+Mean genre fusion: 0.588
+Median: 0.609
+Std dev: 0.193
+
+🎯 Most Genre-Pure Tracks (lowest fusion):
+  fusion=0.000 | Vince Staples, Mustard - BANG THAT
+  fusion=0.002 | Jack Harlow - Dua Lipa
+  fusion=0.062 | Playboi Carti - New Tank
+  fusion=0.062 | Lil Uzi Vert - Silly Watch
+  fusion=0.065 | Key Glock - Son Of A Gun
+
+🌈 Most Genre-Fused Tracks (highest fusion):
+  fusion=1.000 | Shabjdeed, Al Nather - Collage
+  fusion=0.983 | Mashrou' Leila - Raksit Leila
+  fusion=0.980 | JPEGMAFIA - Bloodline Freestyle (2022 Demo)
+  fusion=0.979 | Kanye West - 24
+  fusion=0.963 | Yung Lean - Chinese Restaurant
+
+📊 Top 10 Genres in Library:
+--------------------------------------------------
+Hip Hop---Trap                :  228 tracks ( 18.2%)
+Hip Hop---Cloud Rap           :  211 tracks ( 16.8%)
+Hip Hop---Gangsta             :   83 tracks (  6.6%)
+Hip Hop---Grime               :   56 tracks (  4.5%)
+Hip Hop---Conscious           :   48 tracks (  3.8%)
+Electronic---House            :   47 tracks (  3.8%)
+Rock---Alternative Rock       :   40 tracks (  3.2%)
+Hip Hop---Hardcore Hip-Hop    :   25 tracks (  2.0%)
+Hip Hop---Boom Bap            :   24 tracks (  1.9%)
+Rock---Indie Rock             :   20 tracks (  1.6%)
+
+================================================================================
+8. CLUSTER DEEP DIVE
+================================================================================
+
+Total clusters: 5
+
+🎯 Cluster 0: 733 tracks (58.5%)
+--------------------------------------------------
+Average values:
+  mood_party          : 0.735 (+21.4% vs overall)
+  mood_happy          : 0.532 ( -6.2% vs overall)
+  mood_sad            : 0.149 (-39.2% vs overall)
+  valence             : 5.031 ( -1.4% vs overall)
+  arousal             : 5.275 ( +0.7% vs overall)
+  danceability        : 0.077 (-56.7% vs overall)
+  engagement_score    : 0.816 ( +7.2% vs overall)
+  instrumentalness    : 0.092 (-52.7% vs overall)
+
+Top 5 artists:
+  • Kanye West: 24 tracks
+  • JPEGMAFIA: 18 tracks
+  • Drake: 13 tracks
+  • Kendrick Lamar: 12 tracks
+  • Tyler, The Creator: 11 tracks
+
+Sample tracks:
+  • Kairo Keyz - GANG
+  • Lil Baby, 42 Dugg - Grace (feat. 42 Dugg)
+  • Wegz - عفاريت الأسفلت
+
+🎯 Cluster 1: 226 tracks (18.0%)
+--------------------------------------------------
+Average values:
+  mood_party          : 0.524 (-13.4% vs overall)
+  mood_happy          : 0.525 ( -7.5% vs overall)
+  mood_sad            : 0.284 (+15.6% vs overall)
+  valence             : 5.156 ( +1.0% vs overall)
+  arousal             : 5.304 ( +1.2% vs overall)
+  danceability        : 0.201 (+12.6% vs overall)
+  engagement_score    : 0.737 ( -3.0% vs overall)
+  instrumentalness    : 0.148 (-23.8% vs overall)
+
+Top 5 artists:
+  • Kendrick Lamar: 9 tracks
+  • Kanye West: 9 tracks
+  • Drake: 4 tracks
+  • JID: 4 tracks
+  • ZUTOMAYO: 4 tracks
+
+Sample tracks:
+  • Freddie Gibbs - Dark Hearted
+  • JID, Johnta Austin - Better Days (feat. Johnta Austin)
+  • BROCKHAMPTON - Brockhampton
+
+🎯 Cluster 2: 91 tracks (7.3%)
+--------------------------------------------------
+Average values:
+  mood_party          : 0.235 (-61.1% vs overall)
+  mood_happy          : 0.753 (+32.6% vs overall)
+  mood_sad            : 0.543 (+121.4% vs overall)
+  valence             : 5.093 ( -0.2% vs overall)
+  arousal             : 5.019 ( -4.2% vs overall)
+  danceability        : 0.528 (+196.2% vs overall)
+  engagement_score    : 0.532 (-30.0% vs overall)
+  instrumentalness    : 0.800 (+311.6% vs overall)
+
+Top 5 artists:
+  • Joe Hisaishi: 8 tracks
+  • SOIL & “PIMP” SESSIONS: 3 tracks
+  • Uyama Hiroto: 3 tracks
+  • Toshifumi Hinata: 2 tracks
+  • Khruangbin: 2 tracks
+
+Sample tracks:
+  • That Boy Franco - Shock The World - Melody Version - Inspired By House Is Not A Home
+  • Omori - My Time
+  • Hikaru Shirosu - Waltz No. 1, Collapse
+
+🎯 Cluster 3: 47 tracks (3.8%)
+--------------------------------------------------
+Average values:
+  mood_party          : 0.797 (+31.7% vs overall)
+  mood_happy          : 0.747 (+31.6% vs overall)
+  mood_sad            : 0.111 (-54.9% vs overall)
+  valence             : 6.110 (+19.7% vs overall)
+  arousal             : 5.622 ( +7.3% vs overall)
+  danceability        : 0.062 (-65.4% vs overall)
+  engagement_score    : 0.886 (+16.5% vs overall)
+  instrumentalness    : 0.654 (+236.6% vs overall)
+
+Top 5 artists:
+  • VDYCD: 4 tracks
+  • Camellia: 3 tracks
+  • Seiryu: 3 tracks
+  • sasakure.UK: 2 tracks
+  • DJ972: 1 tracks
+
+Sample tracks:
+  • DJ972 - HOUSE IS NOT A HOME FUNK
+  • Dustvoxx, Laur, Neokontrol - FireLight - (Neokontrol Remix)
+  • Ducky Chix, Bratt Sinclaire - Prayer - Extended mix
+
+🎯 Cluster 4: 156 tracks (12.5%)
+--------------------------------------------------
+Average values:
+  mood_party          : 0.274 (-54.7% vs overall)
+  mood_happy          : 0.634 (+11.7% vs overall)
+  mood_sad            : 0.508 (+107.2% vs overall)
+  valence             : 5.082 ( -0.5% vs overall)
+  arousal             : 4.996 ( -4.6% vs overall)
+  danceability        : 0.452 (+153.5% vs overall)
+  engagement_score    : 0.631 (-17.1% vs overall)
+  instrumentalness    : 0.251 (+29.1% vs overall)
+
+Top 5 artists:
+  • JANNABI: 9 tracks
+  • Travis Scott: 4 tracks
+  • Kanye West: 4 tracks
+  • Ye, Kanye West: 3 tracks
+  • Yumi Arai: 3 tracks
+
+Sample tracks:
+  • Marty Robbins - Big Iron
+  • JANNABI - DOLMARO
+  • Bossacucanova, Adriana Calcanhotto - Previsão
+
+================================================================================
+9. ACOUSTIC VS ELECTRONIC SPECTRUM
+================================================================================
+
+🎸 Acoustic/Electronic Distribution:
+--------------------------------------------------
+Mean (0=electronic, 1=acoustic): 0.174
+
+⚡ Most Electronic Tracks:
+  0.002 | Fimiguerrero - Vogue
+  0.002 | Kenny Mason, Paris Texas, See You Next Year, Billy Lemos - Big Bank
+  0.002 | Jack Harlow - Tyler Herro
+  0.002 | Fred again.., Skepta, Plaqueboymax - Victory Lap
+  0.002 | Fimiguerrero - my bad bro
+  0.003 | Lil Yachty, Kodak Black - Hit Bout It
+  0.003 | Paris Texas - Lift Off
+  0.003 | GSPD, XS Project - I LOVE HARDBASS
+  0.003 | Yeat, NGeeYL - OH I DID
+  0.003 | Honest, Lil Yachty - Fasho Dat
+
+🪕 Most Acoustic Tracks:
+  0.990 | JANNABI - Old dog
+  0.981 | Pedro Mizutani - Melhor Se Acostumar
+  0.979 | Marty Robbins - Big Iron
+  0.972 | Kate Bush - Army Dreamers
+  0.967 | Yu-Peng Chen, HOYO-MiX - Lone Sojourner
+  0.966 | Souad Massi - Samira Meskina
+  0.965 | Don McLean - American Pie
+  0.946 | Oliver Malcolm - Outside
+  0.944 | Edu Lobo - Zum-Zum
+  0.944 | Eslabon Armado, Junior H - DOS MORRITAS
+
+================================================================================
+10. LYRIC FEATURES ANALYSIS
+================================================================================
+
+🎤 Vocal vs Instrumental:
+--------------------------------------------------
+Instrumental tracks: 142 (11.3%)
+Vocal tracks: 1111 (88.7%)
+
+📝 Lyric Features (vocal tracks only):
+--------------------------------------------------
+Tracks with lyrics analyzed: 1111
+
+Lyric averages:
+  lyric_valence            : 0.563
+  lyric_arousal            : 0.697
+  lyric_explicit           : 0.571
+  lyric_narrative          : 0.349
+  lyric_vocabulary_richness: 0.467
+  lyric_repetition         : 0.211
+
+================================================================================
+11. SPECIAL COMPARISONS
+================================================================================
+
+🎷 Jazz vs 🎮 Electronic/Game Music:
+--------------------------------------------------
+Jazz-like tracks: 24
+  Avg danceability: 0.827
+  Avg party mood: 0.070
+  Examples: ['Waltz No. 1, Collapse', 'Menuet', 'Teenage Girl']
+
+Electronic/Game-like tracks: 73
+  Avg danceability: 0.123
+  Avg party mood: 0.643
+  Examples: ['Shock The World - Melody Version - Inspired By House Is Not A Home', 'HOUSE IS NOT A HOME FUNK', 'FireLight - (Neokontrol Remix)']
+
+================================================================================
+12. LIBRARY SUMMARY STATISTICS
+================================================================================
+
+📊 Overall Library Stats:
+--------------------------------------------------
+Total tracks: 1253
+Unique artists: 809
+Date range: 2023-06-21 to 2025-12-17
+Average popularity: 49.1
+
+📏 Feature Ranges (min/mean/max):
+--------------------------------------------------
+danceability        : [0.000, 0.178, 0.993]
+mood_party          : [0.002, 0.605, 0.993]
+valence             : [3.389, 5.105, 7.548]
+arousal             : [3.276, 5.240, 7.150]
+engagement_score    : [-0.026, 0.761, 1.050]
+instrumentalness    : [0.000, 0.194, 0.975]
+
+================================================================================
+END OF COMPREHENSIVE ANALYSIS
+================================================================================
