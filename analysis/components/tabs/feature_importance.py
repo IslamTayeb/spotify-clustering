@@ -18,6 +18,8 @@ from analysis.interpretability.feature_importance import (
     get_feature_interpretation,
 )
 from analysis.components.visualization.color_palette import get_cluster_color
+from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export
 
 
 @st.cache_data
@@ -46,7 +48,7 @@ def render_feature_importance(df: pd.DataFrame):
     selected_cluster = st.selectbox(
         "Select Cluster to Analyze",
         options=cluster_ids,
-        format_func=lambda x: f"Cluster {x}",
+        format_func=lambda x: get_cluster_name(x),
     )
 
     with st.spinner("Computing feature importance..."):
@@ -181,7 +183,7 @@ def render_feature_importance(df: pd.DataFrame):
         # Create heatmap
         heatmap_df = pd.DataFrame(
             heatmap_data,
-            columns=["Feature"] + [f"Cluster {cid}" for cid in cluster_ids],
+            columns=["Feature"] + [get_cluster_name(cid) for cid in cluster_ids],
         )
 
         fig = px.imshow(
@@ -195,7 +197,7 @@ def render_feature_importance(df: pd.DataFrame):
         fig.update_xaxes(side="bottom")
         fig.update_layout(height=500 + len(cluster_ids) * 50, margin=dict(t=0, l=0, r=0, b=0))
 
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "feature_importance_heatmap", "Feature Importance Heatmap", "feature")
 
         st.caption(
             "💡 Red = higher than average, Blue = lower than average, White = near average"
@@ -223,7 +225,7 @@ def render_feature_importance(df: pd.DataFrame):
             fig.add_trace(
                 go.Violin(
                     y=cluster_values,
-                    name=f"Cluster {cluster_id}",
+                    name=get_cluster_name(cluster_id),
                     box_visible=True,
                     meanline_visible=True,
                     line_color=cluster_color,
@@ -240,7 +242,7 @@ def render_feature_importance(df: pd.DataFrame):
             margin=dict(t=0, l=0, r=0, b=0),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, f"feature_violin_{selected_feature}", f"Feature Distribution: {selected_feature}", "feature")
 
         # Add statistical summary
         st.subheader("Statistical Summary")
@@ -251,7 +253,7 @@ def render_feature_importance(df: pd.DataFrame):
 
             summary_data.append(
                 {
-                    "Cluster": f"Cluster {cluster_id}",
+                    "Cluster": get_cluster_name(cluster_id),
                     "Mean": cluster_values.mean(),
                     "Median": cluster_values.median(),
                     "Std Dev": cluster_values.std(),

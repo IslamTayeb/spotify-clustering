@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 
 from analysis.components.visualization.color_palette import CLUSTER_COLORS
 from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export
 
 
 def render_audio_extremes(df: pd.DataFrame):
@@ -101,7 +102,7 @@ def render_mood_analysis(df: pd.DataFrame):
             height=500,
             margin=dict(t=0, l=0, r=0, b=0),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "mood_radar", "Library Mood Profile", "mood")
         st.caption("Average Mood Distribution (%)")
 
         # Valence vs Arousal scatter plot
@@ -109,14 +110,22 @@ def render_mood_analysis(df: pd.DataFrame):
             st.subheader("Emotional Quadrants (Valence vs Arousal)")
             st.caption("Songs by Emotional Content")
 
+            # Add cluster names to dataframe for visualization
+            df_with_names = df.copy()
+            df_with_names["cluster_name"] = df_with_names["cluster"].apply(get_cluster_name)
+
             fig = px.scatter(
-                df,
+                df_with_names,
                 x="valence",
                 y="arousal",
-                color="cluster",
+                color="cluster_name",
                 hover_data=["track_name", "artist"],
-                labels={"valence": "Valence (Pleasant)", "arousal": "Arousal (Energy)"},
-                color_continuous_scale="Viridis",
+                labels={
+                    "valence": "Valence (Pleasant)",
+                    "arousal": "Arousal (Energy)",
+                    "cluster_name": "Cluster",
+                },
+                color_discrete_sequence=CLUSTER_COLORS,
             )
             fig.add_hline(y=0.5, line_dash="dash", line_color="gray", opacity=0.5)
             fig.add_vline(x=0.5, line_dash="dash", line_color="gray", opacity=0.5)
@@ -125,7 +134,7 @@ def render_mood_analysis(df: pd.DataFrame):
             fig.add_annotation(x=0.25, y=0.25, text="Sad/Depressed", showarrow=False, opacity=0.5)
             fig.add_annotation(x=0.75, y=0.25, text="Calm/Peaceful", showarrow=False, opacity=0.5)
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "valence_arousal", "Emotional Quadrants", "mood")
 
         # Mood extremes
         col1, col2 = st.columns(2)
@@ -186,7 +195,7 @@ def render_vocal_analysis(df: pd.DataFrame):
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "voice_gender", "Voice Gender Distribution", "vocal")
 
         # Acoustic vs Electronic (using the actual clustering dimension)
         if "electronic_acoustic" in df.columns:
@@ -204,7 +213,7 @@ def render_vocal_analysis(df: pd.DataFrame):
             )
             fig.add_vline(x=0.5, line_dash="dash", line_color="gray", annotation_text="Hybrid")
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "acoustic_electronic", "Acoustic/Electronic Distribution", "vocal")
 
             col1, col2 = st.columns(2)
             with col1:
@@ -236,7 +245,7 @@ def render_vocal_analysis(df: pd.DataFrame):
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "production_style_pie", "Production Style Distribution", "vocal")
 
 
 def render_language_analysis(df: pd.DataFrame):
@@ -264,7 +273,7 @@ def render_language_analysis(df: pd.DataFrame):
             color_discrete_sequence=get_pie_colors(lang_counts_grouped.index, CLUSTER_COLORS),
         )
         fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "language_pie", "Language Distribution", "language")
 
         # Statistics table
         st.subheader("Language Statistics")
@@ -325,4 +334,4 @@ def render_language_analysis(df: pd.DataFrame):
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "language_instrumentalness", "Language vs Instrumentalness", "language")

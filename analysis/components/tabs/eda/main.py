@@ -29,6 +29,7 @@ from .mood_vocal import (
 )
 from .temporal import render_temporal_analysis
 from .cluster_viz import render_3d_cluster_visualization, render_data_preview_export
+from analysis.components.export.chart_export import render_export_section, get_selected_chart_count
 
 
 def render_eda_explorer(df: pd.DataFrame):
@@ -62,3 +63,7 @@ def render_eda_explorer(df: pd.DataFrame):
 
     # Data Export
     render_data_preview_export(df)
+
+    # Chart Export Section (for all selected charts across all sections)
+    if get_selected_chart_count() > 0:
+        render_export_section("export/visualizations", "eda")

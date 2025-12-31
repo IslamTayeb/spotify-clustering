@@ -5,6 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from analysis.components.visualization.color_palette import CLUSTER_COLORS
+from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export
 
 
 def _format_embedding_table(row, emb_cols):
@@ -96,7 +98,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                             text = (
                                 f"<b>{row['track_name']}</b><br>"
                                 f"Artist: {row['artist']}<br>"
-                                f"Cluster: {row['cluster']}<br>"
+                                f"Cluster: {get_cluster_name(row['cluster'])}<br>"
                                 f"<b>Sub-cluster: {sc_id}</b><br>"
                             )
                             if "top_genre" in row:
@@ -123,7 +125,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                         text = (
                             f"<b>{row['track_name']}</b><br>"
                             f"Artist: {row['artist']}<br>"
-                            f"Cluster: {row['cluster']}<br>"
+                            f"Cluster: {get_cluster_name(row['cluster'])}<br>"
                         )
                         if "top_genre" in row:
                             text += f"Genre: {row['top_genre']}<br>"
@@ -134,7 +136,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                         y=cluster_df["umap_y"],
                         z=cluster_df["umap_z"],
                         mode="markers",
-                        name=f"Cluster {cluster_id} ({len(cluster_df)})",
+                        name=f"{get_cluster_name(cluster_id)} ({len(cluster_df)})",
                         marker=dict(size=3, color="rgba(128,128,128,0.3)", opacity=0.3),
                         text=hover_texts,
                         hovertemplate="%{text}<extra></extra>",
@@ -151,7 +153,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                     text = (
                         f"<b>{row['track_name']}</b><br>"
                         f"Artist: {row['artist']}<br>"
-                        f"Cluster: {row['cluster']}<br>"
+                        f"Cluster: {get_cluster_name(row['cluster'])}<br>"
                     )
                     if "top_genre" in row:
                         text += f"Genre: {row['top_genre']}<br>"
@@ -165,7 +167,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
                     y=cluster_df["umap_y"],
                     z=cluster_df["umap_z"],
                     mode="markers",
-                    name=f"Cluster {cluster_id} ({len(cluster_df)})",
+                    name=f"{get_cluster_name(cluster_id)} ({len(cluster_df)})",
                     marker=dict(size=4, color=colors[i % len(colors)], opacity=0.8),
                     text=hover_texts,
                     hovertemplate="%{text}<extra></extra>",
@@ -183,7 +185,7 @@ def render_3d_cluster_visualization(df: pd.DataFrame):
             margin=dict(t=0, l=0, r=0, b=0),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "cluster_3d_map", "3D Cluster Map", "cluster")
 
 
 def render_data_preview_export(df: pd.DataFrame):

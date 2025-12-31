@@ -20,6 +20,8 @@ from analysis.components.visualization.color_palette import (
     get_cluster_color,
     CLUSTER_COLORS,
 )
+from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export
 
 
 def render_cluster_comparison(df: pd.DataFrame):
@@ -36,7 +38,7 @@ def render_cluster_comparison(df: pd.DataFrame):
         "Select Clusters to Compare (select 2 or more)",
         options=cluster_ids,
         default=cluster_ids[: min(2, len(cluster_ids))],
-        format_func=lambda x: f"Cluster {x}",
+        format_func=lambda x: get_cluster_name(x),
         help="Select 2 or more clusters to compare. The radar plot will show all selected clusters.",
     )
 
@@ -58,7 +60,7 @@ def render_cluster_comparison(df: pd.DataFrame):
     for cluster_id in selected_clusters:
         cluster_df = df[df["cluster"] == cluster_id]
         row = {
-            "Cluster": f"Cluster {cluster_id}",
+            "Cluster": get_cluster_name(cluster_id),
             "Size": len(cluster_df),
             "Percentage": f"{len(cluster_df) / len(df) * 100:.1f}%",
         }
@@ -120,8 +122,8 @@ def render_cluster_comparison(df: pd.DataFrame):
                         height=400,
                         column_config={
                             "feature": "Feature",
-                            "cluster_a_mean": f"Cluster {selected_clusters[0]} Mean",
-                            "cluster_b_mean": f"Cluster {selected_clusters[1]} Mean",
+                            "cluster_a_mean": f"{get_cluster_name(selected_clusters[0])} Mean",
+                            "cluster_b_mean": f"{get_cluster_name(selected_clusters[1])} Mean",
                             "difference": "Difference",
                             "effect_size": st.column_config.NumberColumn(
                                 "Effect Size",
@@ -170,8 +172,8 @@ def render_cluster_comparison(df: pd.DataFrame):
 
                         comparison_summaries.append(
                             {
-                                "Cluster A": f"Cluster {cluster_a}",
-                                "Cluster B": f"Cluster {cluster_b}",
+                                "Cluster A": get_cluster_name(cluster_a),
+                                "Cluster B": get_cluster_name(cluster_b),
                                 "Significant Differences": n_significant,
                                 "Avg Effect Size": f"{avg_effect_size:.3f}",
                                 "Most Different Feature": comparison_df.iloc[0][
@@ -245,7 +247,7 @@ def render_cluster_comparison(df: pd.DataFrame):
                     r=cluster_means.values,
                     theta=radar_features,
                     fill="toself",
-                    name=f"Cluster {cluster_id}",
+                    name=get_cluster_name(cluster_id),
                     line_color=colors[i % len(colors)],
                     opacity=0.6,
                 )
@@ -258,7 +260,7 @@ def render_cluster_comparison(df: pd.DataFrame):
             margin=dict(t=0, l=0, r=0, b=0),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "cluster_comparison_radar", "Multi-Cluster Comparison", "comparison")
         st.caption(
             "💡 All features normalized to 0-1 scale for fair comparison. Each cluster shown as a different color."
         )
@@ -319,7 +321,7 @@ def render_cluster_comparison(df: pd.DataFrame):
 
             overlap_data.append(
                 {
-                    "Cluster": f"Cluster {cluster_id}",
+                    "Cluster": get_cluster_name(cluster_id),
                     "Total Genres": len(genre_sets[cluster_id]),
                     "Unique Genres": len(unique_genres),
                     "Shared with All": len(shared_genres),

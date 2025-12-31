@@ -1,7 +1,7 @@
 ================================================================================
 SPOTIFY CLUSTERING DATA EXPORT - LLM BUNDLE
 ================================================================================
-Generated: 2025-12-30T04:07:00.675595
+Generated: 2025-12-31T20:43:24.367646
 Total files: 24
 
 This bundle contains Tier 1 (essential) + Tier 2 (deep analysis) files.
@@ -12,7 +12,7 @@ Combine with your narrative notes for complete LLM context.
 FILE: metadata.json
 ============================================================
 {
-  "export_timestamp": "2025-12-30T04:00:44.230179",
+  "export_timestamp": "2025-12-30T04:07:00.676441",
   "source_file": "analysis/outputs/analysis_data.pkl",
   "clustering_mode": "combined",
   "audio_backend": "interpretable",
@@ -35,7 +35,7 @@ FILE: metadata.json
     "lyric_dims": "19-28 (valence, arousal, moods, explicit, narrative, vocab, repetition)",
     "meta_dims": "29-32 (theme, language, popularity, release_year)"
   },
-  "export_duration_seconds": 3.1
+  "export_duration_seconds": 2.49
 }
 
 ============================================================
@@ -129,7 +129,7 @@ cluster,rank,feature,cohens_d,cluster_mean,global_mean,direction
 3,3,emb_instrumentalness,2.0212,0.6539,0.1943,higher
 3,4,emb_lyric_vocabulary,-1.8882,0.0687,0.367,lower
 3,5,approachability_score,-1.8296,0.2613,0.5696,lower
-4,1,emb_electronic_acoustic,1.3807,0.472,0.1739,higher
+4,1,emb_acoustic_electronic,1.3807,0.472,0.1739,higher
 4,2,mood_sad,1.3123,0.5082,0.2453,higher
 4,3,emb_mood_sad,1.3123,0.5082,0.2453,higher
 4,4,mood_party,-1.2174,0.274,0.6054,lower
@@ -389,56 +389,56 @@ Electronic---Big Beat,1,0.08
 FILE: data/cluster_comparison/sample_songs_per_cluster.csv
 ============================================================
 cluster,track_name,artist
-0,Wahda W Nos,"Mared, Big Moe"
-0,She Bad,Khantrast
-0,Whip It,BigXthaPlug
+0,Hit Bout It,"Lil Yachty, Kodak Black"
+0,Landed In Brooklyn,Khantrast
 0,Jameel's Space Ride,Thundercat
-0,Know Better (feat. Rv),"Headie One, Rv"
-0,Big Brother,Kanye West
-0,DVP,PUP
-0,Reminisce,Nas
-0,Loose Change (feat. Earl Sweatshirt),"The Alchemist, Earl Sweatshirt"
-0,TURN IT UP,Cochise
-1,TIL FURTHER NOTICE (feat. James Blake & 21 Savage),"Travis Scott, James Blake, 21 Savage"
-1,Galaxy,JID
-1,Amrikkka,"Shabjdeed, Al Nather"
-1,"Am I Dreaming (Metro Boomin & A$AP Rocky, Roisee)","Metro Boomin, A$AP Rocky, Roisee"
-1,wadda3,"Daboor, Al Nather"
-1,United In Grief,Kendrick Lamar
-1,WHAT KIND OF RAPPIN' IS THIS?,JPEGMAFIA
-1,BA$$,Che
-1,Dedicated to Tar Feather,"McKinley Dixon, Anjimile"
-1,Tick Tock,Joji
+0,POP OUT,Playboi Carti
+0,هزيم الرعد,طارق العربي طرقان
+0,Kerosene,"Fimiguerrero, Len"
+0,Coffin,Lil Yachty
+0,PROBLEMATIC,"Kanye West, Ty Dolla $ign"
+0,Grab Yo Skates,BabyTron
+0,Everything I Am,"Kanye West, DJ Premier"
+1,FEEL SOMETHING DIFFERENT,"Bea Miller, Aminé"
+1,Émeraude (feat. aupinard),"FEEL, aupinard"
+1,私以外私じゃないの,Gesu No Kiwami Otome
+1,お勉強しといてよ,ZUTOMAYO
+1,Dumbest Girl Alive,100 gecs
+1,Tears Dry On Their Own,Amy Winehouse
+1,堕天 - Daten,Creepy Nuts
+1,grindstone,MAVI
+1,Not Allowed,TV Girl
+1,Scars,Kevin Gates
+2,Wonderwing,Sakuzyo
+2,House Is Not a Home,the Blue Devils
 2,Chill SQ: FINAL FANTASY IV ～Theme Of Love,Uyama Hiroto
-2,Osono's Request,Joe Hisaishi
-2,Mstny,El Waili
-2,Menuet,Toshifumi Hinata
-2,Vision Eyes (feat. Golden Boy),"Uyama Hiroto, Golden Boy"
-2,SPYRO SKANK,Zeñel
-2,Me and Your Mama,Childish Gambino
-2,a bird's last look - slowed,skywave
-2,Chick's Pain,Mathieu Fiset
-2,Largo,"Portraits in Jazz, Nikolaj Hess, Claus Waidtløw"
-3,ΩΩPARTS,Camellia
-3,Ultramarine,Seiryu
-3,"Cafe SQ: Romancing SaGa 2 ""The Ultimate Confrontation""",sasakure.UK
-3,"L’Étoile d’Afrique, Pt. 2",VDYCD
-3,Critical Crystal - Bd Mix,Seiryu
+2,Pon Pón,Khruangbin
+2,乙女の祈り,Chihiro Yamanaka
+2,My Time,Omori
+2,81Summer,Uyama Hiroto
+2,The Breaking of the Fellowship [In Dreams],Echoes of Old Stories
+2,The Ecstasy of Gold - L'Estasi Dell'oro,"Ennio Morricone, Edda Dell'Orso"
+2,First Nassau Band Rehearsal / Second Nassau Band Rehearsal / Studio Band Eavesdrop / Studio Band Rehearsal After Breakup,Tim Simonec
+3,Blue Dragon,Seiryu
 3,x-tudo - slowed,"slxughter, Mc Gw"
-3,IDK HOW 2 FIGHT,BaBa
-3,Unmask Me - Ashley Beedle Vocal Mix,"MAMA, Ashley Beedle"
-3,Anomaly,Camellia
-3,Step Back!,"1nonly, SXMPRA"
-4,Talk Of The Town,Jack Harlow
-4,running out of time,Lil Yachty
-4,I Was The Life Of The Party,The Dramatics
-4,WE DID IT KID,jsa
-4,Collage,"Shabjdeed, Al Nather"
-4,Mona Lisa,Dominic Fike
-4,geum ui hwan hyang,JANNABI
-4,Genesis,Grimes
-4,"Tenha Fé, Pois Amanhã um Lindo Dia Vai Nascer",Os Originais Do Samba
+3,I LOVE HARDBASS,"GSPD, XS Project"
+3,ΩΩPARTS,Camellia
+3,Papi Julio,"VDYCD, фрози"
+3,NUCLEAR-STAR,Camellia
+3,Atropos,sasakure.UK
+3,airplane mode - deep,Limbo
+3,Paradigm Shift - Extended Mix,Morimori Atsushi
+3,Aphasia,Team Grimoire
+4,After Ascension,Srav3R
+4,DAISIES,Justin Bieber
+4,land of night,JANNABI
 4,Everybody Wants To Rule The World,Tears For Fears
+4,Black Mambo,Glass Animals
+4,Chamber of Reflection,Your Anxiety Buddy
+4,ルージュの伝言,Yumi Arai
+4,Genesis,Grimes
+4,No Tears Left To Cry,Fujii Kaze
+4,Morning Sex,Ralph Castelli
 
 
 # MISSING: data/feature_importance/feature_stats.csv
@@ -677,12 +677,12 @@ FILE: data/subclusters/parent_0_2025-12-28_01-40-39_k-means/top_defining_feature
 subcluster,rank,feature,cohens_d,subcluster_mean,parent_mean,direction
 0,1,mood_sad,-0.4993,0.1032,0.1492,lower
 0,2,emb_mood_sad,-0.4993,0.1032,0.1492,lower
-0,3,emb_electronic_acoustic,-0.4675,0.0413,0.0759,lower
+0,3,emb_acoustic_electronic,-0.4675,0.0413,0.0759,lower
 0,4,mood_relaxed,-0.4053,0.3295,0.4006,lower
 0,5,emb_mood_relaxed,-0.4053,0.3295,0.4006,lower
 1,1,mood_sad,0.9029,0.2323,0.1492,higher
 1,2,emb_mood_sad,0.9029,0.2323,0.1492,higher
-1,3,emb_electronic_acoustic,0.8455,0.1383,0.0759,higher
+1,3,emb_acoustic_electronic,0.8455,0.1383,0.0759,higher
 1,4,mood_relaxed,0.733,0.5293,0.4006,higher
 1,5,emb_mood_relaxed,0.733,0.5293,0.4006,higher
 
@@ -703,12 +703,12 @@ subcluster,rank,feature,cohens_d,subcluster_mean,parent_mean,direction
 0,2,emb_mood_sad,-0.6073,0.3689,0.5082,lower
 0,3,danceability,-0.5616,0.2673,0.4516,lower
 0,4,emb_danceability,-0.5616,0.2673,0.4516,lower
-0,5,emb_electronic_acoustic,-0.5447,0.3145,0.472,lower
+0,5,emb_acoustic_electronic,-0.5447,0.3145,0.472,lower
 1,1,mood_sad,0.9984,0.7372,0.5082,higher
 1,2,emb_mood_sad,0.9984,0.7372,0.5082,higher
 1,3,danceability,0.9232,0.7546,0.4516,higher
 1,4,emb_danceability,0.9232,0.7546,0.4516,higher
-1,5,emb_electronic_acoustic,0.8956,0.731,0.472,higher
+1,5,emb_acoustic_electronic,0.8956,0.731,0.472,higher
 
 
 ============================================================

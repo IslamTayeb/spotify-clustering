@@ -1,14 +1,15 @@
 """Centralized Color Palette - Single source of truth for all dashboard colors.
 
 This module provides consistent color definitions for:
-- Clusters (seaborn "muted" palette)
+- Clusters (12 primary colors + 4 extended = 16 total)
+- Genre families (12 colors)
 - Moods (warm tones, distinct from clusters)
 - States (semantic colors for success/warning/error/info)
 - Special colors (outliers, brand)
 
 Color Consistency Guarantee:
-- Cluster 0 is ALWAYS #4878CF (muted blue) across ALL visualizations
-- Mood "happy" is ALWAYS #FFD700 (gold) across ALL visualizations
+- Cluster 0 is ALWAYS #6BA3E8 (bright blue) across ALL visualizations
+- All categories (genres, subclusters, etc.) get distinct colors up to 12 items
 - No conflicts between cluster and mood colors
 """
 
@@ -18,8 +19,9 @@ from typing import List
 # CLUSTER COLORS - Seaborn "Muted" Palette
 # ============================================================================
 
-# Primary 6 colors - Brighter, more vibrant palette
+# Primary 12 colors - Brighter, more vibrant palette
 # Higher luminance for better visibility on dark backgrounds
+# Expanded to 12 colors to handle genres, subclusters, and other multi-category visualizations
 CLUSTER_COLORS = [
     "#6BA3E8",  # Cluster 0: Bright blue (vibrant, clear)
     "#8CE08C",  # Cluster 1: Bright green (fresh, lively)
@@ -27,14 +29,20 @@ CLUSTER_COLORS = [
     "#D4A5E5",  # Cluster 3: Light purple (soft, distinct)
     "#E8D48A",  # Cluster 4: Light gold (warm, sunny)
     "#8DD6EE",  # Cluster 5: Light cyan (bright, calm)
+    "#F5A86B",  # Cluster 6: Bright orange (warm, energetic)
+    "#A8E6CF",  # Cluster 7: Mint green (fresh, calm)
+    "#E890B8",  # Cluster 8: Bright rose/pink (vibrant)
+    "#B8C4E8",  # Cluster 9: Periwinkle/lavender blue (soft)
+    "#C8E86B",  # Cluster 10: Lime green (bright, fresh)
+    "#E8B8A8",  # Cluster 11: Peach/salmon (warm, soft)
 ]
 
-# Extended palette for >6 clusters (still bright but distinct)
+# Extended palette for >12 clusters (adds 4 more distinct colors)
 EXTENDED_CLUSTER_COLORS = CLUSTER_COLORS + [
-    "#5A8ED0",  # Cluster 6: Medium blue
-    "#6BC96B",  # Cluster 7: Medium green
-    "#E06666",  # Cluster 8: Medium coral
-    "#C490D8",  # Cluster 9: Medium purple
+    "#7B68EE",  # Cluster 12: Medium slate blue
+    "#20B2AA",  # Cluster 13: Light sea green
+    "#DDA0DD",  # Cluster 14: Plum
+    "#F0E68C",  # Cluster 15: Khaki/pale gold
 ]
 
 # ============================================================================
@@ -62,6 +70,10 @@ GENRE_FAMILY_COLORS = [
     "#90C890",  # Bright sage (Jazz/Blues)
     "#E8C078",  # Bright amber (Latin)
     "#A8B8C8",  # Bright silver/gray (World/Folk)
+    "#D8A8A8",  # Dusty rose (Classical)
+    "#A8D8C8",  # Pale teal (Metal)
+    "#D8C8A8",  # Cream/tan (Country)
+    "#C8A8D8",  # Light orchid (Reggae)
 ]
 
 # ============================================================================
@@ -94,13 +106,13 @@ def get_cluster_color(cluster_idx: int) -> str:
         cluster_idx: Cluster index (0-based). Use -1 for outliers.
 
     Returns:
-        Hex color string (e.g., "#4878CF")
+        Hex color string (e.g., "#6BA3E8")
 
     Examples:
         >>> get_cluster_color(0)
-        '#4878CF'  # Always muted blue
+        '#6BA3E8'  # Bright blue
         >>> get_cluster_color(-1)
-        '#CCCCCC'  # Always light gray (outliers)
+        '#CCCCCC'  # Light gray (outliers)
     """
     if cluster_idx == -1:
         return OUTLIER_COLOR
@@ -123,7 +135,7 @@ def get_all_cluster_colors(n_clusters: int) -> List[str]:
 
     Examples:
         >>> get_all_cluster_colors(3)
-        ['#4878CF', '#6ACC65', '#D65F5F']
+        ['#6BA3E8', '#8CE08C', '#F08080']
     """
     return [get_cluster_color(i) for i in range(n_clusters)]
 

@@ -9,6 +9,8 @@ import plotly.graph_objects as go
 from analysis.components.visualization.color_palette import (
     CLUSTER_COLORS, MOOD_COLORS, GENRE_FAMILY_COLORS, SPOTIFY_GREEN
 )
+from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export, render_export_section
 from .utils import group_small_slices, get_pie_colors
 
 # Genre families for temporal analysis
@@ -66,7 +68,7 @@ def render_temporal_analysis(df: pd.DataFrame):
     """Render temporal analysis section with 11 visualizations."""
     with st.expander("⏰ Temporal Analysis", expanded=False):
         st.subheader("Temporal Analysis")
-        st.caption("Explore how your music taste evolved over time")
+        st.caption("Explore how your music taste evolved over time | Check boxes on right to select charts for export")
 
         temporal_cols = ["added_at", "release_date"]
         has_temporal = all(col in df.columns for col in temporal_cols)
@@ -146,6 +148,9 @@ def render_temporal_analysis(df: pd.DataFrame):
         # 11. Cluster Timeline Heatmap
         _render_cluster_heatmap(df_temp)
 
+        # Export section
+        render_export_section("export/visualizations", "temporal")
+
         st.markdown("---")
         st.success("✨ Temporal analysis complete!")
 
@@ -195,7 +200,9 @@ def _render_library_growth(df_temp, songs_before_cutoff):
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
     fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "library_growth", "Library Growth Timeline", "temporal")
+
     st.caption(
         f"This chart shows the {len(df_temp)} songs added after June 4, 2024. "
         f"The {songs_before_cutoff} songs added before that date are not shown."
@@ -217,7 +224,8 @@ def _render_monthly_additions(df_temp):
         color_discrete_sequence=[SPOTIFY_GREEN],
     )
     fig.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "monthly_additions", "Monthly Additions", "temporal")
 
 
 def _render_song_age_distribution(df_temp):
@@ -240,7 +248,8 @@ def _render_song_age_distribution(df_temp):
 
     fig = px.histogram(df_age, x="age_at_add_years", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
     fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "song_age", "Song Age Distribution", "temporal")
 
     category_counts = df_age["age_category"].value_counts()
     st.write("**Age Categories:**")
@@ -265,29 +274,29 @@ def _render_release_year_distribution(df_temp):
 
     fig = px.histogram(df_year, x="release_year", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
     fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "release_year", "Release Year Distribution", "temporal")
 
     df_year["decade"] = (df_year["release_year"] // 10) * 10
     decade_counts = df_year["decade"].value_counts().sort_index()
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.write("**By Decade:**")
-        for decade, count in decade_counts.items():
-            pct = count / len(df_year) * 100
-            st.write(f"- {int(decade)}s: {count} songs ({pct:.1f}%)")
+    st.write("**By Decade:**")
+    for decade, count in decade_counts.items():
+        pct = count / len(df_year) * 100
+        st.write(f"- {int(decade)}s: {count} songs ({pct:.1f}%)")
 
-    with col2:
-        decade_counts_grouped, _ = group_small_slices(decade_counts)
-        decade_names = [f"{int(d)}s" if isinstance(d, (int, float)) else d for d in decade_counts_grouped.index]
-        st.caption("Decade Distribution")
-        fig = px.pie(
-            values=decade_counts_grouped.values,
-            names=decade_names,
-            color_discrete_sequence=get_pie_colors(decade_names, CLUSTER_COLORS),
-        )
-        fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+    decade_counts_grouped, _ = group_small_slices(decade_counts)
+    decade_names = [f"{int(d)}s" if isinstance(d, (int, float)) else d for d in decade_counts_grouped.index]
+    st.caption("Decade Distribution")
+    fig_pie = px.pie(
+        values=decade_counts_grouped.values,
+        names=decade_names,
+        color_discrete_sequence=get_pie_colors(decade_names, CLUSTER_COLORS),
+        hole=0.4,
+    )
+    fig_pie.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
+
+    render_chart_with_export(fig_pie, "release_decade_pie", "Release Decade Pie Chart", "temporal")
 
 
 def _render_cluster_evolution(df_temp):
@@ -312,6 +321,9 @@ def _render_cluster_evolution(df_temp):
         period_cluster = df_sorted_cluster.groupby(["time_period", "cluster"]).size().unstack(fill_value=0)
         period_cluster_pct = period_cluster.div(period_cluster.sum(axis=1), axis=0) * 100
 
+        # Rename columns to use cluster names
+        period_cluster_pct.columns = [get_cluster_name(c) for c in period_cluster_pct.columns]
+
         st.caption("Cluster Distribution Across Time Periods")
         fig = px.bar(
             period_cluster_pct,
@@ -319,7 +331,8 @@ def _render_cluster_evolution(df_temp):
             color_discrete_sequence=CLUSTER_COLORS,
         )
         fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+
+        render_chart_with_export(fig, "cluster_evolution", "Cluster Evolution", "temporal")
 
         st.write("**Time Period Breakdown:**")
         for period in ["Period 1", "Period 2", "Period 3", "Period 4"]:
@@ -382,6 +395,34 @@ def _render_temporal_extremes(df_temp):
     else:
         st.info("Age data not available")
 
+    # Top 5 oldest and newest songs tables
+    st.markdown("---")
+    st.write("**Top 5 Oldest & Newest Songs by Release Year:**")
+    if df_temp["release_year"].notna().sum() > 0:
+        valid_years_mask = df_temp["release_year"].between(1900, 2030)
+        df_valid_years = df_temp[valid_years_mask]
+
+        if len(df_valid_years) >= 5:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.caption("Top 5 Oldest")
+                oldest_5 = df_valid_years.nsmallest(5, "release_year")[["track_name", "artist", "release_year"]].copy()
+                oldest_5["release_year"] = oldest_5["release_year"].astype(int)
+                oldest_5.columns = ["Track", "Artist", "Year"]
+                st.dataframe(oldest_5, use_container_width=True, hide_index=True)
+
+            with col2:
+                st.caption("Top 5 Newest")
+                newest_5 = df_valid_years.nlargest(5, "release_year")[["track_name", "artist", "release_year"]].copy()
+                newest_5["release_year"] = newest_5["release_year"].astype(int)
+                newest_5.columns = ["Track", "Artist", "Year"]
+                st.dataframe(newest_5, use_container_width=True, hide_index=True)
+        else:
+            st.info("Need at least 5 songs with valid release years")
+    else:
+        st.info("Release year data not available")
+
 
 def _render_cluster_trends(df_temp):
     """Render cluster trends over time."""
@@ -405,7 +446,8 @@ def _render_cluster_trends(df_temp):
     rolling_melted = rolling_clusters.melt(
         id_vars=["added_at"], value_vars=cluster_cols, var_name="Cluster", value_name="Percentage"
     )
-    rolling_melted["Cluster"] = rolling_melted["Cluster"].str.replace("cluster_", "Cluster ")
+    # Map cluster IDs to human-readable names
+    rolling_melted["Cluster"] = rolling_melted["Cluster"].str.replace("cluster_", "").astype(int).apply(get_cluster_name)
 
     st.caption("Rolling Cluster Distribution (30-song window)")
     fig = px.line(
@@ -428,7 +470,8 @@ def _render_cluster_trends(df_temp):
                 ))
 
     fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "cluster_trends", "Cluster Trends", "temporal")
 
     caption = "Shows how the proportion of each cluster changes as you add songs over time"
     if show_cluster_trendlines:
@@ -478,7 +521,9 @@ def _render_mood_trends(df_temp):
                 ))
 
     fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, "mood_trends", "Mood Trends", "temporal")
+
     if show_mood_trendlines:
         st.caption("Dashed lines show overall trend direction for each mood")
 
@@ -550,7 +595,8 @@ def _render_genre_family_trends(df_temp):
         caption = "What proportion of songs added each quarter belong to each genre family"
         if show_genre_trendlines:
             caption += " (dashed = trendline)"
-        st.caption(caption)
+        chart_id = "genre_trends_proportion"
+        chart_title = "Genre Trends (Quarterly Proportion)"
 
     elif genre_view == "Delta (Rate of Change)":
         st.caption("Genre Family Delta (Quarter-over-Quarter Change)")
@@ -566,7 +612,8 @@ def _render_genre_family_trends(df_temp):
         caption = "Positive = growing interest, Negative = declining interest"
         if show_genre_trendlines:
             caption += " (dotted = trendline)"
-        st.caption(caption)
+        chart_id = "genre_trends_delta"
+        chart_title = "Genre Trends (Delta)"
 
     else:  # Cumulative Growth
         st.caption("Cumulative Genre Family Growth")
@@ -580,10 +627,14 @@ def _render_genre_family_trends(df_temp):
         caption = "How your collection of each genre family has grown over time"
         if show_genre_trendlines:
             caption += " (dashed = linear growth rate)"
-        st.caption(caption)
+        chart_id = "genre_trends_cumulative"
+        chart_title = "Genre Trends (Cumulative)"
 
     fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+
+    render_chart_with_export(fig, chart_id, chart_title, "temporal")
+
+    st.caption(caption)
 
     # Summary statistics
     st.markdown("**Genre Family Summary:**")
@@ -631,6 +682,9 @@ def _render_cluster_heatmap(df_temp):
     try:
         cluster_month_matrix = df_temp.groupby(["month", "cluster"]).size().unstack(fill_value=0)
 
+        # Rename columns to use cluster names
+        cluster_month_matrix.columns = [get_cluster_name(c) for c in cluster_month_matrix.columns]
+
         if len(cluster_month_matrix) > 1 and len(cluster_month_matrix.columns) > 1:
             st.caption("Cluster Activity Heatmap")
             fig = px.imshow(
@@ -641,8 +695,11 @@ def _render_cluster_heatmap(df_temp):
             )
             fig.update_xaxes(side="bottom")
             fig.update_layout(height=500 + len(cluster_month_matrix.columns) * 20, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+
+            render_chart_with_export(fig, "cluster_heatmap", "Cluster Heatmap", "temporal")
         else:
             st.info("Not enough time periods")
     except Exception as e:
         st.warning(f"Could not generate heatmap: {e}")
+
+

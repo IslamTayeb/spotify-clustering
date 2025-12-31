@@ -6,6 +6,7 @@ import plotly.express as px
 
 from analysis.components.visualization.color_palette import CLUSTER_COLORS, SPOTIFY_GREEN
 from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export
 from .utils import group_small_slices, get_pie_colors
 
 
@@ -32,30 +33,26 @@ def render_genre_analysis(df: pd.DataFrame):
         parent_counts = df_genre["parent_genre"].value_counts()
         parent_counts_grouped, _ = group_small_slices(parent_counts, threshold_pct=2.0)
 
-        col1, col2 = st.columns([1, 1])
+        st.caption("Genre Family Share")
+        fig_pie = px.pie(
+            values=parent_counts_grouped.values,
+            names=parent_counts_grouped.index,
+            hole=0.3,
+            color_discrete_sequence=get_pie_colors(parent_counts_grouped.index, CLUSTER_COLORS),
+        )
+        fig_pie.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
+        render_chart_with_export(fig_pie, "genre_family_pie", "Genre Family Distribution", "genre")
 
-        with col1:
-            st.caption("Genre Family Share")
-            fig_pie = px.pie(
-                values=parent_counts_grouped.values,
-                names=parent_counts_grouped.index,
-                hole=0.3,
-                color_discrete_sequence=get_pie_colors(parent_counts_grouped.index, CLUSTER_COLORS),
-            )
-            fig_pie.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        with col2:
-            st.caption("Genre Family Counts")
-            fig_bar = px.bar(
-                x=parent_counts.values,
-                y=parent_counts.index,
-                orientation="h",
-                labels={"x": "Number of Songs", "y": "Genre Family"},
-                color_discrete_sequence=[SPOTIFY_GREEN],
-            )
-            fig_bar.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig_bar, use_container_width=True)
+        st.caption("Genre Family Counts")
+        fig_bar = px.bar(
+            x=parent_counts.values,
+            y=parent_counts.index,
+            orientation="h",
+            labels={"x": "Number of Songs", "y": "Genre Family"},
+            color_discrete_sequence=[SPOTIFY_GREEN],
+        )
+        fig_bar.update_layout(height=500, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
+        render_chart_with_export(fig_bar, "genre_family_bar", "Genre Family Counts", "genre")
 
         # Detailed subgenre breakdown
         st.markdown("---")
@@ -72,46 +69,82 @@ def render_genre_analysis(df: pd.DataFrame):
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
         fig.update_layout(height=700, showlegend=False, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "top_subgenres", "Top 20 Subgenres", "genre")
 
         # Genre distribution across clusters - grouped by parent genre
         st.subheader("Genre Distribution Across Clusters")
-        st.caption("All genres grouped by parent category (e.g., all Hip Hop subgenres combined)")
+        st.caption("Parent genres grouped with small genres combined into 'Other'")
 
         # Create dataframe with parent genres for clustering analysis
         df_cluster_genre = df.copy()
         df_cluster_genre["parent_genre"] = df_cluster_genre["top_genre"].apply(extract_parent_genre)
 
-        # Get all unique parent genres
-        all_parent_genres = sorted(df_cluster_genre["parent_genre"].unique())
+        # Get parent genre counts to determine which to group as "Other"
+        overall_parent_counts = df_cluster_genre["parent_genre"].value_counts()
+
+        # Group small genres into "Other" (using same threshold as pie chart - 2%)
+        parent_counts_grouped, _ = group_small_slices(overall_parent_counts, threshold_pct=2.0)
+
+        # Create mapping for parent genres
+        # Genres that appear in the grouped counts keep their name, others become "Other"
+        genre_mapping = {}
+        for genre in df_cluster_genre["parent_genre"].unique():
+            if genre in parent_counts_grouped.index and genre != "Other":
+                genre_mapping[genre] = genre
+            else:
+                genre_mapping[genre] = "Other"
+
+        # Apply mapping
+        df_cluster_genre["display_genre"] = df_cluster_genre["parent_genre"].map(genre_mapping)
 
         genre_cluster_data = []
         for cluster_id in sorted(df_cluster_genre["cluster"].unique()):
             cluster_df = df_cluster_genre[df_cluster_genre["cluster"] == cluster_id]
             cluster_name = get_cluster_name(cluster_id)  # Use cluster names instead of indices
 
-            for parent_genre in all_parent_genres:
-                count = (cluster_df["parent_genre"] == parent_genre).sum()
-                if count > 0:  # Only include genres that have songs in this cluster
-                    genre_cluster_data.append({
-                        "Cluster": cluster_name,
-                        "Genre Family": parent_genre,
-                        "Count": count,
-                    })
+            # Count by display genre (with "Other" grouping)
+            genre_counts = cluster_df["display_genre"].value_counts()
+
+            for genre, count in genre_counts.items():
+                genre_cluster_data.append({
+                    "Cluster": cluster_name,
+                    "Genre Family": genre,
+                    "Count": count,
+                })
 
         genre_cluster_df = pd.DataFrame(genre_cluster_data)
 
-        # Create stacked bar chart
+        # Get the overall order of genres by total count
+        genre_totals = genre_cluster_df.groupby("Genre Family")["Count"].sum().sort_values(ascending=False)
+
+        # Ensure "Other" is always last
+        genre_order = list(genre_totals.index)
+        if "Other" in genre_order:
+            genre_order.remove("Other")
+            genre_order.append("Other")
+
+        # Create color mapping for genres
+        genre_color_map = {}
+        color_idx = 0
+        for genre in genre_order:
+            if genre == "Other":
+                genre_color_map[genre] = "#808080"  # Gray for "Other"
+            else:
+                genre_color_map[genre] = CLUSTER_COLORS[color_idx % len(CLUSTER_COLORS)]
+                color_idx += 1
+
+        # Create stacked bar chart with ordered genres
         fig = px.bar(
             genre_cluster_df,
             x="Cluster",
             y="Count",
             color="Genre Family",
             barmode="stack",
-            color_discrete_sequence=CLUSTER_COLORS,
+            category_orders={"Genre Family": genre_order},
+            color_discrete_map=genre_color_map,
         )
         fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "genre_by_cluster", "Genre Distribution by Cluster", "genre")
 
         # Show detailed breakdown in expandable section
         with st.expander("View Detailed Genre Distribution"):
@@ -126,6 +159,11 @@ def render_genre_analysis(df: pd.DataFrame):
             # Calculate totals
             pivot_df["Total"] = pivot_df.sum(axis=1)
             pivot_df = pivot_df.sort_values("Total", ascending=False)
+
+            # Move "Other" to the end if it exists
+            if "Other" in pivot_df.index:
+                other_row = pivot_df.loc[["Other"]]
+                pivot_df = pd.concat([pivot_df.drop("Other"), other_row])
 
             # Format as integers
             st.dataframe(
@@ -152,7 +190,7 @@ def render_genre_fusion_analysis(df: pd.DataFrame):
             color_discrete_sequence=[SPOTIFY_GREEN],
         )
         fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "genre_fusion_hist", "Genre Fusion Distribution", "genre")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -189,7 +227,7 @@ def render_genre_fusion_analysis(df: pd.DataFrame):
                 color_discrete_sequence=CLUSTER_COLORS,
             )
             fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            render_chart_with_export(fig, "genre_fusion_scatter", "Genre Fusion vs Production", "genre")
 
             correlation = df["genre_fusion"].corr(df["electronic_acoustic"])
             st.metric("Genre Fusion ↔ Acoustic Production Correlation", f"{correlation:.3f}")
