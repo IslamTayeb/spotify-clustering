@@ -68,4 +68,4 @@ def render_eda_explorer(df: pd.DataFrame):
 
     # Chart Export Section (for all selected charts across all sections)
     if get_selected_chart_count() > 0:
-        render_export_section("export/visualizations", "eda")
+        render_export_section("export/dimensions-of-taste-viz", "eda")

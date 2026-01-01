@@ -1,0 +1,127 @@
+<html>
+<head>
+<style>
+    #loading-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(248, 249, 250, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    }
+    #loading-backdrop .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e0e0e0;
+        border-top: 3px solid #1DB954;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    #loading-backdrop .message {
+        color: #555;
+        font-size: 14px;
+        text-align: center;
+        max-width: 280px;
+        line-height: 1.5;
+    }
+    #loading-backdrop .refresh-hint {
+        margin-top: 12px;
+        padding: 8px 16px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #777;
+    }
+</style>
+<meta charset="utf-8" /></head>
+<body>
+<div id="loading-backdrop">
+    <div class="spinner"></div>
+    <div class="message">Loading visualization...</div>
+    <div class="refresh-hint">If this doesn't load, try a hard refresh<br>(Ctrl+Shift+R or Cmd+Shift+R)</div>
+</div>
+<div id="error-message" style="display:none; text-align:center; padding:40px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
+    <div style="color:#555; font-size:14px; margin-bottom:12px;">Visualization failed to load</div>
+    <div style="color:#888; font-size:12px; margin-bottom:16px;">This can happen if Plotly CDN is blocked by your browser or ad blocker.</div>
+    <button onclick="location.reload()" style="padding:8px 16px; background:#1DB954; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px;">
+        Try Again
+    </button>
+</div>
+<script>
+    // Hide backdrop once Plotly renders
+    function hideBackdrop() {
+        var backdrop = document.getElementById('loading-backdrop');
+        if (backdrop) {
+            backdrop.style.display = 'none';
+        }
+    }
+    // Show error message
+    function showError() {
+        hideBackdrop();
+        var errorMsg = document.getElementById('error-message');
+        var plotDiv = document.getElementById('plotly-div');
+        if (errorMsg && plotDiv && !plotDiv.querySelector('.plotly')) {
+            errorMsg.style.display = 'block';
+        }
+    }
+    // Check if Plotly div exists and has content
+    function checkPlotlyLoaded() {
+        var plotDiv = document.getElementById('plotly-div');
+        if (plotDiv && plotDiv.querySelector('.plotly')) {
+            hideBackdrop();
+            return true;
+        }
+        return false;
+    }
+    // Check if Plotly library loaded
+    function checkPlotlyLibrary() {
+        if (typeof Plotly === 'undefined') {
+            console.error('Plotly library failed to load from CDN');
+            showError();
+            return false;
+        }
+        return true;
+    }
+    // Start checking after DOM loads
+    var checkCount = 0;
+    var maxChecks = 50; // 5 seconds max (100ms * 50)
+    function pollForPlotly() {
+        checkCount++;
+        if (checkPlotlyLoaded()) {
+            return; // Success!
+        }
+        if (checkCount >= maxChecks) {
+            // Timeout - check why
+            if (!checkPlotlyLibrary()) {
+                return; // CDN failed
+            }
+            showError(); // Unknown error
+            return;
+        }
+        setTimeout(pollForPlotly, 100);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(pollForPlotly, 300);
+        });
+    } else {
+        setTimeout(pollForPlotly, 300);
+    }
+</script>
+
+    <div>                        <script type="text/javascript">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.3.0.min.js" integrity="sha256-bO3dS6yCpk9aK4gUpNELtCiDeSYvGYnK7jFI58NQnHI=" crossorigin="anonymous"></script>                <div id="plotly-div" class="plotly-graph-div" style="height:700px; width:900px;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("plotly-div")) {                    Plotly.newPlot(                        "plotly-div",                        [{"hoverinfo":"skip","marker":{"color":"#E74C3C","size":20},"mode":"markers+text","showlegend":false,"text":["C"],"textfont":{"size":10},"textposition":"top center","x":[0],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":20},"mode":"markers+text","showlegend":false,"text":["D"],"textfont":{"size":10},"textposition":"top center","x":[2],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":20},"mode":"markers+text","showlegend":false,"text":["E"],"textfont":{"size":10},"textposition":"top center","x":[4],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":20},"mode":"markers+text","showlegend":false,"text":["F"],"textfont":{"size":10},"textposition":"top center","x":[5],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":20},"mode":"markers+text","showlegend":false,"text":["G"],"textfont":{"size":10},"textposition":"top center","x":[7],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":20},"mode":"markers+text","showlegend":false,"text":["A"],"textfont":{"size":10},"textposition":"top center","x":[9],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","marker":{"color":"#E74C3C","size":20},"mode":"markers+text","showlegend":false,"text":["B"],"textfont":{"size":10},"textposition":"top center","x":[11],"y":[0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","line":{"color":"#ccc","width":2},"mode":"lines","showlegend":false,"x":[-0.5,11.5],"y":[0,0],"type":"scatter","xaxis":"x","yaxis":"y"},{"hoverinfo":"skip","line":{"color":"#ccc","dash":"dash","width":1},"mode":"lines","showlegend":false,"x":{"dtype":"f8","bdata":"AAAAAAAA8D+VSynBge\u002fvP2j6BgUYvu8\u002fJek3u\u002fVr7z8jfxaOb\u002fnuP\u002fFJcov7Zu4\u002fXLHeqjC17T9+NRQyxuTsP1+hBPiS9us\u002fuvBkh4zr6j9WMpEhxsTpPzlQz6Jvg+g\u002ftTkVSdQo5z+WUJVeWbblP0ATccl8LeQ\u002fA6sNgtOP4j9cLKDxB9\u002fgP1a1P3WwOd4\u002fthLH2SiW2j+KU4hOOdfWP1tDY1G+ANM\u002fjFrgSlktzj+Mcwt+GjrGPyLsuGvkX7w\u002fcyCwKKhcqD\u002fN+ijPKj+QvwzJ6KS5SbS\u002f3kQPZF83wr9P3qvaGjfKv5OAwi7oDdG\u002fPSGBd67u1L83i\u002fTn4LnYv4vJmF6Wa9y\u002fAgAAAAAA4L\u002fP5tyRtrnhv860DJEnYeO\u002fh1h3f5705L\u002fbPrV2e3Lmv11Sx9Q02ee\u002fJuDa0Vgn6b9dHHf9jlvqv4pZi6GZdOu\u002fwfLvCVdx7L\u002fZTwivwlDtvxstUkL2Ee6\u002fV1DNmyq07r9D8kaHuDbvvwQ9tXAZme+\u002fXjTx7ufa778HB0As4PvvvwcHQCzg+++\u002fXjTx7ufa778EPbVwGZnvv0PyRoe4Nu+\u002fV1DNmyq07r8cLVJC9hHuv9lPCK\u002fCUO2\u002fwvLvCVdx7L+JWYuhmXTrv14cd\u002f2OW+q\u002fJeDa0Vgn6b9eUsfUNNnnv9o+tXZ7cua\u002fiFh3f5705L\u002fMtAyRJ2Hjv9Hm3JG2ueG\u002f+f\u002f\u002f\u002f\u002f\u002f\u002f37+IyZhelmvcvzeL9Ofgudi\u002fQSGBd67u1L+MgMIu6A3Rv0jeq9oaN8q\u002f3kQPZF83wr8eyeikuUm0v1T6KM8qP5C\u002fkCCwKKhcqD8R7Lhr5F+8P3xzC34aOsY\u002fk1rgSlktzj9aQ2NRvgDTP4ZTiE4519Y\u002fvRLH2SiW2j9ZtT91sDneP1wsoPEH3+A\u002fAasNgtOP4j9DE3HJfC3kP5dQlV5ZtuU\u002ftDkVSdQo5z83UM+ib4PoP1gykSHGxOk\u002fuvBkh4zr6j9foQT4kvbrP301FDLG5Ow\u002fXbHeqjC17T\u002fxSXKL+2buPyN\u002fFo5v+e4\u002fJuk3u\u002fVr7z9o+gYFGL7vP5VLKcGB7+8\u002fAAAAAAAA8D8="},"y":{"dtype":"f8","bdata":"AAAAAAAAAAADhrXMjDywP\u002fCDAnguNMA\u002fkayggGI5yD+aiNkBzxLQP9kfIiFb+NM\u002f+5MNU1HJ1z+CQNqEwoHbPxlNPurYHd8\u002fC1i7+O1M4T9GhZoMGvniPxwWPFK3keQ\u002fABg\u002flCAV5j+GGZN4xoHnP4hAIRwx1ug\u002flkFFlgER6j93zoZi8zDrPzKcHq\u002fdNOw\u002fEyzujrQb7T\u002fB8a4NiuTtP\u002f0jPCWPju4\u002f3176khQZ7z8XHIGMi4PvPzTGy1KGze8\u002fg6xao7j27z\u002fvOc8G+P7vP2Zmsvw75u8\u002f70I4BJ6s7z+\u002fl\u002feBWVLvPwOssILL1+4\u002fxVNiW3I97j+TIxAn7YPtP1EHwCL7q+w\u002fqkxY6Hq26z+RVimJaaTqP5aCD4nhduk\u002foSg6uxkv6D+258MBZM7mP9KHZvErVuU\u002f8nixWvXH4z8mRkW6WiXiP2ITsJELcOA\u002f8qg+VZVT3T\u002fagWKM2KjZP\u002fgLinSo49U\u002fv412\u002fecH0j\u002flKaSyIjPMP+bENsZjOcQ\u002f3FNHxZdVuD+s23zJpD6gP8nbfMmkPqC\u002f6lNHxZdVuL\u002ftxDbGYznEv9wppLIiM8y\u002fwo12\u002fecH0r\u002f0C4p0qOPVv92BYozYqNm\u002f7qg+VZVT3b9jE7CRC3DgvyRGRbpaJeK\u002f83ixWvXH47\u002fRh2bxK1blv7fnwwFkzua\u002foCg6uxkv6L+Xgg+J4Xbpv5BWKYlppOq\u002frExY6Hq2679SB8Ai+6vsv5MjECftg+2\u002fxFNiW3I97r8ErLCCy9fuv7+X94FZUu+\u002f70I4BJ6s779lZrL8O+bvv+85zwb4\u002fu+\u002fg6xao7j27780xstShs3vvxgcgYyLg++\u002f3176khQZ77\u002f9Izwlj47uv8Lxrg2K5O2\u002fEizujrQb7b8xnB6v3TTsv3fOhmLzMOu\u002fl0FFlgER6r+GQCEcMdbov4UZk3jGgee\u002fABg\u002flCAV5r8fFjxSt5Hkv0SFmgwa+eK\u002fC1i7+O1M4b8bTT7q2B3fv4dA2oTCgdu\u002f9ZMNU1HJ17\u002fZHyIhW\u002fjTv52I2QHPEtC\u002fgKyggGI5yL\u002fogwJ4LjTAvwSGtcyMPLC\u002fB1wUMyamsbw="},"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#27AE60","size":18},"mode":"markers+text","showlegend":false,"text":["C"],"textfont":{"size":10},"textposition":"top center","x":[1.0],"y":[0.0],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":18},"mode":"markers+text","showlegend":false,"text":["D"],"textfont":{"size":10},"textposition":"top center","x":[0.5000000000000001],"y":[0.8660254037844386],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":18},"mode":"markers+text","showlegend":false,"text":["E"],"textfont":{"size":10},"textposition":"top center","x":[-0.49999999999999983],"y":[0.8660254037844387],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":18},"mode":"markers+text","showlegend":false,"text":["F"],"textfont":{"size":10},"textposition":"top center","x":[-0.8660254037844387],"y":[0.49999999999999994],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":18},"mode":"markers+text","showlegend":false,"text":["G"],"textfont":{"size":10},"textposition":"bottom center","x":[-0.8660254037844388],"y":[-0.4999999999999998],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#95A5A6","size":18},"mode":"markers+text","showlegend":false,"text":["A"],"textfont":{"size":10},"textposition":"bottom center","x":[-1.8369701987210297e-16],"y":[-1.0],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hoverinfo":"skip","marker":{"color":"#27AE60","size":18},"mode":"markers+text","showlegend":false,"text":["B"],"textfont":{"size":10},"textposition":"bottom center","x":[0.8660254037844384],"y":[-0.5000000000000004],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"marker":{"color":"#E74C3C"},"name":"Linear","showlegend":true,"text":["2","11","11"],"textposition":"auto","x":["C→D","C→B","B→C"],"y":[2,11,11],"type":"bar","xaxis":"x3","yaxis":"y3"},{"marker":{"color":"#27AE60"},"name":"Circular","showlegend":true,"text":["2","1","1"],"textposition":"auto","x":["C→D","C→B","B→C"],"y":[2,1,1],"type":"bar","xaxis":"x3","yaxis":"y3"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,0.45],"showgrid":false,"zeroline":false,"showticklabels":false},"yaxis":{"anchor":"x","domain":[0.575,1.0],"showgrid":false,"zeroline":false,"showticklabels":false,"range":[-0.6,0.6]},"xaxis2":{"anchor":"y2","domain":[0.55,1.0],"showgrid":false,"zeroline":false,"showticklabels":false},"yaxis2":{"anchor":"x2","domain":[0.575,1.0],"showgrid":false,"zeroline":false,"showticklabels":false,"range":[-1.5,1.5],"scaleanchor":"x2"},"xaxis3":{"anchor":"y3","domain":[0.0,0.45],"showgrid":false,"zeroline":false},"yaxis3":{"anchor":"x3","domain":[0.0,0.425],"showgrid":false,"zeroline":false,"range":[0,14]},"xaxis4":{"anchor":"y4","domain":[0.55,1.0],"showgrid":false,"zeroline":false,"showticklabels":false,"range":[0,1]},"yaxis4":{"anchor":"x4","domain":[0.0,0.425],"showgrid":false,"zeroline":false,"showticklabels":false,"range":[0,1]},"annotations":[{"font":{"size":16},"showarrow":false,"text":"\u003cb\u003e1. The Problem\u003c\u002fb\u003e","x":0.225,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"size":16},"showarrow":false,"text":"\u003cb\u003e2. The Solution\u003c\u002fb\u003e","x":0.775,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"size":16},"showarrow":false,"text":"\u003cb\u003e3. Distance Comparison\u003c\u002fb\u003e","x":0.225,"xanchor":"center","xref":"paper","y":0.425,"yanchor":"bottom","yref":"paper"},{"font":{"size":16},"showarrow":false,"text":"\u003cb\u003e4. The Formula\u003c\u002fb\u003e","x":0.775,"xanchor":"center","xref":"paper","y":0.425,"yanchor":"bottom","yref":"paper"},{"font":{"color":"#E74C3C","size":9},"showarrow":false,"text":"C=0, B=11: Distance=11 (wrong!)","x":5.5,"xref":"x","y":-0.4,"yref":"y"},{"font":{"color":"#27AE60","size":9},"showarrow":false,"text":"C and B are neighbors!","x":0,"xref":"x2","y":-1.3,"yref":"y2"},{"font":{"color":"#9B59B6","size":12},"showarrow":false,"text":"\u003cb\u003ekey_sin\u003c\u002fb\u003e = sin(2π × pitch\u002f12)","x":0.5,"xref":"x4","y":0.7,"yref":"y4"},{"font":{"color":"#27AE60","size":12},"showarrow":false,"text":"\u003cb\u003ekey_cos\u003c\u002fb\u003e = cos(2π × pitch\u002f12)","x":0.5,"xref":"x4","y":0.4,"yref":"y4"},{"font":{"color":"#3498DB","size":12},"showarrow":false,"text":"\u003cb\u003ekey_scale\u003c\u002fb\u003e = 0.33 (major) or 0 (minor)","x":0.5,"xref":"x4","y":0.1,"yref":"y4"}],"margin":{"l":40,"r":40,"t":60,"b":40},"legend":{"orientation":"h","yanchor":"top","y":-0.05,"xanchor":"center","x":0.25},"title":{"font":{"size":18},"text":"\u003cb\u003eCircular Key Encoding Explained\u003c\u002fb\u003e","x":0.5},"height":700,"width":900,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","barmode":"group"},                        {"displayModeBar": "hover", "displaylogo": false, "responsive": true}                    )                };            </script>        </div>
+</body>
+</html>

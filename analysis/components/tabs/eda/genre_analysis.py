@@ -133,7 +133,7 @@ def render_genre_analysis(df: pd.DataFrame):
                 genre_color_map[genre] = CLUSTER_COLORS[color_idx % len(CLUSTER_COLORS)]
                 color_idx += 1
 
-        # Create stacked bar chart with ordered genres
+        # Create stacked bar chart with ordered genres (linear scale)
         fig = px.bar(
             genre_cluster_df,
             x="Cluster",
@@ -144,7 +144,26 @@ def render_genre_analysis(df: pd.DataFrame):
             color_discrete_map=genre_color_map,
         )
         fig.update_layout(height=500, margin=dict(t=0, l=0, r=0, b=0))
-        render_chart_with_export(fig, "genre_by_cluster", "Genre Distribution by Cluster", "genre")
+        render_chart_with_export(fig, "genre_by_cluster", "Genre Distribution by Cluster (Linear)", "genre")
+
+        # Create logarithmic scale version (better for seeing small genre counts)
+        st.caption("Logarithmic scale (better visibility for smaller genre counts)")
+        fig_log = px.bar(
+            genre_cluster_df,
+            x="Cluster",
+            y="Count",
+            color="Genre Family",
+            barmode="group",  # Use grouped bars for log scale readability
+            category_orders={"Genre Family": genre_order},
+            color_discrete_map=genre_color_map,
+            log_y=True,
+        )
+        fig_log.update_layout(
+            height=500,
+            margin=dict(t=0, l=0, r=0, b=0),
+            yaxis_title="Count (log scale)"
+        )
+        render_chart_with_export(fig_log, "genre_by_cluster_log", "Genre Distribution by Cluster (Log Scale)", "genre")
 
         # Show detailed breakdown in expandable section
         with st.expander("View Detailed Genre Distribution"):

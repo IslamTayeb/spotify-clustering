@@ -22,7 +22,7 @@ from typing import Optional
 def export_chart_to_html(
     fig: go.Figure,
     filename: str,
-    output_dir: str = "export/visualizations"
+    output_dir: str = "export/dimensions-of-taste-viz"
 ) -> str:
     """Export a plotly figure to HTML file in its own folder.
 
@@ -105,7 +105,7 @@ def render_chart_with_export(
 
 
 def render_export_section(
-    default_dir: str = "export/visualizations",
+    default_dir: str = "export/dimensions-of-taste-viz",
     section_key: str = "main"
 ):
     """Render the export section for selected charts.

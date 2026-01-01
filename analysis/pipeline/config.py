@@ -128,6 +128,13 @@ CLUSTER_NAMES: Dict[int, str] = {
     4: "Mellow",
 }
 
+# Spotify playlist links for each cluster (add your playlist URLs here)
+# Format: cluster_index -> Spotify playlist URL
+CLUSTER_PLAYLIST_LINKS: Dict[int, str] = {
+    # Example: 0: "https://open.spotify.com/playlist/xxxxx",
+    # Fill in your actual playlist URLs after running export_clusters_as_playlists.py
+}
+
 # Subcluster names (maps (parent_cluster, subcluster_index) to label)
 SUBCLUSTER_NAMES: Dict[tuple, str] = {
     # Cluster 0 (Hard-Rap) subclusters
@@ -136,6 +143,13 @@ SUBCLUSTER_NAMES: Dict[tuple, str] = {
     # Cluster 4 (Mellow) subclusters
     (4, 0): "Mellow-Hopecore",
     (4, 1): "Mellow-Sadcore",
+}
+
+# Spotify playlist links for each subcluster
+# Format: (parent_cluster, subcluster_index) -> Spotify playlist URL
+SUBCLUSTER_PLAYLIST_LINKS: Dict[tuple, str] = {
+    # Example: (0, 0): "https://open.spotify.com/playlist/xxxxx",
+    # Fill in your actual playlist URLs after running export_clusters_as_playlists.py
 }
 
 
@@ -151,6 +165,27 @@ def get_cluster_name(cluster_id: int) -> str:
     return CLUSTER_NAMES.get(cluster_id, f"Cluster {cluster_id}")
 
 
+def get_cluster_name_with_link(cluster_id: int, markdown: bool = True) -> str:
+    """Get cluster name with Spotify playlist link if available.
+
+    Args:
+        cluster_id: Cluster index
+        markdown: If True, return markdown link. If False, return plain text with URL.
+
+    Returns:
+        Cluster name with link, or just name if no link available
+    """
+    name = CLUSTER_NAMES.get(cluster_id, f"Cluster {cluster_id}")
+    link = CLUSTER_PLAYLIST_LINKS.get(cluster_id)
+
+    if link:
+        if markdown:
+            return f"[{name}]({link})"
+        else:
+            return f"{name} ({link})"
+    return name
+
+
 def get_subcluster_name(parent_cluster: int, subcluster_id: int) -> str:
     """Get human-readable subcluster name.
 
@@ -162,6 +197,57 @@ def get_subcluster_name(parent_cluster: int, subcluster_id: int) -> str:
         Subcluster name if defined, else 'Subcluster {id}'
     """
     return SUBCLUSTER_NAMES.get((parent_cluster, subcluster_id), f"Subcluster {subcluster_id}")
+
+
+def get_subcluster_name_with_link(parent_cluster: int, subcluster_id: int, markdown: bool = True) -> str:
+    """Get subcluster name with Spotify playlist link if available.
+
+    Args:
+        parent_cluster: Parent cluster index
+        subcluster_id: Subcluster index within parent
+        markdown: If True, return markdown link. If False, return plain text with URL.
+
+    Returns:
+        Subcluster name with link, or just name if no link available
+    """
+    name = SUBCLUSTER_NAMES.get((parent_cluster, subcluster_id), f"Subcluster {subcluster_id}")
+    link = SUBCLUSTER_PLAYLIST_LINKS.get((parent_cluster, subcluster_id))
+
+    if link:
+        if markdown:
+            return f"[{name}]({link})"
+        else:
+            return f"{name} ({link})"
+    return name
+
+
+def generate_cluster_list_markdown() -> str:
+    """Generate a markdown list of all clusters with their playlist links.
+
+    Useful for embedding in blog posts or documentation.
+
+    Returns:
+        Markdown formatted list of clusters and subclusters with links
+    """
+    lines = ["## Clusters\n"]
+
+    for cluster_id, cluster_name in sorted(CLUSTER_NAMES.items()):
+        link = CLUSTER_PLAYLIST_LINKS.get(cluster_id, "")
+        if link:
+            lines.append(f"- **{cluster_name}** (Cluster {cluster_id}) - [Spotify Playlist]({link})")
+        else:
+            lines.append(f"- **{cluster_name}** (Cluster {cluster_id})")
+
+        # Add subclusters under this cluster
+        for (parent, sub_id), sub_name in sorted(SUBCLUSTER_NAMES.items()):
+            if parent == cluster_id:
+                sub_link = SUBCLUSTER_PLAYLIST_LINKS.get((parent, sub_id), "")
+                if sub_link:
+                    lines.append(f"  - {sub_name} ({parent}.{sub_id}) - [Spotify Playlist]({sub_link})")
+                else:
+                    lines.append(f"  - {sub_name} ({parent}.{sub_id})")
+
+    return "\n".join(lines)
 
 
 def get_lyric_cache_path(backend: str) -> str:

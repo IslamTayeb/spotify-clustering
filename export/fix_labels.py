@@ -107,14 +107,14 @@ def process_file(filepath):
         return False
 
 def main():
-    """Process all HTML files in the visualizations directory."""
-    base_dir = "/Users/islamtayeb/Documents/spotify-clustering/export/visualizations"
+    """Process all HTML files in the dimensions-of-taste-viz directory."""
+    base_dir = "/Users/islamtayeb/Documents/spotify-clustering/export/dimensions-of-taste-viz"
 
     # Find all HTML files
     html_files = glob.glob(os.path.join(base_dir, "**/*.html"), recursive=True)
 
     if not html_files:
-        print("No HTML files found in the visualizations directory.")
+        print("No HTML files found in the dimensions-of-taste-viz directory.")
         return
 
     print(f"Found {len(html_files)} HTML files to process.\n")

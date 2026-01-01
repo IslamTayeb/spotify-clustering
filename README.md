@@ -101,7 +101,7 @@ Each dimension has explicit meaning and rationale:
 |-----|------|--------|-------------|
 | 0 | `bpm` | Essentia RhythmExtractor | Tempo normalized to [0,1] range |
 | 1 | `danceability` | Essentia classifier | How suitable for dancing |
-| 2 | `instrumentalness` | voice_instrumental classifier | 0=vocal, 1=instrumental |
+| 2 | `instrumentalness` | voice_instrumental classifier | 0=vocal, 1=instrumental (see [Essentia Model Architecture](#essentia-model-architecture)) |
 | 3 | `valence` | DEAM model (MusiCNN) | Emotional positivity [1-9] → normalized |
 | 4 | `arousal` | DEAM model (MusiCNN) | Energy/activation [1-9] → normalized |
 | 5 | `engagement` | engagement_regression | Active vs background listening |
@@ -133,7 +133,40 @@ Added to solve jazz vs electronic game music clustering. Both are instrumental, 
 Captures the tonal quality of the production. Dark timbre (mellow jazz, ambient) vs bright timbre (crisp electronic, pop). Helps distinguish mellow rap from energetic party music.
 
 **Key Encoding Deep-Dive:**
-Musical keys are cyclical (C is "close" to B, not far). Sin/cos encoding captures octave equivalence. The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence.
+
+> **Not a musician?** Here's what you need to know: Western music uses 12 notes that repeat in a cycle (C, C#, D, D#, E, F, F#, G, G#, A, A#, B, then back to C). The distance between adjacent notes is called a "semitone." The key of a song tells you which note feels like "home." Major keys sound happy/bright; minor keys sound sad/dark.
+
+**The Problem:** If we encode keys as numbers 0-11 (C=0, B=11), the algorithm thinks C and B are far apart (distance=11). But musically, they're neighbors—just one semitone apart! This is like encoding compass directions as N=0, E=90, S=180, W=270 and concluding that North and West (distance=270) are far apart when you could just turn 90° the other way.
+
+**The Solution:** Place keys on a circle and use sin/cos coordinates:
+
+```
+        C (0)
+    B       C#
+  A#          D
+   A          D#
+    G#      E
+      G   F
+        F#
+```
+
+Now C and B are adjacent on the circle, and the Euclidean distance between their (sin, cos) coordinates correctly reflects their musical closeness.
+
+**Concrete Example:**
+| Key Pair | Linear Distance | Circular Distance | Musical Reality |
+|----------|-----------------|-------------------|-----------------|
+| C → D    | 2               | ~2                | 2 semitones     |
+| C → B    | 11              | ~1                | 1 semitone      |
+| B → C    | 11              | ~1                | 1 semitone      |
+
+**Encoding formula:**
+- `key_sin = sin(2π × pitch/12) × 0.33`
+- `key_cos = cos(2π × pitch/12) × 0.33`
+- `key_scale = 0.33 if major, 0 if minor`
+
+The 0.33 weight ensures 3 key dimensions contribute roughly 1 equivalent dimension of influence (so key doesn't dominate the 33-dim vector).
+
+**Interactive visualization:** See `export/visualizations/key_encoding/` for a 4-panel explainer showing the problem, solution, examples, and formula.
 
 #### Lyric Features (Dimensions 19-28) — Semantic Weighting Strategies
 
@@ -198,6 +231,22 @@ multilingual/unknown/none=0.5 (centered)
 
 ---
 
+**Why Ordinal Encoding Instead of One-Hot?**
+
+One might ask: why not use one-hot encoding (e.g., English=[1,0,0], Spanish=[0,1,0], Arabic=[0,0,1])? Several reasons:
+
+1. **Dimensionality explosion**: One-hot would add ~8 dimensions for language families and ~10 for themes. That's 18 dimensions just for categorical metadata, which could dominate the 33-dim vector even with weighting.
+
+2. **Equal distance assumption is also wrong**: One-hot assumes all categories are equidistant (Euclidean distance = √2 between any pair). But why should Spanish be equally distant from English and Arabic? Musical traditions don't work that way—Romance languages share melodic patterns with English pop more than Arabic maqam scales.
+
+3. **PCA collapses to ordinal anyway**: If you apply PCA to one-hot encoded language data, the first principal component typically recovers an ordinal-like scale based on the underlying structure. We're just doing this explicitly.
+
+4. **Ordinal encodes musical tradition similarity**: The language scale groups by musical tradition (Romance=0.85, East Asian=0.20) rather than linguistic family. This is a deliberate "I made it up" heuristic based on production style similarity, not a claim about objective language distances.
+
+The same reasoning applies to themes: "party" and "flex" are musically closer than "party" and "struggle," so an ordinal scale captures this better than assuming all themes are equidistant.
+
+---
+
 ### GPT Lyric Classification
 
 **Model:** gpt-5-mini-2025-08-07
@@ -222,6 +271,12 @@ multilingual/unknown/none=0.5 (centered)
 ---
 
 ### Essentia Model Architecture
+
+Essentia uses pre-trained neural networks to extract audio features. These work in two stages:
+1. **Embedding extraction**: A backbone network (EffNet or MusiCNN) converts raw audio into a high-dimensional embedding
+2. **Classification**: Smaller classifier heads are trained on top of embeddings for specific tasks (genre, mood, instrumentalness, etc.)
+
+**Instrumentalness** specifically comes from the `voice_instrumental` classifier—a binary classifier trained to distinguish vocal tracks from instrumental ones. It outputs a probability in [0,1], where 0 means "definitely has vocals" and 1 means "definitely instrumental." This score is crucial because it's used to weight lyric features (see [Lyric Features](#lyric-features-dimensions-19-28--semantic-weighting-strategies)).
 
 **Two Embedding Backbones:**
 1. **EffNet-Discogs** (1280-dim) → Most classifiers
@@ -448,6 +503,64 @@ Computed on the standardized 33-dim features (clustering space), NOT on UMAP coo
 - Essentia models auto-download to `~/.essentia/models/`
 - MusiCNN required for valence/arousal (DEAM model)
 - EffNet-Discogs required for all other classifiers
+
+---
+
+## Hosting & Embedding Visualizations
+
+This project exports interactive Plotly visualizations as standalone HTML files. Here's how to embed them in blog posts:
+
+### Hosting Limitations
+
+**Blog Platform:** Bear Blog (bearblog.dev)
+- Uses markdown rendering with HTML support
+- Limited to static content (no server-side processing)
+- Iframes work for embedding external content
+
+**Visualization Hosting:** GitHub Pages
+- Free static file hosting
+- Each visualization folder contains an `index.html`
+- URL pattern: `https://username.github.io/repo-name/visualizations/chart-name/`
+
+### Embedding in Bear Blog
+
+```html
+<iframe
+    src="https://your-github-pages-url.github.io/spotify-clustering/visualizations/combined/"
+    width="100%"
+    height="600"
+    frameborder="0"
+    style="border: none;">
+</iframe>
+```
+
+**Note:** If the iframe doesn't load, try a hard refresh (Ctrl+Shift+R or Cmd+Shift+R). The exported HTML files include a loading backdrop with this hint.
+
+### Exported Visualization Locations
+
+After running `python export/simple_web_export.py --all`:
+
+| Visualization | Path | Description |
+|--------------|------|-------------|
+| Combined UMAP | `export/visualizations/combined/` | 3D cluster visualization |
+| Audio UMAP | `export/visualizations/audio/` | Audio-only clustering |
+| Lyrics UMAP | `export/visualizations/lyrics/` | Lyrics-only clustering |
+| Audio vs Lyrics | `export/visualizations/audio-vs-lyrics/` | Overlay comparison |
+| Subclusters | `export/visualizations/subclusters/*/` | Per-cluster subclustering |
+| Key Encoding | `export/visualizations/key_encoding/` | Circular key encoding diagram |
+| Genre by Cluster | `export/visualizations/genre/genre_by_cluster/` | Genre distribution (linear) |
+| Genre by Cluster (Log) | `export/visualizations/genre/genre_by_cluster_log/` | Genre distribution (log scale) |
+
+### Generating Cluster List with Playlist Links
+
+To generate a markdown-formatted cluster list with Spotify playlist links for your blog:
+
+```python
+from analysis.pipeline.config import generate_cluster_list_markdown
+print(generate_cluster_list_markdown())
+```
+
+First populate `CLUSTER_PLAYLIST_LINKS` and `SUBCLUSTER_PLAYLIST_LINKS` in `analysis/pipeline/config.py` with your Spotify playlist URLs.
 
 ---
 

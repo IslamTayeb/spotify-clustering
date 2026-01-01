@@ -547,7 +547,7 @@ AVAILABLE_CHARTS = {
 def export_temporal_charts(
     df: pd.DataFrame,
     chart_ids: List[str],
-    output_dir: str = "export/visualizations/temporal"
+    output_dir: str = "export/dimensions-of-taste-viz/temporal"
 ) -> List[str]:
     """Export selected temporal charts as HTML files.
 
@@ -648,7 +648,7 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
     # Output directory
     output_dir = st.text_input(
         "Output directory",
-        value="export/visualizations/temporal",
+        value="export/dimensions-of-taste-viz/temporal",
         key="temporal_export_dir"
     )
 

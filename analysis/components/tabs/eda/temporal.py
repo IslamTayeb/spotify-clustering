@@ -149,7 +149,7 @@ def render_temporal_analysis(df: pd.DataFrame):
         _render_cluster_heatmap(df_temp)
 
         # Export section
-        render_export_section("export/visualizations", "temporal")
+        render_export_section("export/dimensions-of-taste-viz", "temporal")
 
         st.markdown("---")
         st.success("✨ Temporal analysis complete!")

@@ -426,7 +426,7 @@ def main():
         st.stop()
 
     # Tabs (always visible at the top)
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 EDA Explorer",
         "🎯 Feature Importance",
         "⚖️ Cluster Comparison",
@@ -434,6 +434,7 @@ def main():
         "🔀 Audio vs Lyrics",
         "🔍 Overview",
         "🗂️ Cluster Inspector",
+        "📚 Feature Explainers",
     ])
 
     with tab1:
@@ -473,6 +474,9 @@ def main():
         # Display selected track details
         if selected_track:
             cluster_inspector.render_track_details(selected_track)
+
+    with tab8:
+        simplified_tabs.render_feature_explainers(df)
 
     # Sub-cluster results section (displayed below tabs when available)
     # Auto-tune results
