@@ -111,15 +111,22 @@ def render_key_encoding_explainer():
 
 
 def create_linear_key_figure():
-    """Create linear key encoding visualization."""
-    keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    """Create linear key encoding visualization (simplified for web display)."""
+    # Simplified: show C, C# on left ... A#, B on right (spaced out)
+    display_keys = [
+        ("C", 0, "#E74C3C"),  # Red - endpoint
+        ("C#", 1.5, "#3498DB"),  # Blue - closer to center
+        # ... gap ...
+        ("A#", 3.5, "#3498DB"),  # Blue - closer to center
+        ("B", 5, "#E74C3C"),  # Red - endpoint
+    ]
 
     fig = go.Figure()
 
     # Number line FIRST (so it's behind the circles)
     fig.add_trace(
         go.Scatter(
-            x=[-0.5, 11.5],
+            x=[-0.5, 5.5],
             y=[0, 0],
             mode="lines",
             line=dict(color="#ccc", width=2),
@@ -128,27 +135,49 @@ def create_linear_key_figure():
         )
     )
 
-    # Then add circles on top
-    for i, key in enumerate(keys):
-        color = "#E74C3C" if key in ["C", "B"] else "#3498DB"
+    # Add circles for visible keys
+    for key, x_pos, color in display_keys:
+        # Map display position to actual index for hover
+        actual_idx = {"C": 0, "C#": 1, "A#": 10, "B": 11}[key]
         fig.add_trace(
             go.Scatter(
-                x=[i],
+                x=[x_pos],
                 y=[0],
                 mode="markers+text",
-                marker=dict(size=25, color=color, line=dict(color="white", width=2)),
+                marker=dict(size=28, color=color, line=dict(color="white", width=2)),
                 text=[key],
                 textposition="top center",
-                textfont=dict(size=11),
+                textfont=dict(size=12),
                 showlegend=False,
-                hovertemplate=f"<b>{key}</b><br>Index: {i}<extra></extra>",
+                hovertemplate=f"<b>{key}</b><br>Index: {actual_idx}<extra></extra>",
             )
         )
 
+    # Dashed line in the middle to indicate more keys (white)
+    fig.add_trace(
+        go.Scatter(
+            x=[2.1, 2.9],
+            y=[0, 0],
+            mode="lines",
+            line=dict(color="white", width=2, dash="dot"),
+            showlegend=False,
+            hoverinfo="skip",
+        )
+    )
+
+    # Ellipsis annotation
+    fig.add_annotation(
+        x=2.5,
+        y=0.35,
+        text="<i>8 more keys</i>",
+        showarrow=False,
+        font=dict(size=10, color="#888"),
+    )
+
     # Distance arrow
     fig.add_annotation(
-        x=5.5,
-        y=-0.4,
+        x=2.5,
+        y=-0.75,
         text="<b>C to B: Distance = 11 (maximum!)</b>",
         showarrow=False,
         font=dict(size=11, color="#E74C3C"),
@@ -158,7 +187,7 @@ def create_linear_key_figure():
         height=250,
         margin=dict(l=20, r=20, t=20, b=60),
         xaxis=dict(
-            showgrid=False, zeroline=False, showticklabels=False, range=[-1, 12]
+            showgrid=False, zeroline=False, showticklabels=False, range=[-0.8, 6.3]
         ),
         yaxis=dict(
             showgrid=False, zeroline=False, showticklabels=False, range=[-1.2, 1.2]
@@ -254,8 +283,8 @@ def create_circular_key_figure():
 
     # Label for B-C adjacency
     fig.add_annotation(
-        x=1.55,
-        y=-0.35,
+        x=1.75,
+        y=-0.45,
         text="<b>B → C</b><br><i>1 semitone</i>",
         showarrow=False,
         font=dict(color="#27AE60", size=11),

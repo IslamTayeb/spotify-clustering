@@ -954,30 +954,37 @@ def export_key_encoding_visualization():
         horizontal_spacing=0.1,
     )
 
-    # Panel 1: Linear number line showing C far from B
-    keys = ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B"]
-    for i, key in enumerate(keys):
-        if key:
-            color = "#E74C3C" if key in ["C", "B"] else "#95A5A6"
-            fig.add_trace(
-                go.Scatter(
-                    x=[i],
-                    y=[0],
-                    mode="markers+text",
-                    marker=dict(size=20, color=color),
-                    text=[key],
-                    textposition="top center",
-                    textfont=dict(size=10),
-                    showlegend=False,
-                    hoverinfo="skip",
-                ),
-                row=1,
-                col=1,
-            )
+    # Panel 1: Linear number line showing C far from B (simplified)
+    # Show: C (red), C# (blue), D (blue) ... gap ... A# (blue), B (red)
+    display_keys = [
+        ("C", 0, "#E74C3C"),   # Red - endpoint
+        ("C#", 1, "#3498DB"),  # Blue
+        ("D", 2, "#3498DB"),   # Blue
+        ("A#", 5, "#3498DB"),  # Blue
+        ("B", 6, "#E74C3C"),   # Red - endpoint
+    ]
 
+    for key, x_pos, color in display_keys:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_pos],
+                y=[0],
+                mode="markers+text",
+                marker=dict(size=20, color=color),
+                text=[key],
+                textposition="top center",
+                textfont=dict(size=10),
+                showlegend=False,
+                hoverinfo="skip",
+            ),
+            row=1,
+            col=1,
+        )
+
+    # Number line
     fig.add_trace(
         go.Scatter(
-            x=[-0.5, 11.5],
+            x=[-0.5, 6.5],
             y=[0, 0],
             mode="lines",
             line=dict(color="#ccc", width=2),
@@ -988,9 +995,33 @@ def export_key_encoding_visualization():
         col=1,
     )
 
+    # Dashed gap in the middle
+    fig.add_trace(
+        go.Scatter(
+            x=[2.6, 4.4],
+            y=[0, 0],
+            mode="lines",
+            line=dict(color="#999", width=2, dash="dot"),
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        row=1,
+        col=1,
+    )
+
     fig.add_annotation(
-        x=5.5,
-        y=-0.4,
+        x=3.5,
+        y=0.35,
+        text="<i>6 more</i>",
+        showarrow=False,
+        font=dict(size=8, color="#888"),
+        xref="x",
+        yref="y",
+    )
+
+    fig.add_annotation(
+        x=3,
+        y=-0.45,
         text="C=0, B=11: Distance=11 (wrong!)",
         showarrow=False,
         font=dict(size=9, color="#E74C3C"),
