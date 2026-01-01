@@ -957,11 +957,11 @@ def export_key_encoding_visualization():
     # Panel 1: Linear number line showing C far from B (simplified)
     # Show: C (red), C# (blue), D (blue) ... gap ... A# (blue), B (red)
     display_keys = [
-        ("C", 0, "#E74C3C"),   # Red - endpoint
+        ("C", 0, "#E74C3C"),  # Red - endpoint
         ("C#", 1, "#3498DB"),  # Blue
-        ("D", 2, "#3498DB"),   # Blue
+        ("D", 2, "#3498DB"),  # Blue
         ("A#", 5, "#3498DB"),  # Blue
-        ("B", 6, "#E74C3C"),   # Red - endpoint
+        ("B", 6, "#E74C3C"),  # Red - endpoint
     ]
 
     for key, x_pos, color in display_keys:
