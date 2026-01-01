@@ -112,12 +112,12 @@ def render_key_encoding_explainer():
 
 def create_linear_key_figure():
     """Create linear key encoding visualization (simplified for web display)."""
-    # Simplified: show C, C# on left ... A#, B on right (spaced out)
+    # Simplified: show C, C# on left ... A#, B on right
     display_keys = [
         ("C", 0, "#E74C3C"),  # Red - endpoint
-        ("C#", 1.5, "#3498DB"),  # Blue - closer to center
+        ("C#", 1, "#3498DB"),  # Blue
         # ... gap ...
-        ("A#", 3.5, "#3498DB"),  # Blue - closer to center
+        ("A#", 4, "#3498DB"),  # Blue
         ("B", 5, "#E74C3C"),  # Red - endpoint
     ]
 
@@ -144,7 +144,7 @@ def create_linear_key_figure():
                 x=[x_pos],
                 y=[0],
                 mode="markers+text",
-                marker=dict(size=28, color=color, line=dict(color="white", width=2)),
+                marker=dict(size=28, color=color, line=dict(color="white", width=1)),
                 text=[key],
                 textposition="top center",
                 textfont=dict(size=12),
@@ -156,7 +156,7 @@ def create_linear_key_figure():
     # Dashed line in the middle to indicate more keys (white)
     fig.add_trace(
         go.Scatter(
-            x=[2.1, 2.9],
+            x=[1.7, 3.3],
             y=[0, 0],
             mode="lines",
             line=dict(color="white", width=2, dash="dot"),
@@ -251,9 +251,9 @@ def create_circular_key_figure():
         angle = 2 * np.pi * i / 12
         x, y = np.cos(angle), np.sin(angle)
 
-        # Highlight C and B
+        # Highlight C and B with green (same size as others)
         marker_color = "#27AE60" if key in ["C", "B"] else color
-        size = 28 if key in ["C", "B"] else 22
+        size = 22
 
         textpos = (
             "top center"
@@ -271,7 +271,7 @@ def create_circular_key_figure():
                 y=[y],
                 mode="markers+text",
                 marker=dict(
-                    size=size, color=marker_color, line=dict(color="white", width=2)
+                    size=size, color=marker_color, line=dict(color="white", width=1)
                 ),
                 text=[key],
                 textposition=textpos,
@@ -283,7 +283,7 @@ def create_circular_key_figure():
 
     # Label for B-C adjacency
     fig.add_annotation(
-        x=1.75,
+        x=1.85,
         y=-0.45,
         text="<b>B → C</b><br><i>1 semitone</i>",
         showarrow=False,
