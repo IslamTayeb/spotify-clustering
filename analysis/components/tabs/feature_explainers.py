@@ -161,7 +161,7 @@ def create_linear_key_figure():
             showgrid=False, zeroline=False, showticklabels=False, range=[-1, 12]
         ),
         yaxis=dict(
-            showgrid=False, zeroline=False, showticklabels=False, range=[-0.8, 0.8]
+            showgrid=False, zeroline=False, showticklabels=False, range=[-1.2, 1.2]
         ),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -263,7 +263,7 @@ def create_circular_key_figure():
     )
 
     fig.update_layout(
-        height=300,
+        height=250,
         margin=dict(l=20, r=20, t=20, b=20),
         xaxis=dict(
             showgrid=False,
