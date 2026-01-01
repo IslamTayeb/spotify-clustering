@@ -167,6 +167,158 @@ def render_raw_features(df: pd.DataFrame):
         )
 
 
+# Feature category definitions matching interpretable_features.py structure
+FEATURE_CATEGORIES = {
+    "Audio Features (16)": [
+        "emb_bpm", "emb_danceability", "emb_instrumentalness", "emb_valence",
+        "emb_arousal", "emb_engagement", "emb_approachability",
+        "emb_mood_happy", "emb_mood_sad", "emb_mood_aggressive",
+        "emb_mood_relaxed", "emb_mood_party", "emb_voice_gender",
+        "emb_genre_fusion", "emb_acoustic_electronic", "emb_timbre_brightness",
+    ],
+    "Key Features (3)": [
+        "emb_key_sin", "emb_key_cos", "emb_key_scale",
+    ],
+    "Lyric Features (10)": [
+        "emb_lyric_valence", "emb_lyric_arousal",
+        "emb_lyric_mood_happy", "emb_lyric_mood_sad",
+        "emb_lyric_mood_aggressive", "emb_lyric_mood_relaxed",
+        "emb_lyric_explicit", "emb_lyric_narrative",
+        "emb_lyric_vocabulary", "emb_lyric_repetition",
+    ],
+    "Metadata Features (4)": [
+        "emb_theme", "emb_language", "emb_popularity", "emb_release_year",
+    ],
+}
+
+# Friendly display names for features
+FEATURE_DISPLAY_NAMES = {
+    "emb_bpm": "BPM",
+    "emb_danceability": "Danceability",
+    "emb_instrumentalness": "Instrumentalness",
+    "emb_valence": "Audio Valence",
+    "emb_arousal": "Audio Arousal",
+    "emb_engagement": "Engagement",
+    "emb_approachability": "Approachability",
+    "emb_mood_happy": "Mood: Happy",
+    "emb_mood_sad": "Mood: Sad",
+    "emb_mood_aggressive": "Mood: Aggressive",
+    "emb_mood_relaxed": "Mood: Relaxed",
+    "emb_mood_party": "Mood: Party",
+    "emb_voice_gender": "Voice Gender (0=F, 1=M)",
+    "emb_genre_fusion": "Genre Fusion",
+    "emb_acoustic_electronic": "Acoustic↔Electronic",
+    "emb_timbre_brightness": "Timbre Brightness",
+    "emb_key_sin": "Key (sin)",
+    "emb_key_cos": "Key (cos)",
+    "emb_key_scale": "Major/Minor",
+    "emb_lyric_valence": "Lyric Valence",
+    "emb_lyric_arousal": "Lyric Arousal",
+    "emb_lyric_mood_happy": "Lyric: Happy",
+    "emb_lyric_mood_sad": "Lyric: Sad",
+    "emb_lyric_mood_aggressive": "Lyric: Aggressive",
+    "emb_lyric_mood_relaxed": "Lyric: Relaxed",
+    "emb_lyric_explicit": "Explicit Content",
+    "emb_lyric_narrative": "Narrative Style",
+    "emb_lyric_vocabulary": "Vocabulary Richness",
+    "emb_lyric_repetition": "Repetition",
+    "emb_theme": "Theme",
+    "emb_language": "Language",
+    "emb_popularity": "Popularity",
+    "emb_release_year": "Release Year",
+}
+
+
+def render_feature_distributions_by_category(df: pd.DataFrame):
+    """Render all feature distributions organized by category (Audio, Lyrics, Metadata)."""
+    with st.expander("📊 Feature Distributions by Category", expanded=True):
+        st.subheader("All 33 Embedding Features")
+        st.caption("Distributions split by Audio, Key, Lyrics, and Metadata categories")
+
+        # Check for embedding columns
+        embedding_cols = [col for col in df.columns if col.startswith("emb_")]
+        if not embedding_cols:
+            st.warning("No embedding columns found. Re-run analysis to include embeddings.")
+            return
+
+        # Color palette for each category
+        category_colors = {
+            "Audio Features (16)": "#1DB954",      # Spotify green
+            "Key Features (3)": "#E91E63",         # Pink
+            "Lyric Features (10)": "#2196F3",      # Blue
+            "Metadata Features (4)": "#FF9800",    # Orange
+        }
+
+        for category_name, features in FEATURE_CATEGORIES.items():
+            # Filter to features that exist in the dataframe
+            available_features = [f for f in features if f in df.columns]
+
+            if not available_features:
+                continue
+
+            st.markdown(f"### {category_name}")
+            color = category_colors.get(category_name, SPOTIFY_GREEN)
+
+            # Calculate grid dimensions
+            n_features = len(available_features)
+            n_cols = min(4, n_features)
+            n_rows = (n_features + n_cols - 1) // n_cols
+
+            # Create subplot titles with friendly names
+            titles = [FEATURE_DISPLAY_NAMES.get(f, f.replace("emb_", "")) for f in available_features]
+
+            fig = make_subplots(
+                rows=n_rows, cols=n_cols,
+                subplot_titles=titles,
+                vertical_spacing=0.15,
+                horizontal_spacing=0.08,
+            )
+
+            for idx, feature in enumerate(available_features):
+                row = idx // n_cols + 1
+                col = idx % n_cols + 1
+                hist_data = df[feature].dropna()
+
+                fig.add_trace(
+                    go.Histogram(
+                        x=hist_data,
+                        name=FEATURE_DISPLAY_NAMES.get(feature, feature),
+                        showlegend=False,
+                        marker_color=color,
+                        opacity=0.8,
+                    ),
+                    row=row, col=col,
+                )
+
+            height = max(300, n_rows * 200)
+            fig.update_layout(
+                height=height,
+                showlegend=False,
+                margin=dict(t=40, l=40, r=20, b=20),
+            )
+            fig.update_xaxes(title_text="", tickfont=dict(size=9))
+            fig.update_yaxes(title_text="", tickfont=dict(size=9))
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Summary stats for this category
+            with st.container():
+                stats_cols = st.columns(min(5, len(available_features)))
+                for i, feature in enumerate(available_features[:5]):  # Show first 5
+                    with stats_cols[i]:
+                        mean_val = df[feature].mean()
+                        std_val = df[feature].std()
+                        display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+                        st.metric(
+                            display_name[:15],  # Truncate long names
+                            f"{mean_val:.2f}",
+                            delta=f"σ={std_val:.2f}",
+                            delta_color="off",
+                        )
+
+            st.markdown("---")
+
+
 def render_overall_statistics(df: pd.DataFrame):
     """Render overall statistics section."""
     with st.expander("📈 Overall Statistics", expanded=False):

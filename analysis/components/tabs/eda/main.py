@@ -17,6 +17,7 @@ import pandas as pd
 
 from .feature_stats import (
     render_feature_vector_analysis,
+    render_feature_distributions_by_category,
     render_raw_features,
     render_overall_statistics,
 )
@@ -38,6 +39,7 @@ def render_eda_explorer(df: pd.DataFrame):
 
     # Feature Analysis
     render_feature_vector_analysis(df)
+    render_feature_distributions_by_category(df)
     render_raw_features(df)
 
     # Statistics
