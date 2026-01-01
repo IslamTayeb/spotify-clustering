@@ -26,6 +26,7 @@ from sklearn.metrics import (
 from sklearn.metrics.cluster import contingency_matrix
 
 from analysis.components.visualization.color_palette import CLUSTER_COLORS
+from analysis.components.export.chart_export import render_chart_with_export, render_export_section
 
 
 # Feature column definitions
@@ -240,30 +241,32 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
 
     cont_matrix = contingency_matrix(labels_audio, labels_lyrics)
 
-    # Create heatmap (styled to match dissimilarity matrix)
+    # Create heatmap (styled to match dissimilarity matrix - square cells)
     st.markdown(f"**Contingency Matrix ({n_clusters} clusters)**")
     st.caption("How tracks from each audio cluster distribute across lyric clusters")
 
-    fig = go.Figure(data=go.Heatmap(
-        z=cont_matrix,
-        x=[f"Lyric {i}" for i in range(n_clusters)],
-        y=[f"Audio {i}" for i in range(n_clusters)],
-        colorscale="Blues",
-        text=np.round(cont_matrix, 0).astype(int),
-        texttemplate="%{text}",
-        textfont={"size": 12},
-        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>Count: %{z}<extra></extra>",
-    ))
+    x_labels = [f"Lyric {i}" for i in range(n_clusters)]
+    y_labels = [f"Audio {i}" for i in range(n_clusters)]
 
-    fig.update_layout(
-        height=500,
-        xaxis_title="Lyric Clusters",
-        yaxis_title="Audio Clusters",
-        yaxis=dict(autorange="reversed"),
-        margin=dict(t=0, l=0, r=0, b=0),
+    fig = px.imshow(
+        cont_matrix,
+        x=x_labels,
+        y=y_labels,
+        labels=dict(color="Count"),
+        color_continuous_scale="Blues",
+        aspect="equal",
+        text_auto="d",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(textfont_size=12)
+    fig.update_layout(
+        height=600,
+        margin=dict(t=0, l=0, r=0, b=0),
+        xaxis_title="",
+        yaxis_title="",
+    )
+
+    render_chart_with_export(fig, "contingency_matrix", "Audio vs Lyric Contingency Matrix", "audio_vs_lyrics")
 
     # Show raw contingency table
     with st.expander("View Raw Contingency Table"):
@@ -337,7 +340,7 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
 
             fig_sankey.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
 
-            st.plotly_chart(fig_sankey, use_container_width=True)
+            render_chart_with_export(fig_sankey, "audio_lyric_sankey", "Audio → Lyric Cluster Flow", "audio_vs_lyrics")
 
             st.dataframe(flow_df, use_container_width=True, hide_index=True)
 
@@ -427,27 +430,27 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
 
             st.markdown("**Audio ↔ Lyric Feature Correlation Matrix**")
             st.caption("Red = negative correlation, Blue = positive correlation")
-            fig_corr = go.Figure(data=go.Heatmap(
-                z=corr_matrix.values,
-                x=corr_matrix.columns,
-                y=corr_matrix.index,
-                colorscale='RdBu',
-                zmid=0,
-                text=np.round(corr_matrix.values, 2),
-                texttemplate="%{text}",
-                textfont={"size": 9},
-                hovertemplate="<b>%{y}</b> ↔ <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>",
-            ))
 
-            fig_corr.update_layout(
-                height=600,
-                xaxis_title="Lyric Features",
-                yaxis_title="Audio Features",
-                yaxis=dict(autorange="reversed"),
-                margin=dict(t=0, l=0, r=0, b=0),
+            fig_corr = px.imshow(
+                corr_matrix.values,
+                x=corr_matrix.columns.tolist(),
+                y=corr_matrix.index.tolist(),
+                labels=dict(color="Correlation"),
+                color_continuous_scale="RdBu",
+                color_continuous_midpoint=0,
+                aspect="auto",
+                text_auto=".2f",
             )
 
-            st.plotly_chart(fig_corr, use_container_width=True)
+            fig_corr.update_traces(textfont_size=9)
+            fig_corr.update_layout(
+                height=600,
+                margin=dict(t=0, l=0, r=0, b=0),
+                xaxis_title="",
+                yaxis_title="",
+            )
+
+            render_chart_with_export(fig_corr, "audio_lyric_correlation_matrix", "Audio-Lyric Correlation Matrix", "audio_vs_lyrics")
 
     # ====================
     # SECTION 5: Example Tracks
@@ -559,27 +562,31 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
                 avg_movement = genre_df['cluster_distance'].mean()
                 st.metric("Avg Cluster Distance", f"{avg_movement:.2f}")
 
-            # Movement matrix for this genre
+            # Movement matrix for this genre (styled to match main contingency matrix)
             genre_cont = pd.crosstab(genre_df['audio_cluster'], genre_df['lyric_cluster'])
 
             st.markdown(f"**{selected_genre}: Audio → Lyric Movement**")
-            fig_genre = go.Figure(data=go.Heatmap(
-                z=genre_cont.values,
-                x=[f"Lyric {i}" for i in genre_cont.columns],
-                y=[f"Audio {i}" for i in genre_cont.index],
-                colorscale="Blues",
-                text=np.round(genre_cont.values, 0).astype(int),
-                texttemplate="%{text}",
-                textfont={"size": 12},
-                hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>Count: %{z}<extra></extra>",
-            ))
 
+            # Use consistent labels (Audio/Lyric prefix)
+            x_labels = [f"Lyric {i}" for i in genre_cont.columns]
+            y_labels = [f"Audio {i}" for i in genre_cont.index]
+
+            fig_genre = px.imshow(
+                genre_cont.values,
+                x=x_labels,
+                y=y_labels,
+                labels=dict(color="Count"),
+                color_continuous_scale="Blues",
+                aspect="equal",
+                text_auto="d",
+            )
+
+            fig_genre.update_traces(textfont_size=12)
             fig_genre.update_layout(
                 height=500,
-                xaxis_title="Lyric Cluster",
-                yaxis_title="Audio Cluster",
-                yaxis=dict(autorange="reversed"),
                 margin=dict(t=0, l=0, r=0, b=0),
+                xaxis_title="",
+                yaxis_title="",
             )
 
             st.plotly_chart(fig_genre, use_container_width=True)
@@ -721,3 +728,6 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
                 file_name="audio_lyric_correlations.csv",
                 mime="text/csv"
             )
+
+    # Chart export section for HTML exports
+    render_export_section(default_dir="export/visualizations", section_key="audio_vs_lyrics")

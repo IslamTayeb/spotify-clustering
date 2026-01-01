@@ -21,6 +21,7 @@ from analysis.interpretability.cluster_comparison import (
 )
 from analysis.components.visualization.color_palette import CLUSTER_COLORS, get_cluster_color
 from analysis.pipeline.config import get_cluster_name
+from analysis.components.export.chart_export import render_chart_with_export, render_export_section
 
 
 def render_overview(df: pd.DataFrame):
@@ -95,19 +96,28 @@ def render_overview(df: pd.DataFrame):
     with st.spinner("Computing cluster similarities..."):
         similarity_matrix = compute_cluster_similarity_matrix(df)
 
+        # Use actual cluster names
+        cluster_ids = sorted(df["cluster"].unique())
+        labels = [get_cluster_name(cid) for cid in cluster_ids]
+
         fig = px.imshow(
-            similarity_matrix,
-            labels=dict(x="Cluster", y="Cluster", color="Dissimilarity"),
-            x=similarity_matrix.columns,
-            y=similarity_matrix.index,
+            similarity_matrix.values,
+            labels=dict(color="Dissimilarity"),
+            x=labels,
+            y=labels,
             color_continuous_scale="YlOrRd",
-            aspect="auto",
+            aspect="equal",
             text_auto=".2f",
         )
 
         fig.update_traces(textfont_size=12)
-        fig.update_layout(height=600, margin=dict(t=0, l=0, r=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(
+            height=600,
+            margin=dict(t=0, l=0, r=0, b=0),
+            xaxis_title="",
+            yaxis_title="",
+        )
+        render_chart_with_export(fig, "cluster_similarity_matrix", "Cluster Similarity Matrix", "overview")
 
     # Most and least similar cluster pairs
     col1, col2 = st.columns(2)
@@ -243,7 +253,7 @@ def render_overview(df: pd.DataFrame):
             margin=dict(t=0, l=0, r=0, b=0),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        render_chart_with_export(fig, "mood_profiles_radar", "Mood Profiles by Cluster", "overview")
 
     # Export all overview data
     st.markdown("---")
@@ -270,3 +280,6 @@ def render_overview(df: pd.DataFrame):
             file_name="cluster_summary.csv",
             mime="text/csv",
         )
+
+    # Chart export section for HTML exports
+    render_export_section(default_dir="export/visualizations", section_key="overview")

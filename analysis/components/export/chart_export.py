@@ -51,7 +51,7 @@ def export_chart_to_html(
     html = fig.to_html(
         include_plotlyjs='cdn',
         config={
-            'displayModeBar': True,
+            'displayModeBar': 'hover',
             'displaylogo': False,
             'responsive': True,
             'fillFrame': True

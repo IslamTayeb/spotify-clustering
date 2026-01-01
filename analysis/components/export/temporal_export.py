@@ -133,7 +133,7 @@ def _fig_to_html(fig: go.Figure, title: str = "") -> str:
     html = fig.to_html(
         include_plotlyjs='cdn',
         config={
-            'displayModeBar': True,
+            'displayModeBar': 'hover',
             'displaylogo': False,
             'responsive': True,
             'fillFrame': True

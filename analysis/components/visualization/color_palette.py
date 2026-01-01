@@ -46,6 +46,38 @@ EXTENDED_CLUSTER_COLORS = CLUSTER_COLORS + [
 ]
 
 # ============================================================================
+# SUBCLUSTER COLORS - Variants of parent cluster colors
+# ============================================================================
+# Maps (parent_cluster, subcluster_index) to color
+# Colors are darker/lighter variants of the parent cluster color
+
+SUBCLUSTER_COLORS = {
+    # Hard-Rap (cluster 0, parent: #6BA3E8 bright blue) subclusters
+    (0, 0): "#4A7BBF",  # Hard-Rap-Aggro: darker blue
+    (0, 1): "#9DC4F5",  # Hard-Rap-Acoustic: lighter blue
+    # Mellow (cluster 4, parent: #E8D48A light gold) subclusters
+    (4, 0): "#F5E8A8",  # Mellow-Hopecore: lighter gold
+    (4, 1): "#C4A85A",  # Mellow-Sadcore: darker gold
+}
+
+
+def get_subcluster_color(parent_cluster: int, subcluster_idx: int) -> str:
+    """Get color for a subcluster based on parent cluster.
+
+    Args:
+        parent_cluster: Parent cluster index
+        subcluster_idx: Subcluster index within parent
+
+    Returns:
+        Hex color string. Falls back to regular cluster color if not defined.
+    """
+    return SUBCLUSTER_COLORS.get(
+        (parent_cluster, subcluster_idx),
+        get_cluster_color(subcluster_idx)  # Fallback to regular palette
+    )
+
+
+# ============================================================================
 # MOOD COLORS - Same luminance as clusters, different hues
 # ============================================================================
 
@@ -199,6 +231,7 @@ __all__ = [
     # Color lists
     "CLUSTER_COLORS",
     "EXTENDED_CLUSTER_COLORS",
+    "SUBCLUSTER_COLORS",
     "MOOD_COLORS",
     "GENRE_FAMILY_COLORS",
     "STATE_COLORS",
@@ -209,6 +242,7 @@ __all__ = [
     "get_cluster_color",
     "get_all_cluster_colors",
     "get_cluster_colorscale",
+    "get_subcluster_color",
     "get_mood_color",
     "get_state_color",
 ]

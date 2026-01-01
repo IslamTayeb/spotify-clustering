@@ -14,6 +14,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 from analysis.components.visualization.umap_3d import compute_umap_embedding, get_cluster_color, OUTLIER_COLOR
+from analysis.components.visualization.color_palette import get_subcluster_color
 from analysis.pipeline.config import CLUSTER_NAMES, SUBCLUSTER_NAMES
 
 # Simplified hover text function that only shows song name and artist
@@ -76,13 +77,16 @@ def create_umap_3d_plot_with_names(df, cluster_names=None, is_subcluster=False, 
                 # For subclusters, use the subcluster naming with index
                 subcluster_name = SUBCLUSTER_NAMES.get((parent_cluster, label), f"Subcluster {label}")
                 name = f"{subcluster_name} ({parent_cluster}.{label}) • {len(cluster_points)} songs"
+                # Use subcluster-specific colors (variants of parent color)
+                color_val = get_subcluster_color(parent_cluster, label)
             elif cluster_names and label in cluster_names:
                 # For main clusters, include the index
                 name = f"{cluster_names[label]} ({label}) • {len(cluster_points)} songs"
+                color_val = get_cluster_color(label)
             else:
                 name = f"Cluster {label} • {len(cluster_points)} songs"
+                color_val = get_cluster_color(label)
 
-            color_val = get_cluster_color(label)
             size = 4
             opacity = 0.8
 
@@ -285,7 +289,7 @@ def export_for_bearblog(mode="combined", input_file="analysis/outputs/analysis_d
     html = fig.to_html(
         include_plotlyjs='cdn',
         config={
-            'displayModeBar': True,
+            'displayModeBar': 'hover',
             'displaylogo': False,
             'responsive': True,
             'fillFrame': True  # Fill the entire frame
@@ -485,7 +489,7 @@ def export_audio_lyrics_overlay(input_file="analysis/outputs/analysis_data.pkl")
     html = fig.to_html(
         include_plotlyjs='cdn',
         config={
-            'displayModeBar': True,
+            'displayModeBar': 'hover',
             'displaylogo': False,
             'responsive': True,
             'fillFrame': True
@@ -672,7 +676,7 @@ def export_saved_subclusters():
         html = fig.to_html(
             include_plotlyjs='cdn',
             config={
-                'displayModeBar': True,
+                'displayModeBar': 'hover',
                 'displaylogo': False,
                 'responsive': True,
                 'fillFrame': True  # Fill the entire frame
