@@ -13,46 +13,126 @@ from typing import List, Dict, Optional, Callable
 from pathlib import Path
 
 from analysis.components.visualization.color_palette import (
-    CLUSTER_COLORS, MOOD_COLORS, GENRE_FAMILY_COLORS, SPOTIFY_GREEN
+    CLUSTER_COLORS,
+    MOOD_COLORS,
+    GENRE_FAMILY_COLORS,
+    SPOTIFY_GREEN,
 )
 from analysis.pipeline.config import get_cluster_name
 
 # Genre families for temporal analysis (copied from temporal.py)
 GENRE_FAMILIES = {
     "Hip Hop": [
-        "hip hop", "rap", "trap", "drill", "boom bap", "conscious hip hop",
-        "southern hip hop", "west coast", "east coast", "gangsta", "mumble",
-        "cloud rap", "phonk", "memphis", "crunk", "grime", "uk hip hop",
+        "hip hop",
+        "rap",
+        "trap",
+        "drill",
+        "boom bap",
+        "conscious hip hop",
+        "southern hip hop",
+        "west coast",
+        "east coast",
+        "gangsta",
+        "mumble",
+        "cloud rap",
+        "phonk",
+        "memphis",
+        "crunk",
+        "grime",
+        "uk hip hop",
     ],
     "Electronic": [
-        "electronic", "edm", "house", "techno", "trance", "dubstep",
-        "drum and bass", "dnb", "ambient", "downtempo", "idm", "electro",
-        "synthwave", "retrowave", "future bass", "garage", "breakbeat",
+        "electronic",
+        "edm",
+        "house",
+        "techno",
+        "trance",
+        "dubstep",
+        "drum and bass",
+        "dnb",
+        "ambient",
+        "downtempo",
+        "idm",
+        "electro",
+        "synthwave",
+        "retrowave",
+        "future bass",
+        "garage",
+        "breakbeat",
     ],
     "Rock": [
-        "rock", "alternative", "indie", "punk", "metal", "grunge",
-        "hard rock", "classic rock", "progressive", "post-rock",
-        "shoegaze", "emo", "hardcore",
+        "rock",
+        "alternative",
+        "indie",
+        "punk",
+        "metal",
+        "grunge",
+        "hard rock",
+        "classic rock",
+        "progressive",
+        "post-rock",
+        "shoegaze",
+        "emo",
+        "hardcore",
     ],
     "R&B/Soul": [
-        "r&b", "rnb", "soul", "neo soul", "funk", "motown",
-        "quiet storm", "contemporary r&b", "new jack swing",
+        "r&b",
+        "rnb",
+        "soul",
+        "neo soul",
+        "funk",
+        "motown",
+        "quiet storm",
+        "contemporary r&b",
+        "new jack swing",
     ],
     "Pop": [
-        "pop", "synth pop", "dance pop", "electropop", "indie pop",
-        "art pop", "dream pop", "k-pop", "j-pop", "latin pop",
+        "pop",
+        "synth pop",
+        "dance pop",
+        "electropop",
+        "indie pop",
+        "art pop",
+        "dream pop",
+        "k-pop",
+        "j-pop",
+        "latin pop",
     ],
     "Jazz/Blues": [
-        "jazz", "blues", "smooth jazz", "bebop", "swing", "fusion",
-        "acid jazz", "nu jazz", "contemporary jazz",
+        "jazz",
+        "blues",
+        "smooth jazz",
+        "bebop",
+        "swing",
+        "fusion",
+        "acid jazz",
+        "nu jazz",
+        "contemporary jazz",
     ],
     "Latin": [
-        "latin", "reggaeton", "salsa", "bachata", "cumbia", "dembow",
-        "urbano", "latin trap", "spanish", "brazilian", "bossa nova",
+        "latin",
+        "reggaeton",
+        "salsa",
+        "bachata",
+        "cumbia",
+        "dembow",
+        "urbano",
+        "latin trap",
+        "spanish",
+        "brazilian",
+        "bossa nova",
     ],
     "World/Folk": [
-        "world", "folk", "acoustic", "country", "bluegrass", "celtic",
-        "african", "middle eastern", "indian", "asian",
+        "world",
+        "folk",
+        "acoustic",
+        "country",
+        "bluegrass",
+        "celtic",
+        "african",
+        "middle eastern",
+        "indian",
+        "asian",
     ],
 }
 
@@ -94,11 +174,19 @@ def _prepare_temporal_df(df: pd.DataFrame) -> Optional[pd.DataFrame]:
 
     # Calculate age_at_add_years if needed
     if "age_at_add_years" not in df_temp.columns:
-        if df_temp["added_at"].dt.tz is not None and df_temp["release_date"].dt.tz is None:
+        if (
+            df_temp["added_at"].dt.tz is not None
+            and df_temp["release_date"].dt.tz is None
+        ):
             df_temp["release_date"] = df_temp["release_date"].dt.tz_localize("UTC")
-        elif df_temp["added_at"].dt.tz is None and df_temp["release_date"].dt.tz is not None:
+        elif (
+            df_temp["added_at"].dt.tz is None
+            and df_temp["release_date"].dt.tz is not None
+        ):
             df_temp["added_at"] = df_temp["added_at"].dt.tz_localize("UTC")
-        df_temp["age_at_add_years"] = (df_temp["added_at"] - df_temp["release_date"]).dt.days / 365.25
+        df_temp["age_at_add_years"] = (
+            df_temp["added_at"] - df_temp["release_date"]
+        ).dt.days / 365.25
 
     df_temp["release_year"] = df_temp["release_date"].dt.year
     df_temp["added_year"] = df_temp["added_at"].dt.year
@@ -131,14 +219,14 @@ def _apply_web_layout(fig: go.Figure, height: int = 600) -> go.Figure:
 def _fig_to_html(fig: go.Figure, title: str = "") -> str:
     """Convert a plotly figure to standalone HTML."""
     html = fig.to_html(
-        include_plotlyjs='cdn',
+        include_plotlyjs="cdn",
         config={
-            'displayModeBar': 'hover',
-            'displaylogo': False,
-            'responsive': True,
-            'fillFrame': True
+            "displayModeBar": "hover",
+            "displaylogo": False,
+            "responsive": True,
+            "fillFrame": True,
         },
-        div_id="plotly-div"
+        div_id="plotly-div",
     )
     return html
 
@@ -146,6 +234,7 @@ def _fig_to_html(fig: go.Figure, title: str = "") -> str:
 # =============================================================================
 # CHART GENERATION FUNCTIONS
 # =============================================================================
+
 
 def generate_library_growth_chart(df_temp: pd.DataFrame) -> go.Figure:
     """Generate library growth timeline chart."""
@@ -190,7 +279,9 @@ def generate_song_age_distribution_chart(df_temp: pd.DataFrame) -> Optional[go.F
     if len(df_age) == 0:
         return None
 
-    fig = px.histogram(df_age, x="age_at_add_years", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
+    fig = px.histogram(
+        df_age, x="age_at_add_years", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN]
+    )
     fig = _apply_web_layout(fig)
     fig.update_layout(
         title="Song Age When Added (Years)",
@@ -200,7 +291,9 @@ def generate_song_age_distribution_chart(df_temp: pd.DataFrame) -> Optional[go.F
     return fig
 
 
-def generate_release_year_distribution_chart(df_temp: pd.DataFrame) -> Optional[go.Figure]:
+def generate_release_year_distribution_chart(
+    df_temp: pd.DataFrame,
+) -> Optional[go.Figure]:
     """Generate release year distribution histogram."""
     if df_temp["release_year"].notna().sum() == 0:
         return None
@@ -211,7 +304,9 @@ def generate_release_year_distribution_chart(df_temp: pd.DataFrame) -> Optional[
     if len(df_year) == 0:
         return None
 
-    fig = px.histogram(df_year, x="release_year", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN])
+    fig = px.histogram(
+        df_year, x="release_year", nbins=50, color_discrete_sequence=[SPOTIFY_GREEN]
+    )
     fig = _apply_web_layout(fig)
     fig.update_layout(
         title="Release Year Distribution",
@@ -236,11 +331,19 @@ def generate_cluster_evolution_chart(df_temp: pd.DataFrame) -> Optional[go.Figur
             duplicates="drop",
         )
 
-        period_cluster = df_sorted_cluster.groupby(["time_period", "cluster"]).size().unstack(fill_value=0)
-        period_cluster_pct = period_cluster.div(period_cluster.sum(axis=1), axis=0) * 100
+        period_cluster = (
+            df_sorted_cluster.groupby(["time_period", "cluster"])
+            .size()
+            .unstack(fill_value=0)
+        )
+        period_cluster_pct = (
+            period_cluster.div(period_cluster.sum(axis=1), axis=0) * 100
+        )
 
         # Rename columns to use cluster names
-        period_cluster_pct.columns = [get_cluster_name(c) for c in period_cluster_pct.columns]
+        period_cluster_pct.columns = [
+            get_cluster_name(c) for c in period_cluster_pct.columns
+        ]
 
         fig = px.bar(
             period_cluster_pct,
@@ -258,7 +361,9 @@ def generate_cluster_evolution_chart(df_temp: pd.DataFrame) -> Optional[go.Figur
         return None
 
 
-def generate_cluster_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool = True) -> Optional[go.Figure]:
+def generate_cluster_trends_chart(
+    df_temp: pd.DataFrame, show_trendlines: bool = True
+) -> Optional[go.Figure]:
     """Generate rolling cluster distribution line chart."""
     if len(df_temp) < 30 or "cluster" not in df_temp.columns:
         return None
@@ -268,14 +373,27 @@ def generate_cluster_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool =
     rolling_clusters = cluster_dummies.rolling(window=30, min_periods=10).mean() * 100
     rolling_clusters["added_at"] = df_sorted["added_at"].values
 
-    cluster_cols = [col for col in rolling_clusters.columns if col.startswith("cluster_")]
+    cluster_cols = [
+        col for col in rolling_clusters.columns if col.startswith("cluster_")
+    ]
     rolling_melted = rolling_clusters.melt(
-        id_vars=["added_at"], value_vars=cluster_cols, var_name="Cluster", value_name="Percentage"
+        id_vars=["added_at"],
+        value_vars=cluster_cols,
+        var_name="Cluster",
+        value_name="Percentage",
     )
-    rolling_melted["Cluster"] = rolling_melted["Cluster"].str.replace("cluster_", "").astype(int).apply(get_cluster_name)
+    rolling_melted["Cluster"] = (
+        rolling_melted["Cluster"]
+        .str.replace("cluster_", "")
+        .astype(int)
+        .apply(get_cluster_name)
+    )
 
     fig = px.line(
-        rolling_melted, x="added_at", y="Percentage", color="Cluster",
+        rolling_melted,
+        x="added_at",
+        y="Percentage",
+        color="Cluster",
         labels={"Percentage": "Proportion (%)", "added_at": "Date Added"},
         color_discrete_sequence=CLUSTER_COLORS,
     )
@@ -284,23 +402,43 @@ def generate_cluster_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool =
         for i, cluster in enumerate(rolling_melted["Cluster"].unique()):
             cluster_data = rolling_melted[rolling_melted["Cluster"] == cluster].dropna()
             if len(cluster_data) > 1:
-                x_numeric = (cluster_data["added_at"] - cluster_data["added_at"].min()).dt.total_seconds()
+                x_numeric = (
+                    cluster_data["added_at"] - cluster_data["added_at"].min()
+                ).dt.total_seconds()
                 z = np.polyfit(x_numeric, cluster_data["Percentage"], 1)
                 p = np.poly1d(z)
-                fig.add_trace(go.Scatter(
-                    x=cluster_data["added_at"], y=p(x_numeric), mode="lines",
-                    line=dict(dash="dash", width=2, color=CLUSTER_COLORS[i % len(CLUSTER_COLORS)]),
-                    name=f"{cluster} trend", showlegend=False, opacity=0.7,
-                ))
+                fig.add_trace(
+                    go.Scatter(
+                        x=cluster_data["added_at"],
+                        y=p(x_numeric),
+                        mode="lines",
+                        line=dict(
+                            dash="dash",
+                            width=2,
+                            color=CLUSTER_COLORS[i % len(CLUSTER_COLORS)],
+                        ),
+                        name=f"{cluster} trend",
+                        showlegend=False,
+                        opacity=0.7,
+                    )
+                )
 
     fig = _apply_web_layout(fig)
     fig.update_layout(title="Cluster Trends Over Time (30-song rolling window)")
     return fig
 
 
-def generate_mood_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool = True) -> Optional[go.Figure]:
+def generate_mood_trends_chart(
+    df_temp: pd.DataFrame, show_trendlines: bool = True
+) -> Optional[go.Figure]:
     """Generate rolling mood trends line chart."""
-    mood_cols = ["mood_happy", "mood_sad", "mood_aggressive", "mood_relaxed", "mood_party"]
+    mood_cols = [
+        "mood_happy",
+        "mood_sad",
+        "mood_aggressive",
+        "mood_relaxed",
+        "mood_party",
+    ]
     available_moods = [col for col in mood_cols if col in df_temp.columns]
 
     if not available_moods or len(df_temp) < 30:
@@ -310,10 +448,15 @@ def generate_mood_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool = Tr
     rolling_moods = df_sorted[available_moods].rolling(window=30, min_periods=10).mean()
     rolling_moods["added_at"] = df_sorted["added_at"].values
 
-    rolling_melted = rolling_moods.melt(id_vars=["added_at"], var_name="Mood", value_name="Score")
+    rolling_melted = rolling_moods.melt(
+        id_vars=["added_at"], var_name="Mood", value_name="Score"
+    )
 
     fig = px.line(
-        rolling_melted, x="added_at", y="Score", color="Mood",
+        rolling_melted,
+        x="added_at",
+        y="Score",
+        color="Mood",
         color_discrete_sequence=list(MOOD_COLORS.values()),
     )
 
@@ -322,14 +465,26 @@ def generate_mood_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool = Tr
         for i, mood in enumerate(rolling_melted["Mood"].unique()):
             mood_data = rolling_melted[rolling_melted["Mood"] == mood].dropna()
             if len(mood_data) > 1:
-                x_numeric = (mood_data["added_at"] - mood_data["added_at"].min()).dt.total_seconds()
+                x_numeric = (
+                    mood_data["added_at"] - mood_data["added_at"].min()
+                ).dt.total_seconds()
                 z = np.polyfit(x_numeric, mood_data["Score"], 1)
                 p = np.poly1d(z)
-                fig.add_trace(go.Scatter(
-                    x=mood_data["added_at"], y=p(x_numeric), mode="lines",
-                    line=dict(dash="dash", width=2, color=mood_color_list[i % len(mood_color_list)]),
-                    name=f"{mood} trend", showlegend=False, opacity=0.7,
-                ))
+                fig.add_trace(
+                    go.Scatter(
+                        x=mood_data["added_at"],
+                        y=p(x_numeric),
+                        mode="lines",
+                        line=dict(
+                            dash="dash",
+                            width=2,
+                            color=mood_color_list[i % len(mood_color_list)],
+                        ),
+                        name=f"{mood} trend",
+                        showlegend=False,
+                        opacity=0.7,
+                    )
+                )
 
     fig = _apply_web_layout(fig)
     fig.update_layout(title="Mood Trends Over Time (30-song rolling window)")
@@ -337,9 +492,7 @@ def generate_mood_trends_chart(df_temp: pd.DataFrame, show_trendlines: bool = Tr
 
 
 def generate_genre_family_trends_chart(
-    df_temp: pd.DataFrame,
-    view: str = "proportion",
-    show_trendlines: bool = True
+    df_temp: pd.DataFrame, view: str = "proportion", show_trendlines: bool = True
 ) -> Optional[go.Figure]:
     """Generate genre family trends chart.
 
@@ -370,15 +523,21 @@ def generate_genre_family_trends_chart(
         for family in top_families:
             added_this_quarter = (quarter_df["genre_family"] == family).sum()
             cumulative_counts[family] += added_this_quarter
-            quarter_pct = (added_this_quarter / total_in_quarter * 100) if total_in_quarter > 0 else 0
+            quarter_pct = (
+                (added_this_quarter / total_in_quarter * 100)
+                if total_in_quarter > 0
+                else 0
+            )
 
-            timeline_data.append({
-                "Quarter": str(quarter),
-                "Genre Family": family,
-                "Added": added_this_quarter,
-                "Cumulative": cumulative_counts[family],
-                "Quarter %": quarter_pct,
-            })
+            timeline_data.append(
+                {
+                    "Quarter": str(quarter),
+                    "Genre Family": family,
+                    "Added": added_this_quarter,
+                    "Cumulative": cumulative_counts[family],
+                    "Quarter %": quarter_pct,
+                }
+            )
 
     if not timeline_data:
         return None
@@ -387,38 +546,55 @@ def generate_genre_family_trends_chart(
 
     for family in top_families:
         family_mask = timeline_df["Genre Family"] == family
-        timeline_df.loc[family_mask, "Delta"] = timeline_df.loc[family_mask, "Quarter %"].diff().fillna(0)
+        timeline_df.loc[family_mask, "Delta"] = (
+            timeline_df.loc[family_mask, "Quarter %"].diff().fillna(0)
+        )
 
     if view == "proportion":
         fig = px.line(
-            timeline_df, x="Quarter", y="Quarter %", color="Genre Family",
+            timeline_df,
+            x="Quarter",
+            y="Quarter %",
+            color="Genre Family",
             labels={"Quarter %": "Share of Quarter (%)"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
         if show_trendlines:
-            _add_trendlines_to_fig(fig, timeline_df, top_families, "Quarter %", GENRE_FAMILY_COLORS)
+            _add_trendlines_to_fig(
+                fig, timeline_df, top_families, "Quarter %", GENRE_FAMILY_COLORS
+            )
         title = "Genre Family Share of Quarterly Additions"
 
     elif view == "delta":
         fig = px.bar(
-            timeline_df, x="Quarter", y="Delta", color="Genre Family",
+            timeline_df,
+            x="Quarter",
+            y="Delta",
+            color="Genre Family",
             barmode="group",
             labels={"Delta": "Change in Share (pp)"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
         fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
         if show_trendlines:
-            _add_trendlines_to_fig(fig, timeline_df, top_families, "Delta", GENRE_FAMILY_COLORS, dash="dot")
+            _add_trendlines_to_fig(
+                fig, timeline_df, top_families, "Delta", GENRE_FAMILY_COLORS, dash="dot"
+            )
         title = "Genre Family Delta (Quarter-over-Quarter Change)"
 
     else:  # cumulative
         fig = px.area(
-            timeline_df, x="Quarter", y="Cumulative", color="Genre Family",
+            timeline_df,
+            x="Quarter",
+            y="Cumulative",
+            color="Genre Family",
             labels={"Cumulative": "Total Songs"},
             color_discrete_sequence=GENRE_FAMILY_COLORS,
         )
         if show_trendlines:
-            _add_trendlines_to_fig(fig, timeline_df, top_families, "Cumulative", GENRE_FAMILY_COLORS)
+            _add_trendlines_to_fig(
+                fig, timeline_df, top_families, "Cumulative", GENRE_FAMILY_COLORS
+            )
         title = "Cumulative Genre Family Growth"
 
     fig = _apply_web_layout(fig)
@@ -434,11 +610,17 @@ def _add_trendlines_to_fig(fig, timeline_df, families, y_col, colors, dash="dash
             x_numeric = np.arange(len(family_data))
             z = np.polyfit(x_numeric, family_data[y_col], 1)
             p = np.poly1d(z)
-            fig.add_trace(go.Scatter(
-                x=family_data["Quarter"], y=p(x_numeric), mode="lines",
-                line=dict(dash=dash, width=2, color=colors[i % len(colors)]),
-                name=f"{family} trend", showlegend=False, opacity=0.7,
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=family_data["Quarter"],
+                    y=p(x_numeric),
+                    mode="lines",
+                    line=dict(dash=dash, width=2, color=colors[i % len(colors)]),
+                    name=f"{family} trend",
+                    showlegend=False,
+                    opacity=0.7,
+                )
+            )
 
 
 def generate_cluster_heatmap(df_temp: pd.DataFrame) -> Optional[go.Figure]:
@@ -450,8 +632,12 @@ def generate_cluster_heatmap(df_temp: pd.DataFrame) -> Optional[go.Figure]:
     df_temp["month"] = df_temp["added_at"].dt.to_period("M")
 
     try:
-        cluster_month_matrix = df_temp.groupby(["month", "cluster"]).size().unstack(fill_value=0)
-        cluster_month_matrix.columns = [get_cluster_name(c) for c in cluster_month_matrix.columns]
+        cluster_month_matrix = (
+            df_temp.groupby(["month", "cluster"]).size().unstack(fill_value=0)
+        )
+        cluster_month_matrix.columns = [
+            get_cluster_name(c) for c in cluster_month_matrix.columns
+        ]
 
         if len(cluster_month_matrix) > 1 and len(cluster_month_matrix.columns) > 1:
             fig = px.imshow(
@@ -461,7 +647,9 @@ def generate_cluster_heatmap(df_temp: pd.DataFrame) -> Optional[go.Figure]:
                 color_continuous_scale="Viridis",
             )
             fig.update_xaxes(side="bottom")
-            fig = _apply_web_layout(fig, height=400 + len(cluster_month_matrix.columns) * 30)
+            fig = _apply_web_layout(
+                fig, height=400 + len(cluster_month_matrix.columns) * 30
+            )
             fig.update_layout(title="Cluster Activity Heatmap")
             return fig
     except Exception:
@@ -520,7 +708,9 @@ AVAILABLE_CHARTS = {
     "genre_trends_proportion": {
         "name": "Genre Trends (Proportion)",
         "description": "Genre family share per quarter",
-        "generator": lambda df: generate_genre_family_trends_chart(df, view="proportion"),
+        "generator": lambda df: generate_genre_family_trends_chart(
+            df, view="proportion"
+        ),
         "filename": "genre_trends_proportion",
     },
     "genre_trends_delta": {
@@ -532,7 +722,9 @@ AVAILABLE_CHARTS = {
     "genre_trends_cumulative": {
         "name": "Genre Trends (Cumulative)",
         "description": "Genre family cumulative growth",
-        "generator": lambda df: generate_genre_family_trends_chart(df, view="cumulative"),
+        "generator": lambda df: generate_genre_family_trends_chart(
+            df, view="cumulative"
+        ),
         "filename": "genre_trends_cumulative",
     },
     "cluster_heatmap": {
@@ -547,7 +739,7 @@ AVAILABLE_CHARTS = {
 def export_temporal_charts(
     df: pd.DataFrame,
     chart_ids: List[str],
-    output_dir: str = "export/dimensions-of-taste-viz/temporal"
+    output_dir: str = "export/visualizations/temporal",
 ) -> List[str]:
     """Export selected temporal charts as HTML files.
 
@@ -583,7 +775,7 @@ def export_temporal_charts(
             html = _fig_to_html(fig)
             output_path = os.path.join(output_dir, f"{filename}.html")
 
-            with open(output_path, 'w') as f:
+            with open(output_path, "w") as f:
                 f.write(html)
 
             exported.append(output_path)
@@ -598,7 +790,9 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
     """Render the temporal export UI in Streamlit."""
     st.markdown("---")
     st.subheader("Export Temporal Charts for Web")
-    st.caption("Select charts to export as standalone HTML files for Netlify/web hosting")
+    st.caption(
+        "Select charts to export as standalone HTML files for Netlify/web hosting"
+    )
 
     # Check if temporal data is available
     df_temp = _prepare_temporal_df(df)
@@ -619,7 +813,7 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
             if st.checkbox(
                 chart_info["name"],
                 help=chart_info["description"],
-                key=f"export_chart_{chart_id}"
+                key=f"export_chart_{chart_id}",
             ):
                 selected_charts.append(chart_id)
 
@@ -648,8 +842,8 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
     # Output directory
     output_dir = st.text_input(
         "Output directory",
-        value="export/dimensions-of-taste-viz/temporal",
-        key="temporal_export_dir"
+        value="export/visualizations/temporal",
+        key="temporal_export_dir",
     )
 
     # Export button
@@ -657,7 +851,7 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
         f"Export {len(selected_charts)} Chart(s)",
         type="primary",
         disabled=len(selected_charts) == 0,
-        key="export_temporal_btn"
+        key="export_temporal_btn",
     ):
         with st.spinner("Exporting charts..."):
             exported_paths = export_temporal_charts(df, selected_charts, output_dir)
@@ -671,12 +865,16 @@ def render_temporal_export_ui(df: pd.DataFrame) -> None:
                 file_size = os.path.getsize(path) / 1024
                 st.text(f"  {filename} ({file_size:.1f} KB)")
 
-            st.info("""
+            st.info(
+                """
 **Next steps:**
 1. Go to [Netlify Drop](https://app.netlify.com/drop)
 2. Drag the `{output_dir}` folder into the browser
 3. Get instant URL like: `https://amazing-viz-123.netlify.app`
 4. Add to Bear Blog: `<iframe src="YOUR_URL/chart_name.html" width="100%" height="600"></iframe>`
-            """.format(output_dir=output_dir))
+            """.format(output_dir=output_dir)
+            )
         else:
-            st.error("No charts were exported. Check that the data contains valid temporal information.")
+            st.error(
+                "No charts were exported. Check that the data contains valid temporal information."
+            )

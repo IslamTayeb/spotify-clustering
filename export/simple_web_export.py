@@ -474,7 +474,7 @@ def export_for_bearblog(
 
     # Determine output directory
     if output_dir is None:
-        output_dir = f"export/dimensions-of-taste-viz/{mode}"
+        output_dir = f"export/visualizations/{mode}"
 
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -702,7 +702,7 @@ def export_audio_lyrics_overlay(input_file="analysis/outputs/analysis_data.pkl")
     html = add_loading_backdrop(html)
 
     # Save to appropriate directory
-    output_dir = "export/dimensions-of-taste-viz/audio-vs-lyrics"
+    output_dir = "export/visualizations/audio-vs-lyrics"
     os.makedirs(output_dir, exist_ok=True)
 
     output_file = os.path.join(output_dir, "index.html")
@@ -742,10 +742,10 @@ def export_combined_and_subclusters(input_file="analysis/outputs/analysis_data.p
     print(f"✅ EXPORT COMPLETE")
     print("=" * 50)
     print(f"\n📁 Created {len(exported_paths)} visualizations:")
-    print(f"   • Combined clustering: export/dimensions-of-taste-viz/combined/")
+    print(f"   • Combined clustering: export/visualizations/combined/")
     if len(subcluster_paths) > 0:
         print(
-            f"   • {len(subcluster_paths)} subclusters in: export/dimensions-of-taste-viz/subclusters/"
+            f"   • {len(subcluster_paths)} subclusters in: export/visualizations/subclusters/"
         )
     print("\n💡 Each folder can be uploaded separately to Netlify for different URLs!")
 
@@ -913,7 +913,7 @@ def export_saved_subclusters():
         html = add_loading_backdrop(html)
 
         # Save to appropriate directory
-        output_dir = f"export/dimensions-of-taste-viz/subclusters/{folder_name}"
+        output_dir = f"export/visualizations/subclusters/{folder_name}"
         os.makedirs(output_dir, exist_ok=True)
 
         output_file = os.path.join(output_dir, "index.html")
@@ -1211,23 +1211,21 @@ def export_all_modes(
     print("=" * 50)
 
     print("\n📁 Created folders:")
-    print("   • export/dimensions-of-taste-viz/audio/")
-    print("   • export/dimensions-of-taste-viz/lyrics/")
-    print("   • export/dimensions-of-taste-viz/combined/")
-    print("   • export/dimensions-of-taste-viz/audio-vs-lyrics/")
+    print("   • export/visualizations/audio/")
+    print("   • export/visualizations/lyrics/")
+    print("   • export/visualizations/combined/")
+    print("   • export/visualizations/audio-vs-lyrics/")
     print("   • export/visualizations/key_encoding/")
     if len(subcluster_paths) > 0:
         print(
-            f"   • export/dimensions-of-taste-viz/subclusters/ ({len(subcluster_paths)} subclusters)"
+            f"   • export/visualizations/subclusters/ ({len(subcluster_paths)} subclusters)"
         )
         for path in subcluster_paths:
             folder_name = os.path.dirname(path).split("/")[-1]
             print(f"       - {folder_name}/")
 
     print("\n💡 Each folder can be uploaded separately to Netlify for different URLs!")
-    print(
-        "   Or upload the entire 'dimensions-of-taste-viz' folder for one site with subpaths."
-    )
+    print("   Or upload the entire 'visualizations' folder for one site with subpaths.")
 
     return exported_paths
 

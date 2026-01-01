@@ -730,4 +730,4 @@ def render_audio_vs_lyrics(df: pd.DataFrame):
             )
 
     # Chart export section for HTML exports
-    render_export_section(default_dir="export/dimensions-of-taste-viz", section_key="audio_vs_lyrics")
+    render_export_section(default_dir="export/visualizations", section_key="audio_vs_lyrics")

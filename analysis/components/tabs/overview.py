@@ -282,4 +282,4 @@ def render_overview(df: pd.DataFrame):
         )
 
     # Chart export section for HTML exports
-    render_export_section(default_dir="export/dimensions-of-taste-viz", section_key="overview")
+    render_export_section(default_dir="export/visualizations", section_key="overview")

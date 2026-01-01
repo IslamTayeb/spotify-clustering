@@ -149,7 +149,7 @@ def render_temporal_analysis(df: pd.DataFrame):
         _render_cluster_heatmap(df_temp)
 
         # Export section
-        render_export_section("export/dimensions-of-taste-viz", "temporal")
+        render_export_section("export/visualizations", "temporal")
 
         st.markdown("---")
         st.success("✨ Temporal analysis complete!")
@@ -701,5 +701,3 @@ def _render_cluster_heatmap(df_temp):
             st.info("Not enough time periods")
     except Exception as e:
         st.warning(f"Could not generate heatmap: {e}")
-
-
