@@ -119,9 +119,3 @@ python export/export_clusters_as_playlists.py            # create
 | `analysis/pipeline/audio_analysis.py` | Essentia feature extraction |
 | `analysis/pipeline/lyric_features.py` | GPT lyric classification |
 | `analysis/pipeline/config.py` | Configuration & scales |
-
----
-
-## License
-
-MIT
